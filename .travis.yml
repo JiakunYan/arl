@@ -32,6 +32,5 @@ before_install:
 
 script:
   - docker run --name container -u ubuntu -w /home/ubuntu -v $(pwd):/home/ubuntu/host-arl -d -it --shm-size=2048M -d benbrock/bcl:mpich-debug # keep container alive
-  - docker cp `pwd` container:/home/ubuntu/host-arl # copy new changes
   - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/host-arl"
   - docker exec --user ubuntu container bash -c "cd ./host-arl/tests/ && ./run_tests.sh gasnet_ex" # run the test script
