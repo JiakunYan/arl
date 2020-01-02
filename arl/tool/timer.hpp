@@ -36,7 +36,7 @@ namespace arl {
 //      }
   }
 
-  extern size_t my_worker_local();
+  extern rank_t my_worker_local();
 
   struct SharedTimer {
   private:

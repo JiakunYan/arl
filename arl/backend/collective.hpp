@@ -9,7 +9,7 @@
 
 namespace arl::backend {
   template <typename T>
-  inline T broadcast(T& val, uint64_t root) {
+  inline T broadcast(T& val, rank_t root) {
     T rv;
     gex_Event_t event = gex_Coll_BroadcastNB(tm, root, &rv, &val, sizeof(T), 0);
     gex_Event_Wait(event);

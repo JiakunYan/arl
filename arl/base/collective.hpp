@@ -7,7 +7,7 @@
 
 namespace arl {
   template <typename T>
-  inline T broadcast_node(T& val, uint64_t root) {
+  inline T broadcast_node(T& val, rank_t root) {
     ARL_Assert(root < arl::nworkers_local(), "");
     static T shared_val;
     if (my_worker_local() == root) {
@@ -22,7 +22,7 @@ namespace arl {
   }
 
   template <typename T>
-  inline T broadcast(T& val, uint64_t root) {
+  inline T broadcast(T& val, rank_t root) {
     ARL_Assert(root < arl::nworkers(), "");
     if (my_worker_local() == root % nworkers_local()) {
       val = backend::broadcast(val, root / nworkers_local());
