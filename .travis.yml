@@ -1,0 +1,37 @@
+# Acknowledgement:
+#   Most content in this file is based on the source code of
+#   the Berkeley Container Library (https://github.com/berkeley-container-library/bcl).
+#
+
+install:
+
+language: c++
+
+services:
+  - docker
+
+compiler:
+  - gcc
+
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+            - libopenmpi-dev
+            - openmpi-bin
+            - wget
+
+before_install:
+  - docker pull benbrock/bcl:debug
+  - eval "${MATRIX_EVAL}"
+
+script:
+  - docker run --name container --shm-size=2048M --user ubuntu -d benbrock/bcl:mpich-debug tail -f /dev/null # keep container alive
+  - docker cp `pwd` container:/home/ubuntu/src # copy new changes
+  - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/src"
+  - docker exec --user ubuntu container bash -c "cd ./src/bcl/tests/ && ./run_tests.sh mpi shmem gasnet_ex" # run the test script
