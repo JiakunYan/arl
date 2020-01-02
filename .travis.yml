@@ -27,7 +27,7 @@ matrix:
             - wget
 
 before_install:
-  - docker pull benbrock/bcl:debug
+  - docker pull benbrock/bcl:mpich-debug
   - eval "${MATRIX_EVAL}"
 
 script:
