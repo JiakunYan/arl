@@ -31,7 +31,7 @@ before_install:
   - eval "${MATRIX_EVAL}"
 
 script:
-  - docker run -u ubuntu -w /home/ubuntu -v .:/home/ubuntu/host-arl -d -it --shm-size=2048M -d benbrock/bcl:mpich-debug # keep container alive
-  - docker cp `pwd` container:/home/ubuntu/src # copy new changes
-  - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/src"
-  - docker exec --user ubuntu container bash -c "cd ./src/bcl/tests/ && ./run_tests.sh gasnet_ex" # run the test script
+  - docker run --name container -u ubuntu -w /home/ubuntu -v $(pwd):/home/ubuntu/host-arl -d -it --shm-size=2048M -d benbrock/bcl:mpich-debug # keep container alive
+  - docker cp `pwd` container:/home/ubuntu/host-arl # copy new changes
+  - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/host-arl"
+  - docker exec --user ubuntu container bash -c "cd ./host-arl/tests/ && ./run_tests.sh gasnet_ex" # run the test script
