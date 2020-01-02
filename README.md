@@ -8,23 +8,28 @@ Remote Procedure Call (RPC) requesting and execution with:
 ## Example
 
 ```cpp
-  #include "arl/arl.hpp"
+#include "arl/arl.hpp"
 
-  using namespace arl;
+using namespace arl;
 
-  void worker(int val) {
-    printf("Hello, I am thread %lu/%lu! receive arguments %d\n", my_worker(), nworkers(), val);
-  }
-  
-  int main(int argc, char** argv) {
-    // one process per processor
-    init(15, 16); // 15 worker threads and 1 progress thread
+rank_t say_hello(rank_t source) {
+  printf("Worker %lu/%lu is running an RPC from worker %lu!\n", my_worker(), nworkers(), source);
+  return my_worker();
+}
 
-    int val = 132; // arguments to be passed to threads
-    run(worker, val);
-  
-    finalize();
-  }
+void worker(int arg) {
+  rank_t target = (my_worker() + 1) % nworkers();
+  auto future = rpc(target, say_hello, my_worker());
+  rank_t result = future.get();
+  printf("Worker %lu/%lu's RPC has been executed by worker %lu!\n", my_worker(), nworkers(), result);
+}
+
+int main(int argc, char** argv) {
+  // one process per node/processor
+  arl::init(15, 16); // 15 worker, 1 progress thread per process
+  arl::run(worker, 233); // you can pass some arguments if you want
+  arl::finalize();
+}
 ```
 
 ## Bug
