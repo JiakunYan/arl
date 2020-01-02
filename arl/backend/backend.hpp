@@ -1,6 +1,11 @@
 //
 // Created by Jiakun Yan on 12/31/19.
 //
+/*
+ * Acknowledgement:
+ *   Most content in this file is based on the source code of
+ *   the Berkeley Container Library (https://github.com/berkeley-container-library/bcl).
+*/
 
 #ifndef ARL_BACKEND_HPP
 #define ARL_BACKEND_HPP

@@ -1,6 +1,6 @@
 # ARL
 The Asynchronous RPC Library is a C++ library supporting high-throughput asynchronous
-Remote Procedure Call (RPC) requesting and execution with
+Remote Procedure Call (RPC) requesting and execution with:
 
 - Node-level Aggregation
 - Single-node Work-stealing
@@ -27,6 +27,9 @@ Remote Procedure Call (RPC) requesting and execution with
   }
 ```
 
-## Bugs
+## Bug
 Please let us know if you identify any bugs or general usability issues by creating
 an issue on GitHub or directly contacting the authors.
+
+## Note
+ARL is previously developed at [berkeley-container-library/bcl/branch-arh](https://github.com/berkeley-container-library/bcl/tree/arh/bcl/containers/experimental/arh).
