@@ -1,4 +1,7 @@
 # ARL
+
+[![Build Status](https://travis-ci.com/JiakunYan/arl.svg?branch=master)](https://travis-ci.com/JiakunYan/arl)
+
 The Asynchronous RPC Library is a C++ library supporting high-throughput asynchronous
 Remote Procedure Call (RPC) requesting and execution with:
 
