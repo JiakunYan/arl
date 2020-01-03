@@ -1,4 +1,3 @@
-#define ARL_DEBUG
 #include "arl/arl.hpp"
 
 using namespace arl;

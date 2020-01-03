@@ -1,7 +1,7 @@
 # CLion
 CMakeLists.txt
 .idea
-cmake-build-debug
+cmake-build-*
 
 # macOS
 .DS_store

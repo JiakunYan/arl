@@ -51,12 +51,19 @@ namespace arl {
 
   inline void init(size_t custom_num_workers_per_proc = 15,
       size_t custom_num_threads_per_proc = 16, size_t shared_segment_size = 256) {
+    backend::init(shared_segment_size, true);
+
+#ifdef ARL_DEBUG
+    backend::print("WARNING: Running low-performance debug mode");
+#endif
+#ifndef ARL_THREAD_PIN
+    backend::print("WARNING: Haven't pinned threads to cores");
+#endif
     num_workers_per_proc = custom_num_workers_per_proc;
     num_threads_per_proc = custom_num_threads_per_proc;
     thread_contexts.resize(num_threads_per_proc);
     threadBarrier.init(num_workers_per_proc, progress);
 
-    backend::init(shared_segment_size, true);
     init_am();
     init_agg();
   }
