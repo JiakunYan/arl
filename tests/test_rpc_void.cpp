@@ -1,5 +1,6 @@
-  #include "arl/arl.hpp"
-  #include <cassert>
+#define ARL_DEBUG
+#include "arl/arl.hpp"
+#include <cassert>
 
 void worker() {
   int my_rank = (int) arl::my_worker();

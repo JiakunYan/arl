@@ -1,5 +1,6 @@
-  #include "arl/arl.hpp"
-  #include <cassert>
+#define ARL_DEBUG
+#include "arl/arl.hpp"
+#include <cassert>
 
 // test Aggregation
 
