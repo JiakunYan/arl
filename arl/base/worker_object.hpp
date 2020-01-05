@@ -38,7 +38,7 @@ namespace arl {
     T &get() {
 #ifdef ARL_DEBUG
       ARL_Assert(len != 1, "Use before calling init!");
-      ARL_Assert(my_worker_local() >= len, "Index out of scope!");
+      ARL_Assert(my_worker_local() < len, "Index out of scope!");
 #endif
       return objects[my_worker_local()]._val;
     }

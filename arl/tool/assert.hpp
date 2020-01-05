@@ -28,5 +28,4 @@ void __ARL_Assert(const char* expr_str, bool expr, const char* file, int line, c
 
 #define ARL_Assert_Align(Val, alignof_size) ARL_Assert(alignof(Val) % alignof_size == 0, "alignment check failed!")
 
-
 #endif //ARL_ASSERT_HPP

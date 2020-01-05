@@ -54,10 +54,10 @@ namespace arl {
     backend::init(shared_segment_size, true);
 
 #ifdef ARL_DEBUG
-    backend::print("WARNING: Running low-performance debug mode.\n");
+    backend::print("%s", "WARNING: Running low-performance debug mode.\n");
 #endif
 #ifndef ARL_THREAD_PIN
-    backend::print("WARNING: Haven't pinned threads to cores.\n");
+    backend::print("%s", "WARNING: Haven't pinned threads to cores.\n");
 #endif
     num_workers_per_proc = custom_num_workers_per_proc;
     num_threads_per_proc = custom_num_threads_per_proc;
@@ -138,7 +138,11 @@ namespace arl {
     fflush(stdout);
     barrier();
     if (my_worker() == 0) {
-      printf(format.c_str(), args...);
+      if constexpr (sizeof...(args) == 0) {
+        printf("%s", format.c_str());
+      } else {
+        printf(format.c_str(), args...);
+      }
     }
     fflush(stdout);
     barrier();
