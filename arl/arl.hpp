@@ -18,12 +18,14 @@
 #include <gasnetex.h>
 
 #include "global_decl.hpp"
+#include "base/op.hpp"
 // tools
 #include "tool/assert.hpp"
 #include "tool/timer.hpp"
 // backend
 #include "backend/backend.hpp"
 #include "backend/collective.hpp"
+#include "backend/reduce.hpp"
 // base
 #include "base/detail/threadbarrier.hpp"
 #include "base/rank.hpp"

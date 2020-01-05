@@ -9,7 +9,7 @@
 #include <time.h>
 #include <iostream>
 
-#ifndef ARL_DEBUG
+#ifdef ARL_DEBUG
 #   define ARL_Assert(Expr, Msg) \
     __ARL_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
 #else

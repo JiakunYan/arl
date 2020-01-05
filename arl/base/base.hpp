@@ -54,10 +54,10 @@ namespace arl {
     backend::init(shared_segment_size, true);
 
 #ifdef ARL_DEBUG
-    backend::print("WARNING: Running low-performance debug mode");
+    backend::print("WARNING: Running low-performance debug mode.\n");
 #endif
 #ifndef ARL_THREAD_PIN
-    backend::print("WARNING: Haven't pinned threads to cores");
+    backend::print("WARNING: Haven't pinned threads to cores.\n");
 #endif
     num_workers_per_proc = custom_num_workers_per_proc;
     num_threads_per_proc = custom_num_threads_per_proc;
@@ -144,6 +144,11 @@ namespace arl {
     barrier();
   }
 
+  namespace local {
+    inline void barrier() {
+      threadBarrier.wait();
+    }
+  }
 }
 
 #endif //ARL_BASE_HPP
