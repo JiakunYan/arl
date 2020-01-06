@@ -20,10 +20,10 @@ void worker() {
 
 
   arl::print("Sorting %lu integers among %lu workers with aggregation size %lu\n",
-          n_vals, arl::nworkers(), arl::get_agg_size());
+          n_vals, arl::rank_n(), arl::get_agg_size());
 
   // Set up the random engine and generate values
-  std::default_random_engine generator(arl::nworkers());
+  std::default_random_engine generator(arl::rank_n());
   std::uniform_int_distribution<int> distribution(1, range);
 
   std::vector<int> vals;
@@ -38,7 +38,7 @@ void worker() {
   arl::tick_t start = arl::ticks_now();
 
   for (auto& val : vals) {
-    size_t target_rank = (val / partition_size) * arl::nworkers_local();
+    size_t target_rank = (val / partition_size) * arl::local::rank_n();
 
     auto future = arl::rpc_agg(target_rank, histogram_handler, val);
     futures.push_back(std::move(future));
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   arl::set_agg_size(agg_size);
 
   // Initialize the buckets
-  partition_size = (range + arl::nprocs() - 1) / arl::nprocs();
+  partition_size = (range + arl::proc::rank_n() - 1) / arl::proc::rank_n();
   buckets = std::vector<std::atomic<int>>(partition_size);
 
   arl::run(worker);

@@ -6,7 +6,7 @@
 
 void worker() {
 
-  int my_rank = (int) arl::my_worker();
+  int my_rank = (int) arl::rank_me();
   int steps = 1000;
 
   auto fn = [](int a, int b) -> int {
@@ -17,7 +17,7 @@ void worker() {
   std::vector<rv> futures;
 
   for (int i = 0 ; i < steps; i++) {
-    size_t target_rank = rand() % arl::nworkers();
+    size_t target_rank = rand() % arl::rank_n();
     auto f = arl::rpc_agg(target_rank, fn, my_rank, my_rank);
     futures.push_back(std::move(f));
   }

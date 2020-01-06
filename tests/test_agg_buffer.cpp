@@ -26,7 +26,7 @@ void worker() {
     int count = counts[val]++;
     if (print_verbose) {
       printf("Rank %lu push val: (%d, %d), buf_size = %lu\n",
-             arl::my_worker(), val, count, aggBuffer.size());
+             arl::rank_me(), val, count, aggBuffer.size());
     }
     if (status == status_t::SUCCESS_AND_FULL) {
       std::vector<int> buf;
@@ -37,7 +37,7 @@ void worker() {
         }
       else {
         std::ostringstream ostr;
-        ostr << "Rank " << arl::my_worker() << " pop vec: ";
+        ostr << "Rank " << arl::rank_me() << " pop vec: ";
         for (auto val: buf) {
           int count = --counts[val];
           ostr << "(" << val << ", " << count << "), ";
@@ -51,7 +51,7 @@ void worker() {
   arl::barrier();
   arl::print("Finish pushing...\n");
 
-  if (arl::my_worker_local() == 0) {
+  if (arl::local::rank_me() == 0) {
     std::vector<int> buf;
     size_t len = aggBuffer.pop_all(buf);
     if (!print_verbose) {
@@ -61,7 +61,7 @@ void worker() {
       }
     } else {
       std::ostringstream ostr;
-      ostr << "Rank " << arl::my_worker() << " pop vec: ";
+      ostr << "Rank " << arl::rank_me() << " pop vec: ";
       for (int i = 0; i < len; ++i) {
         int val = buf[i];
         int count = --counts[val];
@@ -75,7 +75,7 @@ void worker() {
     for (int i = 0; i < MAX_VAL; ++i) {
       int sum = counts[i].load();
       if (print_verbose && sum != 0) {
-        printf("Error! Proc %lu, val = %d, sum = %d\n", arl::my_proc(), i, sum);
+        printf("Error! Proc %lu, val = %d, sum = %d\n", arl::proc::rank_me(), i, sum);
         success = false;
       } else {
         assert(sum == 0);

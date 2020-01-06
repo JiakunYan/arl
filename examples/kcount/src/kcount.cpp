@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <upcxx/upcxx.hpp>
+#include "arl/arl.hpp"
 
 #include "utils.hpp"
 #include "progressbar.hpp"
@@ -16,7 +16,7 @@
 #include "fastq.hpp"
 
 using namespace std;
-using namespace upcxx;
+using namespace arl;
 
 //#define DBG_ADD_KMER DBG
 #define DBG_ADD_KMER(...)
@@ -31,6 +31,8 @@ bool _verbose = false;
 bool _show_progress = false;
 
 unsigned int Kmer::k = 0;
+
+using options_t = decltype(make_shared<Options>());
 
 uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list) {
   Timer timer(__func__);
@@ -66,9 +68,9 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
   }
   double fraction = (double) total_records_processed / (double) estimated_total_records;
   DBG("This rank processed ", num_lines, " lines (", num_reads, " reads), and found ", num_kmers, " kmers\n");
-  auto all_num_lines = reduce_one(num_lines / fraction, op_fast_add, 0).wait();
-  auto all_num_reads = reduce_one(num_reads / fraction, op_fast_add, 0).wait();
-  auto all_num_kmers = reduce_all(num_kmers / fraction, op_fast_add).wait();
+  auto all_num_lines = reduce_one(num_lines / fraction, op_plus(), 0);
+  auto all_num_reads = reduce_one(num_reads / fraction, op_plus(), 0);
+  auto all_num_kmers = reduce_all(num_kmers / fraction, op_plus());
   int percent = 100.0 * fraction;
   SLOG_VERBOSE("Processed ", percent, " % of the estimated total of ", (int64_t)all_num_lines,
                " lines (", (int64_t)all_num_reads, " reads), and found an estimated maximum of ", 
@@ -125,8 +127,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
   if (pass_type != BLOOM_SET_PASS) SLOG_VERBOSE("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 
-int main(int argc, char **argv) {
-  upcxx::init();
+void worker(const options_t& options) {
   init_logger();
   auto start_t = chrono::high_resolution_clock::now();
   double start_mem_free = get_free_mem_gb();
@@ -139,11 +140,6 @@ int main(int argc, char **argv) {
   _dbgstream.open(dbg_fname);
 #endif
 
-  auto options = make_shared<Options>();
-  if (!options->load(argc, argv)) return 0;
-  set_logger_verbose(options->verbose);
-  _show_progress = options->show_progress;
-  Kmer::k = options->kmer_len;
   // get total file size across all libraries
   double tot_file_size = 0;
   if (!rank_me()) {
@@ -172,9 +168,27 @@ int main(int argc, char **argv) {
   _dbgstream.flush();
   _dbgstream.close();
 #endif
-  barrier();
-  upcxx::finalize();
-  return 0;
 }
 
+int main(int argc, char **argv) {
+  init_logger();
+  double start_mem_free = get_free_mem_gb();
 
+#ifdef DEBUG
+  //time_t curr_t = std::time(nullptr);
+  //string dbg_fname = "debug" + to_string(curr_t) + ".log";
+  string dbg_fname = "debug.log";
+  get_rank_path(dbg_fname, backend::rank_me());
+  _dbgstream.open(dbg_fname);
+#endif
+  auto options = make_shared<Options>();
+  if (!options->load(argc, argv)) return 0;
+  set_logger_verbose(options->verbose);
+  _show_progress = options->show_progress;
+  Kmer::k = options->kmer_len;
+
+  init(15, 16);
+  run(worker, options);
+  finalize();
+  return 0;
+}

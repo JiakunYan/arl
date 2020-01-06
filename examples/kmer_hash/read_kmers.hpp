@@ -66,10 +66,10 @@ size_t line_count(const std::string &fname) {
 }
 
 // Read k-mers from fname.
-// If nprocs and rank are given, each rank will read
+// If proc::rank_n and rank are given, each rank will read
 // an appropriately sized block portion of the k-mers.
-std::vector <kmer_pair> read_kmers(const std::string &fname, size_t num_lines, int nprocs = 1, int rank = 0) {
-  size_t split = (num_lines + nprocs - 1) / nprocs;
+std::vector <kmer_pair> read_kmers(const std::string &fname, size_t num_lines, int proc::rank_n = 1, int rank = 0) {
+  size_t split = (num_lines + proc::rank_n - 1) / proc::rank_n;
   size_t start = split*rank;
   size_t size = std::min(split, num_lines - start);
 

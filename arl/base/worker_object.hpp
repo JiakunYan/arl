@@ -22,25 +22,25 @@ namespace arl {
 
     void init() {
 #ifdef ARL_DEBUG
-      len = nworkers_local();
+      len = local::rank_n();
 #endif
-      objects = std::vector<align_T>(nworkers_local());
+      objects = std::vector<align_T>(local::rank_n());
     }
 
     // T must have copy constructor
     void init(T&& val) {
 #ifdef ARL_DEBUG
-      len = nworkers_local();
+      len = local::rank_n();
 #endif
-      objects = std::vector<align_T>(nworkers_local(), val);
+      objects = std::vector<align_T>(local::rank_n(), val);
     }
 
     T &get() {
 #ifdef ARL_DEBUG
       ARL_Assert(len != 1, "Use before calling init!");
-      ARL_Assert(my_worker_local() < len, "Index out of scope!");
+      ARL_Assert(local::rank_me() < len, "Index out of scope!");
 #endif
-      return objects[my_worker_local()]._val;
+      return objects[local::rank_me()]._val;
     }
   };
 

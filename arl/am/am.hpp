@@ -94,24 +94,24 @@ namespace arl {
 
     gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable)/sizeof(gex_AM_Entry_t));
 
-    acknowledgeds = std::vector<AlignedAtomicSize_t>(nworkers_local());
+    acknowledgeds = std::vector<AlignedAtomicSize_t>(local::rank_n());
     for (auto& t : acknowledgeds) {
       t.val = 0;
     }
-    requesteds = std::vector<AlignedAtomicSize_t>(nworkers_local());
+    requesteds = std::vector<AlignedAtomicSize_t>(local::rank_n());
     for (auto& t : requesteds) {
       t.val = 0;
     }
   }
 
   void flush_am() {
-    while (acknowledgeds[my_worker_local()].val < requesteds[my_worker_local()].val) {
+    while (acknowledgeds[local::rank_me()].val < requesteds[local::rank_me()].val) {
       gasnet_AMPoll();
     }
   }
 
   void flush_am_nopoll() {
-    while (acknowledgeds[my_worker_local()].val < requesteds[my_worker_local()].val) {}
+    while (acknowledgeds[local::rank_me()].val < requesteds[local::rank_me()].val) {}
   }
 
   template<typename T>
@@ -162,10 +162,10 @@ namespace arl {
   template <typename Fn, typename... Args>
   Future<std::invoke_result_t<Fn, Args...>>
   rpc(size_t remote_worker, Fn&& fn, Args&&... args) {
-    ARL_Assert(remote_worker < nworkers(), "");
+    ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / nworkers_local();
-    u_int8_t remote_worker_local = (u_int8_t) remote_worker % nworkers_local();
+    size_t remote_proc = remote_worker / local::rank_n();
+    u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     Future<std::invoke_result_t<Fn, Args...>> future;
     rpc_t my_rpc(future.get_p(), remote_worker_local);
@@ -174,7 +174,7 @@ namespace arl {
     std::vector<rpc_t> rpcs;
     rpcs.push_back(std::move(my_rpc));
     generic_handler_request_impl_(remote_proc, std::move(rpcs));
-    requesteds[my_worker_local()].val++;
+    requesteds[local::rank_me()].val++;
 
     return std::move(future);
   }

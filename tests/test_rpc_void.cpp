@@ -3,7 +3,7 @@
 #include <cassert>
 
 void worker() {
-  int my_rank = (int) arl::my_worker();
+  int my_rank = (int) arl::rank_me();
 
   auto fn = [](int a) {};
 
@@ -11,7 +11,7 @@ void worker() {
   std::vector<rv> futures;
 
   for (int i = 0 ; i < 10; i++) {
-    size_t target_rank = rand() % arl::nworkers();
+    size_t target_rank = rand() % arl::rank_n();
     auto f = arl::rpc(target_rank, fn, my_rank);
     futures.push_back(std::move(f));
   }

@@ -3,9 +3,9 @@
 #include <vector>
 
 void worker() {
-  std::vector<size_t> v(arl::nworkers(), -1);
-  v[arl::my_worker()] = arl::my_worker();
-  for (int i = 0; i < arl::nworkers(); ++i) {
+  std::vector<size_t> v(arl::rank_n(), -1);
+  v[arl::rank_me()] = arl::rank_me();
+  for (int i = 0; i < arl::rank_n(); ++i) {
     arl::broadcast(v[i], i);
     assert(v[i] == i);
   }

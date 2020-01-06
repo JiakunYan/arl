@@ -18,11 +18,11 @@ namespace arl {
 
   inline void barrier() {
     threadBarrier.wait();
-    if (my_worker_local() == 0) {
+    if (local::rank_me() == 0) {
       flush_agg_buffer();
     }
     flush_am();
-    if (my_worker_local() == 0) {
+    if (local::rank_me() == 0) {
       backend::barrier();
     }
     threadBarrier.wait();
@@ -137,7 +137,7 @@ namespace arl {
   void print(std::string format, Args... args) {
     fflush(stdout);
     barrier();
-    if (my_worker() == 0) {
+    if (rank_me() == 0) {
       if constexpr (sizeof...(args) == 0) {
         printf("%s", format.c_str());
       } else {

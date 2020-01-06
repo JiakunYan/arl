@@ -23,29 +23,29 @@ namespace arl {
   public:
     // initialize the local map
     HashMap(size_t size) {
-      my_size = (size + nprocs() - 1) / nprocs();
-      total_size = my_size * nprocs();
+      my_size = (size + proc::rank_n() - 1) / proc::rank_n();
+      total_size = my_size * proc::rank_n();
 
-      map_ptrs.resize(nprocs());
-      if (my_worker_local() == 0) {
-        map_ptrs[my_proc()] = new local_map_t();
-        map_ptrs[my_proc()]->reserve(my_size);
+      map_ptrs.resize(proc::rank_n());
+      if (local::rank_me() == 0) {
+        map_ptrs[proc::rank_me()] = new local_map_t();
+        map_ptrs[proc::rank_me()]->reserve(my_size);
       }
-      for (size_t i = 0; i < nprocs(); ++i) {
-        broadcast(map_ptrs[i], i * nworkers_local());
+      for (size_t i = 0; i < proc::rank_n(); ++i) {
+        broadcast(map_ptrs[i], i * local::rank_n());
       }
     }
 
     ~HashMap() {
       arl::barrier();
-      if (my_worker_local() == 0) {
-        delete map_ptrs[my_proc()];
+      if (local::rank_me() == 0) {
+        delete map_ptrs[proc::rank_me()];
       }
     }
 
     Future<bool> insert(Key key, Val val) {
       size_t target_proc = get_target_proc(key);
-      return rpc(target_proc * nworkers_local(),
+      return rpc(target_proc * local::rank_n(),
                         [](local_map_t* lmap, Key key, Val val){
                           lmap->insert(key, val);
                           return true; // hashmap will never be full
@@ -54,15 +54,15 @@ namespace arl {
 
     Future<Val> find(Key key){
       size_t target_proc = get_target_proc(key);
-      return rpc(target_proc * nworkers_local(),
+      return rpc(target_proc * local::rank_n(),
                         [](local_map_t* lmap, Key key)
                             -> Val {
                             Val out;
                           if (lmap->find(key, out)) {
-//                            printf("Node %lu find {%lu, %lu}\n", my_proc(), key, out);
+//                            printf("Node %lu find {%lu, %lu}\n", proc::rank_me(), key, out);
                             return out;
                           } else {
-//                            printf("Worker %lu cannot find %lu\n", my_worker(), key.hash());
+//                            printf("Worker %lu cannot find %lu\n", rank_me(), key.hash());
                             return Val();
                           }
                         }, map_ptrs[target_proc], key);
@@ -70,7 +70,7 @@ namespace arl {
 
     void insert_ff(Key key, Val val) {
       size_t target_proc = get_target_proc(key);
-      rpc_ff(target_proc * nworkers_local(),
+      rpc_ff(target_proc * local::rank_n(),
              [](local_map_t* lmap, Key key, Val val){
                  lmap->insert(key, val);
              }, map_ptrs[target_proc], key, val);
@@ -78,15 +78,15 @@ namespace arl {
 
     Future<Val> find_agg(Key key){
       size_t target_proc = get_target_proc(key);
-      return rpc_agg(target_proc * nworkers_local(),
+      return rpc_agg(target_proc * local::rank_n(),
                  [](local_map_t* lmap, Key key)
                          -> Val {
                      Val out;
                      if (lmap->find(key, out)) {
-//                            printf("Node %lu find {%lu, %lu}\n", my_proc(), key, out);
+//                            printf("Node %lu find {%lu, %lu}\n", proc::rank_me(), key, out);
                        return out;
                      } else {
-//                            printf("Worker %lu cannot find %lu\n", my_worker(), key.hash());
+//                            printf("Worker %lu cannot find %lu\n", rank_me(), key.hash());
                        return Val();
                      }
                  }, map_ptrs[target_proc], key);

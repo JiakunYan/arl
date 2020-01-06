@@ -13,7 +13,7 @@ void do_something(int i) {
 }
 
 void worker() {
-  int total_num_ops = num_ops * (int) arl::nworkers();
+  int total_num_ops = num_ops * (int) arl::rank_n();
 
   arl::print("Start benchmark %s on %lu ops\n", title, num_ops);
   arl::barrier();

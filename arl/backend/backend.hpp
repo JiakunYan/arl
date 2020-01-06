@@ -14,7 +14,7 @@ namespace arl {
 
   namespace backend {
     rank_t my_proc;
-    rank_t my_nprocs;
+    rank_t nprocs;
     bool finalized;
 
     gex_Client_t client;
@@ -33,7 +33,7 @@ namespace arl {
     }
 
     inline rank_t rank_n() {
-      return my_nprocs;
+      return nprocs;
     }
 
     inline void barrier() {
@@ -62,9 +62,9 @@ namespace arl {
       }
 
       my_proc = gex_System_QueryJobRank();
-      my_nprocs = gex_System_QueryJobSize();
+      nprocs = gex_System_QueryJobSize();
 
-      gasnet_seginfo = (gasnet_seginfo_t*) malloc(sizeof(gasnet_seginfo_t) * my_nprocs);
+      gasnet_seginfo = (gasnet_seginfo_t*) malloc(sizeof(gasnet_seginfo_t) * nprocs);
       gasnet_getSegmentInfo(gasnet_seginfo, rank_n());
 
 //      init_malloc();
@@ -93,6 +93,8 @@ namespace arl {
       barrier();
     }
   }
+
+  namespace proc = backend;
 }
 
 #endif //ARL_BACKEND_HPP

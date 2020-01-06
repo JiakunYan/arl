@@ -9,9 +9,9 @@ namespace arl {
   namespace local {
     template <typename T>
     inline T broadcast(T& val, rank_t root) {
-      ARL_Assert(root < arl::nworkers_local(), "");
+      ARL_Assert(root < arl::local::rank_n(), "");
       static T shared_val;
-      if (my_worker_local() == root) {
+      if (local::rank_me() == root) {
         shared_val = val;
         local::barrier();
       } else {
@@ -26,11 +26,11 @@ namespace arl {
 
   template <typename T>
   inline T broadcast(T& val, rank_t root) {
-    ARL_Assert(root < arl::nworkers(), "");
-    if (my_worker_local() == root % nworkers_local()) {
-      val = backend::broadcast(val, root / nworkers_local());
+    ARL_Assert(root < arl::rank_n(), "");
+    if (local::rank_me() == root % local::rank_n()) {
+      val = backend::broadcast(val, root / local::rank_n());
     }
-    local::broadcast(val, root % nworkers_local());
+    local::broadcast(val, root % local::rank_n());
     return val;
   }
 
@@ -41,11 +41,11 @@ namespace arl {
       static T result = T();
 
       local::barrier();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         result = value;
         order = 1;
       } else {
-        while (order != my_worker_local()) progress();
+        while (order != local::rank_me()) progress();
         result = op(result, value);
         ++order;
       }
@@ -56,12 +56,12 @@ namespace arl {
 
   template <typename T, typename BinaryOp>
   inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
-    ARL_Assert(root < arl::nworkers(), "");
+    ARL_Assert(root < arl::rank_n(), "");
     T result = local::reduce_all(value, op);
-    if (my_worker_local() == root % nworkers_local()) {
-      result = backend::reduce_one(result, op, root / nworkers_local());
+    if (local::rank_me() == root % local::rank_n()) {
+      result = backend::reduce_one(result, op, root / local::rank_n());
     }
-    if (my_worker() == root) {
+    if (rank_me() == root) {
       return result;
     } else {
       return T();
@@ -71,7 +71,7 @@ namespace arl {
   template <typename T, typename BinaryOp>
   inline T reduce_all(const T& value, const BinaryOp& op) {
     T result = local::reduce_all(value, op);
-    if (my_worker_local() == 0) {
+    if (local::rank_me() == 0) {
       result = backend::reduce_all(result, op);
     }
     result = local::broadcast(result, 0);

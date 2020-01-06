@@ -21,8 +21,8 @@ namespace arl {
         );
     agg_size = max_agg_size;
 
-    agg_buffers = std::vector<AggBuffer<rpc_t>>(nprocs());
-    for (size_t i = 0; i < nprocs(); ++i) {
+    agg_buffers = std::vector<AggBuffer<rpc_t>>(proc::rank_n());
+    for (size_t i = 0; i < proc::rank_n(); ++i) {
       agg_buffers[i].init(agg_size);
     }
   }
@@ -30,7 +30,7 @@ namespace arl {
   size_t set_agg_size(size_t custom_agg_size) {
     ARL_Assert(custom_agg_size > 0, "");
     agg_size = std::min(max_agg_size, custom_agg_size);
-    for (size_t i = 0; i < nprocs(); ++i) {
+    for (size_t i = 0; i < proc::rank_n(); ++i) {
       agg_buffers[i].init(agg_size);
     }
     return agg_size.load();
@@ -53,7 +53,7 @@ namespace arl {
   }
 
   void flush_agg_buffer() {
-    for (size_t i = 0; i < nprocs(); i++) {
+    for (size_t i = 0; i < proc::rank_n(); i++) {
       flush_agg_buffer_single(i);
     }
   }
@@ -61,10 +61,10 @@ namespace arl {
   template <typename Fn, typename... Args>
   Future<std::invoke_result_t<Fn, Args...>>
   rpc_agg(size_t remote_worker, Fn&& fn, Args&&... args) {
-    ARL_Assert(remote_worker < nworkers(), "");
+    ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / nworkers_local();
-    u_int8_t remote_worker_local = (u_int8_t) remote_worker % nworkers_local();
+    size_t remote_proc = remote_worker / local::rank_n();
+    u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     Future<std::invoke_result_t<Fn, Args...>> future;
     rpc_t my_rpc(future.get_p(), remote_worker_local);
@@ -77,7 +77,7 @@ namespace arl {
     if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
       flush_agg_buffer_single(remote_proc);
     }
-    requesteds[my_worker_local()].val++;
+    requesteds[local::rank_me()].val++;
 
     return std::move(future);
   }
@@ -85,10 +85,10 @@ namespace arl {
   template <typename Fn, typename... Args>
   void rpc_ff(size_t remote_worker, Fn&& fn, Args&&... args) {
     static_assert(std::is_same<std::invoke_result_t<Fn, Args...>, void>::value, "rpc_ff must return void!");
-    ARL_Assert(remote_worker < nworkers(), "");
+    ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / nworkers_local();
-    u_int8_t remote_worker_local = (u_int8_t) remote_worker % nworkers_local();
+    size_t remote_proc = remote_worker / local::rank_n();
+    u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     rpc_t my_rpc(NULL, remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
@@ -100,7 +100,7 @@ namespace arl {
     if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
       flush_agg_buffer_single(remote_proc);
     }
-    requesteds[my_worker_local()].val++;
+    requesteds[local::rank_me()].val++;
 
     return;
   }

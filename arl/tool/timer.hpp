@@ -31,12 +31,14 @@ namespace arl {
 
   inline void update_average(double &average, uint64_t val, uint64_t num) {
     average += (val - average) / num;
-//      if (my_worker() == 0) {
+//      if (rank_me() == 0) {
 //        std::printf("val=%lu; num=%lu; average=%.2lf\n", val, num, average);
 //      }
   }
 
-  extern rank_t my_worker_local();
+  namespace local {
+    extern rank_t rank_me();
+  }
 
   struct SharedTimer {
   private:
@@ -45,7 +47,7 @@ namespace arl {
     alignas(alignof_cacheline) double _ticks = 0;
   public:
     void start() {
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         _start = ticks_now();
       } else {
         ticks_now();
@@ -54,14 +56,14 @@ namespace arl {
 
     void end_and_update() {
       tick_t _end = ticks_now();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         update_average(_ticks, _end - _start, ++step);
       }
     }
 
     void tick_and_update(tick_t _start_) {
       tick_t _end = ticks_now();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         update_average(_ticks, _end - _start_, ++step);
       }
     }
@@ -79,7 +81,7 @@ namespace arl {
     }
 
     void print_us(std::string &&name = "") const {
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         printf("Duration %s: %.3lf us\n", name.c_str(), to_us());
       }
     }

@@ -18,17 +18,17 @@ constexpr size_t range = 1 << 28;
 size_t partition_size;
 
 void histogram_handler(int val) {
-  size_t bucket_start = arl::my_worker() * partition_size;
+  size_t bucket_start = arl::rank_me() * partition_size;
   mObjects.get().v[val - bucket_start] += 1;
 }
 
 void worker() {
-  size_t n_ops = n_vals / arl::nworkers_local();
+  size_t n_ops = n_vals / arl::local::rank_n();
   arl::print("Sorting %lu integers among %lu workers with aggregation size %lu\n",
-          n_vals * arl::nprocs(), arl::nworkers(), arl::get_agg_size());
+          n_vals * arl::proc::rank_n(), arl::rank_n(), arl::get_agg_size());
 
   // Set up the random engine and generate values
-  std::default_random_engine generator(arl::nworkers());
+  std::default_random_engine generator(arl::rank_n());
   std::uniform_int_distribution<int> distribution(1, range);
 
   std::vector<int> vals;
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
   mObjects.init();
   arl::set_agg_size(agg_size);
 
-  partition_size = (range + arl::nworkers() - 1) / arl::nworkers();
+  partition_size = (range + arl::rank_n() - 1) / arl::rank_n();
 
 
   arl::run(worker);

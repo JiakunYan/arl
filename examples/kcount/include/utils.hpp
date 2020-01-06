@@ -53,7 +53,7 @@ inline void find_and_replace(std::string& subject, const std::string& search, co
 }
 
 inline void init_logger() {
-  if (!upcxx::rank_me()) _logstream.open("kcount.log");
+  if (!arl::backend::rank_me()) _logstream.open("kcount.log");
 }
 
 inline void set_logger_verbose(bool verbose) {

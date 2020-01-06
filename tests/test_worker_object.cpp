@@ -15,10 +15,10 @@ void histogram_handler(int idx) {
 void worker() {
 
   int local_range = 5;
-  int total_range = local_range * (int) arl::nworkers();
+  int total_range = local_range * (int) arl::rank_n();
 
-  size_t my_rank = arl::my_worker_local();
-  int nworkers = (int) arl::nworkers();
+  size_t my_rank = arl::local::rank_me();
+  int nworkers = (int) arl::rank_n();
 
   mObjects.get().v = std::vector<std::atomic<int>>(local_range);
 

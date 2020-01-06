@@ -14,7 +14,7 @@ void empty_handler() {
 void worker() {
 
   int num_ops = 100000;
-  int total_num_ops = num_ops * (int) arl::nworkers();
+  int total_num_ops = num_ops * (int) arl::rank_n();
   double ticks_step = 0;
 #ifdef ARL_PROFILE
   arl::SharedTimer timer_rand;
@@ -23,8 +23,8 @@ void worker() {
   arl::SharedTimer timer_barrier;
   arl::SharedTimer timer_get;
 #endif
-  size_t my_rank = arl::my_worker();
-  size_t nworkers = arl::nworkers();
+  size_t my_rank = arl::rank_me();
+  size_t nworkers = arl::rank_n();
 
   using rv = decltype(arl::rpc(size_t(), empty_handler));
   std::vector<rv> futures;
@@ -65,7 +65,7 @@ void worker() {
   arl::flush_agg_buffer();
   arl::tick_t end_req = arl::ticks_now();
   arl::flush_am();
-  if (arl::my_worker_local() == 0) {
+  if (arl::local::rank_me() == 0) {
     arl::backend::barrier();
   }
   arl::threadBarrier.wait();

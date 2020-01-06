@@ -22,8 +22,8 @@ namespace arl {
         );
     agg_size = max_agg_size;
 
-    agg_buffers.resize(nprocs());
-    agg_locks = std::vector<std::mutex>(nprocs());
+    agg_buffers.resize(proc::rank_n());
+    agg_locks = std::vector<std::mutex>(proc::rank_n());
   }
 
   size_t set_agg_size(size_t custom_agg_size) {
@@ -43,7 +43,7 @@ namespace arl {
   }
 
   void flush_agg_buffer() {
-    for (size_t i = my_worker_local(); i < nprocs(); i += nworkers_local()) {
+    for (size_t i = local::rank_me(); i < proc::rank_n(); i += local::rank_n()) {
       agg_locks[i].lock();
       if (!agg_buffers[i].empty()) {
         std::vector<rpc_t> send_buf = std::move(agg_buffers[i]);
@@ -60,10 +60,10 @@ namespace arl {
   template <typename Fn, typename... Args>
   Future<std::invoke_result_t<Fn, Args...>>
   rpc_agg(size_t remote_worker, Fn&& fn, Args&&... args) {
-    assert(remote_worker < nworkers());
+    assert(remote_worker < rank_n());
 
-    size_t remote_proc = remote_worker / nworkers_local();
-    u_int8_t remote_worker_local = (u_int8_t) remote_worker % nworkers_local();
+    size_t remote_proc = remote_worker / local::rank_n();
+    u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
 #ifdef ARL_PROFILE
     tick_t start_load = ticks_now();
@@ -74,7 +74,7 @@ namespace arl {
 #ifdef ARL_PROFILE
     static int step_load = 0;
     tick_t end_load = ticks_now();
-    if (my_worker_local() == 0) {
+    if (local::rank_me() == 0) {
       update_average(ticks_load, end_load - start_load, ++step_load);
     }
 #endif
@@ -91,7 +91,7 @@ namespace arl {
 #ifdef ARL_PROFILE
       static int step_agg_buffer_pop = 0;
       tick_t end = ticks_now();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         update_average(ticks_agg_buf_pop, end - start, ++step_agg_buffer_pop);
       }
 #endif
@@ -103,7 +103,7 @@ namespace arl {
 #ifdef ARL_PROFILE
       static int step_gex_req = 0;
       tick_t end_gex_req = ticks_now();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         update_average(ticks_gex_req, end_gex_req - start_gex_req, ++step_gex_req);
       }
 #endif
@@ -113,7 +113,7 @@ namespace arl {
 #ifdef ARL_PROFILE
       static int step = 0;
       tick_t end = ticks_now();
-      if (my_worker_local() == 0) {
+      if (local::rank_me() == 0) {
         update_average(ticks_agg_buf_npop, end - start, ++step);
       }
 #endif

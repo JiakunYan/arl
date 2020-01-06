@@ -28,29 +28,47 @@ namespace arl {
     return thread_contexts[get_thread_id()].val;
   }
 
-  inline rank_t my_worker_local() {
-    return get_context();
+  namespace local {
+    inline rank_t rank_me() {
+      return get_context();
+    }
+
+    inline rank_t rank_n() {
+      return num_workers_per_proc;
+    }
   }
 
-  inline rank_t nworkers_local() {
-    return num_workers_per_proc;
+  inline rank_t rank_me() {
+    return local::rank_me() + proc::rank_me() * num_workers_per_proc;
   }
 
-  inline rank_t my_proc() {
-    return backend::rank_me();
+  inline rank_t rank_n() {
+    return proc::rank_n() * num_workers_per_proc;
   }
 
-  inline rank_t nprocs() {
-    return backend::rank_n();
-  }
-
-  inline rank_t my_worker() {
-    return my_worker_local() + my_proc() * num_workers_per_proc;
-  }
-
-  inline rank_t nworkers() {
-    return nprocs() * num_workers_per_proc;
-  }
+//  inline rank_t local::rank_me() {
+//    return get_context();
+//  }
+//
+//  inline rank_t local::rank_n() {
+//    return num_workers_per_proc;
+//  }
+//
+//  inline rank_t proc::rank_me() {
+//    return backend::rank_me();
+//  }
+//
+//  inline rank_t proc::rank_n() {
+//    return backend::rank_n();
+//  }
+//
+//  inline rank_t rank_me() {
+//    return local::rank_me() + proc::rank_me() * num_workers_per_proc;
+//  }
+//
+//  inline rank_t rank_n() {
+//    return proc::rank_n() * num_workers_per_proc;
+//  }
 }
 
 #endif //ARL_RANK_HPP

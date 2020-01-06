@@ -34,7 +34,7 @@ void worker(size_t n_kmers) {
                  hash_table_size, n_kmers);
   }
 
-  std::vector <kmer_pair> kmers = read_kmers(kmer_fname, n_kmers, arl::nworkers(), arl::my_worker());
+  std::vector <kmer_pair> kmers = read_kmers(kmer_fname, n_kmers, arl::rank_n(), arl::rank_me());
 
   if (run_type == "verbose" || run_type == "verbose_test") {
     arl::print("Finished reading kmers.\n");
@@ -90,7 +90,7 @@ void worker(size_t n_kmers) {
   size_t iter_count = 0;
   size_t total_count = 0;
   size_t inactive_count = 0;
-  std::ofstream fout2("profile_" + std::to_string(arl::my_worker()) + ".dat");
+  std::ofstream fout2("profile_" + std::to_string(arl::rank_me()) + ".dat");
   tick_t now_profile = ticks_now();
   fout2 << taskPool.size() << " " << ticks_to_us(now_profile-start_profile) << std::endl;
   while (!taskPool.empty()) {
@@ -169,12 +169,12 @@ void worker(size_t n_kmers) {
 
   if (run_type == "verbose" || run_type == "verbose_test") {
     printf("Rank %d reconstructed %d contigs with %d nodes from %d start nodes."
-           " (%lf read, %lf insert, %lf total)\n", arl::my_worker(), contigs.size(),
+           " (%lf read, %lf insert, %lf total)\n", arl::rank_me(), contigs.size(),
            numKmers, start_nodes.size(), read.count(), insert.count(), total.count());
   }
 
   if (run_type == "test" || run_type == "verbose_test") {
-    std::ofstream fout("test_" + std::to_string(arl::my_worker()) + ".dat");
+    std::ofstream fout("test_" + std::to_string(arl::rank_me()) + ".dat");
     for (const auto &contig : contigs) {
       fout << extract_contig(contig) << std::endl;
     }
