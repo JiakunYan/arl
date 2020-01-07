@@ -12,7 +12,7 @@
 #include "utils.hpp"
 #include "progressbar.hpp"
 #include "options.hpp"
-#include "kmer_dht.hpp"
+#include "kmer_dht_arl.hpp"
 #include "fastq.hpp"
 
 using namespace std;
@@ -78,7 +78,7 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
   return num_kmers / fraction;
 }
 
-static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dist_object<KmerDHT> &kmer_dht, 
+static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
   Timer timer(__func__);
   int64_t num_reads = 0;
@@ -109,20 +109,20 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
       // split into kmers
       auto kmers = Kmer::get_kmers(kmer_len, seq);
       for (int i = 1; i < kmers.size() - 1; i++) {
-        kmer_dht->add_kmer(kmers[i], pass_type);
+        kmer_dht.add_kmer(kmers[i], pass_type);
         num_kmers++;
       }
       progress();
     }
     progbar.done();
-    kmer_dht->flush_updates(pass_type);
+    kmer_dht.flush_updates(pass_type);
   }
   read_io_timer.done();
   DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
-  auto all_num_lines = reduce_one(num_lines, op_fast_add, 0).wait();
-  auto all_num_reads = reduce_one(num_reads, op_fast_add, 0).wait();
-  auto all_num_kmers = reduce_one(num_kmers, op_fast_add, 0).wait();
-  auto all_distinct_kmers = kmer_dht->get_num_kmers();
+  auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
+  auto all_num_reads = reduce_one(num_reads, op_plus(), 0);
+  auto all_num_kmers = reduce_one(num_kmers, op_plus(), 0);
+  auto all_distinct_kmers = kmer_dht.get_num_kmers();
   SLOG_VERBOSE("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_VERBOSE("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
@@ -148,21 +148,21 @@ void worker(const options_t& options) {
          " is ", get_size_str(tot_file_size), "\n");
   }
   auto my_num_kmers = estimate_num_kmers(options->kmer_len, options->reads_fname_list);
-  dist_object<KmerDHT> kmer_dht(world(), my_num_kmers, options->max_kmer_store_mb * ONE_MB);
+  KmerDHT kmer_dht(my_num_kmers, options->max_kmer_store_mb * ONE_MB);
   barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_SET_PASS);
-  kmer_dht->reserve_space_and_clear_bloom();
+  kmer_dht.reserve_space_and_clear_bloom();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_COUNT_PASS);
   barrier();
-  SLOG_VERBOSE("kmer DHT load factor: ", kmer_dht->load_factor(), "\n");
+  SLOG_VERBOSE("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
   barrier();
-  kmer_dht->purge_kmers(options->depth_thres);
-  int64_t new_count = kmer_dht->get_num_kmers();
+  kmer_dht.purge_kmers(options->depth_thres);
+  int64_t new_count = kmer_dht.get_num_kmers();
   SLOG_VERBOSE("After purge of kmers < ", options->depth_thres, " there are ", new_count, " unique kmers\n");
   barrier();
   chrono::duration<double> t_elapsed = chrono::high_resolution_clock::now() - start_t;
   SLOG("Finished in ", setprecision(2), fixed, t_elapsed.count(), " s at ", get_current_time(), "\n");
-  if (!options->output_fname.empty()) kmer_dht->dump_kmers(options->output_fname, options->kmer_len);
+  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
 
 #ifdef DEBUG
   _dbgstream.flush();

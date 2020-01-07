@@ -26,6 +26,23 @@ void __ARL_Assert(const char* expr_str, bool expr, const char* file, int line, c
   }
 }
 
+#   define ARL_Error(Msg) \
+    __ARL_Error(__FILE__, __LINE__, Msg)
+void __ARL_Error(const char* file, int line, const char* msg)
+{
+  std::cerr << "ERROR:\t" << msg << "\n"
+            << "Source:\t\t" << file << ", line " << line << std::endl;
+  abort();
+}
+
+#   define ARL_Warn(Msg) \
+    __ARL_Warn(__FILE__, __LINE__, Msg)
+void __ARL_Warn(const char* file, int line, const char* msg)
+{
+  std::cerr << "WARNING:\t" << msg << "\n"
+            << "Source:\t\t" << file << ", line " << line << std::endl;
+}
+
 #define ARL_Assert_Align(Val, alignof_size) ARL_Assert(alignof(Val) % alignof_size == 0, "alignment check failed!")
 
 #endif //ARL_ASSERT_HPP

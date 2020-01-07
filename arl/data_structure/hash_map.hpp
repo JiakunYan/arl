@@ -8,11 +8,12 @@ namespace arl {
   template <
       typename Key,
       typename Val,
-      typename Hash = std::hash<Key>
+      typename Hash = std::hash<Key>,
+      class KeyEqual = std::equal_to<Key>
   >
   class HashMap {
   private:
-    using local_map_t = libcuckoo::cuckoohash_map<Key, Val, Hash>;
+    using local_map_t = libcuckoo::cuckoohash_map<Key, Val, Hash, KeyEqual>;
     std::vector<local_map_t*> map_ptrs;
     size_t my_size;
     size_t total_size;
