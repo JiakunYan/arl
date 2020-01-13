@@ -49,7 +49,7 @@ void worker(size_t local_num) {
   }
 
   size_t error_num = 0;
-  for (size_t i = local_num; i < local_num + test_num; ++i) {
+  for (size_t i = local_num; i < local_num + local_num; ++i) {
     flat_string_t val = string_format(rank_me(), "_", i);
     bool error = bloomFilter.possibly_contains(val);
     if (error) {
@@ -60,7 +60,7 @@ void worker(size_t local_num) {
   barrier();
   size_t total_fn_error = reduce_one(fn_error, op_plus(), 0);
   size_t total_error_num = reduce_one(error_num, op_plus(), 0);
-  double error_rate = (double)total_error_num / test_num / rank_n();
+  double error_rate = (double)total_error_num / local_num / rank_n();
   print("False negative number is %lu\n", total_fn_error);
   print("Total entry number is %lu\n", test_num);
   print("Design error rate is %lf\n", p);

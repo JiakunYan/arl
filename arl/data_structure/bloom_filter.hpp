@@ -35,7 +35,7 @@ namespace arl {
         typename NextHash = BloomNextHash
     >
     class BloomFilter {
-      using bucket_t = unsigned long long;
+      using bucket_t = uint64_t;
       size_t hash_n;
       size_t bucket_n;
       std::vector<std::atomic<bucket_t>> buckets;
