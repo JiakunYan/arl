@@ -45,30 +45,6 @@ namespace arl {
   inline rank_t rank_n() {
     return proc::rank_n() * num_workers_per_proc;
   }
-
-//  inline rank_t local::rank_me() {
-//    return get_context();
-//  }
-//
-//  inline rank_t local::rank_n() {
-//    return num_workers_per_proc;
-//  }
-//
-//  inline rank_t proc::rank_me() {
-//    return backend::rank_me();
-//  }
-//
-//  inline rank_t proc::rank_n() {
-//    return backend::rank_n();
-//  }
-//
-//  inline rank_t rank_me() {
-//    return local::rank_me() + proc::rank_me() * num_workers_per_proc;
-//  }
-//
-//  inline rank_t rank_n() {
-//    return proc::rank_n() * num_workers_per_proc;
-//  }
 }
 
 #endif //ARL_RANK_HPP

@@ -29,7 +29,7 @@ void worker() {
 
 int main(int argc, char** argv) {
   // one process per node
-  arl::init(2, 3);
+  arl::init(15, 16);
   arl::run(worker);
 
   arl::finalize();

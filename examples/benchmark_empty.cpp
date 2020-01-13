@@ -1,6 +1,6 @@
 #define ARL_PROFILE
 #include "arl/arl.hpp"
-#include "arl/tool/assert.hpp"
+#include "arl/tool/utils.hpp"
 #include <cassert>
 #include "external/cxxopts.hpp"
 

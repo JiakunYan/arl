@@ -20,7 +20,7 @@
 #include "global_decl.hpp"
 #include "base/op.hpp"
 // tools
-#include "tool/assert.hpp"
+#include "arl/tool/utils.hpp"
 #include "tool/timer.hpp"
 // backend
 #include "backend/backend.hpp"
@@ -39,6 +39,7 @@
 #include "am/am_agg.hpp"
 // data structure
 #include "data_structure/hash_map.hpp"
+#include "data_structure/bloom_filter.hpp"
 
 namespace arl {
 }

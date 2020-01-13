@@ -9,7 +9,7 @@ namespace arl {
       typename Key,
       typename Val,
       typename Hash = std::hash<Key>,
-      class KeyEqual = std::equal_to<Key>
+      typename KeyEqual = std::equal_to<Key>
   >
   class HashMap {
   private:
