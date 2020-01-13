@@ -18,8 +18,17 @@ struct flat_string_t {
   }
 };
 
+namespace std {
+  template <>
+  struct hash<flat_string_t> {
+    uint64_t operator()(flat_string_t val) {
+      return std::hash<std::string>{}(string(val.str));
+    }
+  };
+}
+
 size_t test_num = 10000;
-double p = 0.05;
+double p = 0.01;
 local::BloomFilter<flat_string_t> bloomFilter(test_num, p);
 
 void worker(size_t local_num) {

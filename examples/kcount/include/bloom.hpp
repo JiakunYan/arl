@@ -37,9 +37,9 @@ public:
     try {
       m_bits.resize(num_bits, false);
     } catch (std::exception &e) {
-      DIE(e.what(), " note: num bits is ", num_bits, " dentries is ", dentries, " bpe is ", bpe);
+//      DIE(e.what(), " note: num bits is ", num_bits, " dentries is ", dentries, " bpe is ", bpe);
     }
-    SLOG_VERBOSE("Rank 0 created bloom filter with ", num_bits, " bits and ", num_hashes, " hashes\n");
+//    SLOG_VERBOSE("Rank 0 created bloom filter with ", num_bits, " bits and ", num_hashes, " hashes\n");
   }
 
   void clear() {
