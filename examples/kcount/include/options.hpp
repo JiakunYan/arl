@@ -4,9 +4,8 @@
 #include <iostream>
 #include <regex>
 #include <sys/stat.h>
-#include <upcxx/upcxx.hpp>
 
-#include "utils.hpp"
+#include "arl/arl.hpp"
 #include "CLI11.hpp"
 
 using std::cout;
@@ -44,14 +43,14 @@ struct Options {
     try {
       app.parse(argc, argv);
     } catch(const CLI::ParseError &e) {
-      if (upcxx::rank_me() == 0) app.exit(e);
+      if (arl::proc::rank_me() == 0) app.exit(e);
       return false;
     }
 
     reads_fname_list = split(reads_fnames, ',');
     if (show_progress) verbose = true;
 
-    if (upcxx::rank_me() == 0) {
+    if (arl::proc::rank_me() == 0) {
       // print out all compiler definitions
       SLOG(KBLUE, "_________________________\nCompiler definitions:", KNORM, "\n");
       std::istringstream all_defs_ss(ALL_DEFNS);
@@ -72,12 +71,12 @@ struct Options {
 
       double start_mem_free = get_free_mem_gb();
       SLOG("Initial free memory on node 0: ", std::setprecision(3), std::fixed, start_mem_free, " GB\n");
-      SLOG("Running on ", upcxx::rank_n(), " ranks\n");
+      SLOG("Running on ", arl::proc::rank_n(), " ranks\n");
 #ifdef DEBUG
       SWARN("Running low-performance debug mode", KNORM);
 #endif
     }
-    upcxx::barrier();
+    arl::proc::barrier();
     return true;
   }
 };

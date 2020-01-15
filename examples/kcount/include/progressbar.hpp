@@ -6,9 +6,8 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <upcxx/upcxx.hpp>
 
-#include "utils.hpp"
+#include "arl/arl.hpp"
 #include "colors.h"
 
 using std::string;
@@ -43,7 +42,7 @@ public:
     , complete_char{complete}
     , incomplete_char{incomplete} {
       if (_show_progress) {
-        if (upcxx::rank_me() == RANK_FOR_PROGRESS) {
+        if (arl::rank_me() == RANK_FOR_PROGRESS) {
           ten_perc = total / 10;
           if (ten_perc == 0) ten_perc = 1;
           std::cout << KLGREEN << "* " << prefix_str << "... " << std::flush;
@@ -62,7 +61,7 @@ public:
     , complete_char{complete}
     , incomplete_char{incomplete} {
       if (_show_progress) {
-        if (upcxx::rank_me() == RANK_FOR_PROGRESS) {
+        if (arl::rank_me() == RANK_FOR_PROGRESS) {
           /*
             struct stat stat_buf;
             stat(fname.c_str(), &stat_buf);
@@ -88,7 +87,7 @@ public:
 
   void display(bool is_last = false) {
     if (_show_progress) {
-      if (upcxx::rank_me() != RANK_FOR_PROGRESS) return;
+      if (arl::rank_me() != RANK_FOR_PROGRESS) return;
       if (total_ticks == 0) return;
       float progress = (float) ticks / total_ticks;
       int pos = (int) (bar_width * progress);
@@ -112,10 +111,10 @@ public:
       std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
       auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
       DBG("Time ", prefix_str, ": ", (double)time_elapsed / 1000, "\n");
-      double max_time = (double)upcxx::reduce_one(time_elapsed, upcxx::op_fast_max, 0).wait() / 1000;
-      double tot_time = (double)upcxx::reduce_one(time_elapsed, upcxx::op_fast_add, 0).wait() / 1000;
-      double av_time = tot_time / upcxx::rank_n();
-      if (upcxx::rank_me() == RANK_FOR_PROGRESS) {
+      double max_time = (double)arl::reduce_one(time_elapsed, arl::op_plus(), 0) / 1000;
+      double tot_time = (double)arl::reduce_one(time_elapsed, arl::op_plus(), 0) / 1000;
+      double av_time = tot_time / arl::rank_n();
+      if (arl::rank_me() == RANK_FOR_PROGRESS) {
         std::cout << std::setprecision(2) << std::fixed;
         std::cout << "  Average " << av_time << " max " << max_time << " (balance " <<  (max_time == 0.0 ? 1.0 : (av_time / max_time))
                   << ")"<< KNORM << std::endl;

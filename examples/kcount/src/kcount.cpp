@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include "arl/arl.hpp"
 
+#include "config.hpp"
 #include "utils.hpp"
 #include "progressbar.hpp"
 #include "options.hpp"
@@ -18,15 +19,6 @@
 using namespace std;
 using namespace arl;
 
-//#define DBG_ADD_KMER DBG
-#define DBG_ADD_KMER(...)
-
-#ifndef NDEBUG
-#define DEBUG
-ofstream _dbgstream;
-#endif
-ofstream _logstream;
-
 bool _verbose = false;
 bool _show_progress = false;
 
@@ -34,8 +26,8 @@ unsigned int Kmer::k = 0;
 
 using options_t = decltype(make_shared<Options>());
 
+
 uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list) {
-  Timer timer(__func__);
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -67,12 +59,12 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
     barrier();
   }
   double fraction = (double) total_records_processed / (double) estimated_total_records;
-  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads), and found ", num_kmers, " kmers\n");
+//  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads), and found ", num_kmers, " kmers\n");
   auto all_num_lines = reduce_one(num_lines / fraction, op_plus(), 0);
   auto all_num_reads = reduce_one(num_reads / fraction, op_plus(), 0);
   auto all_num_kmers = reduce_all(num_kmers / fraction, op_plus());
   int percent = 100.0 * fraction;
-  SLOG_VERBOSE("Processed ", percent, " % of the estimated total of ", (int64_t)all_num_lines,
+  SLOG("Processed ", percent, " % of the estimated total of ", (int64_t)all_num_lines,
                " lines (", (int64_t)all_num_reads, " reads), and found an estimated maximum of ", 
                (int64_t)all_num_kmers, " kmers\n");
   return num_kmers / fraction;
@@ -80,7 +72,6 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
-  Timer timer(__func__);
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -89,7 +80,6 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     case BLOOM_SET_PASS: progbar_prefix = "Pass 1: Parsing reads file to setup bloom filter"; break;
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
-  IntermittentTimer read_io_timer("Read IO");
   //char special = qual_offset + 2;
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
@@ -97,9 +87,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     ProgressBar progbar(fqr.my_file_size(), progbar_prefix);
     size_t tot_bytes_read = 0;
     while (true) {
-      read_io_timer.start();
       size_t bytes_read = fqr.get_next_fq_record(id, seq, quals);
-      read_io_timer.stop();
       if (!bytes_read) break;
       num_lines += 4;
       num_reads++;
@@ -109,36 +97,32 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       // split into kmers
       auto kmers = Kmer::get_kmers(kmer_len, seq);
       for (int i = 1; i < kmers.size() - 1; i++) {
-        kmer_dht.add_kmer(kmers[i], pass_type);
+        switch (pass_type) {
+          case BLOOM_SET_PASS:
+            kmer_dht.add_kmer_set(kmers[i]);
+            break;
+          case BLOOM_COUNT_PASS:
+            kmer_dht.add_kmer_count(kmers[i]);
+            break;
+        };
         num_kmers++;
       }
       progress();
     }
     progbar.done();
-    kmer_dht.flush_updates(pass_type);
+    flush_agg_buffer();
   }
-  read_io_timer.done();
-  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
+//  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
   auto all_num_reads = reduce_one(num_reads, op_plus(), 0);
   auto all_num_kmers = reduce_one(num_kmers, op_plus(), 0);
-  auto all_distinct_kmers = kmer_dht.get_num_kmers();
-  SLOG_VERBOSE("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
-  if (pass_type != BLOOM_SET_PASS) SLOG_VERBOSE("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
+  auto all_distinct_kmers = kmer_dht.size();
+  SLOG("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
+  if (pass_type != BLOOM_SET_PASS) SLOG("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 
 void worker(const options_t& options) {
-  init_logger();
   auto start_t = chrono::high_resolution_clock::now();
-  double start_mem_free = get_free_mem_gb();
-
-#ifdef DEBUG
-  //time_t curr_t = std::time(nullptr);
-  //string dbg_fname = "debug" + to_string(curr_t) + ".log";
-  string dbg_fname = "debug.log";
-  get_rank_path(dbg_fname, rank_me());
-  _dbgstream.open(dbg_fname);
-#endif
 
   // get total file size across all libraries
   double tot_file_size = 0;
@@ -148,7 +132,7 @@ void worker(const options_t& options) {
          " is ", get_size_str(tot_file_size), "\n");
   }
   auto my_num_kmers = estimate_num_kmers(options->kmer_len, options->reads_fname_list);
-  KmerDHT kmer_dht(my_num_kmers, options->max_kmer_store_mb * ONE_MB);
+  KmerDHT kmer_dht(my_num_kmers);
   barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_SET_PASS);
   kmer_dht.reserve_space_and_clear_bloom();
@@ -157,37 +141,21 @@ void worker(const options_t& options) {
   SLOG_VERBOSE("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
   barrier();
   kmer_dht.purge_kmers(options->depth_thres);
-  int64_t new_count = kmer_dht.get_num_kmers();
+  int64_t new_count = kmer_dht.size();
   SLOG_VERBOSE("After purge of kmers < ", options->depth_thres, " there are ", new_count, " unique kmers\n");
   barrier();
   chrono::duration<double> t_elapsed = chrono::high_resolution_clock::now() - start_t;
   SLOG("Finished in ", setprecision(2), fixed, t_elapsed.count(), " s at ", get_current_time(), "\n");
-  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
-
-#ifdef DEBUG
-  _dbgstream.flush();
-  _dbgstream.close();
-#endif
+//  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
 }
 
 int main(int argc, char **argv) {
-  init_logger();
-  double start_mem_free = get_free_mem_gb();
-
-#ifdef DEBUG
-  //time_t curr_t = std::time(nullptr);
-  //string dbg_fname = "debug" + to_string(curr_t) + ".log";
-  string dbg_fname = "debug.log";
-  get_rank_path(dbg_fname, backend::rank_me());
-  _dbgstream.open(dbg_fname);
-#endif
+  init(15, 16);
   auto options = make_shared<Options>();
   if (!options->load(argc, argv)) return 0;
-  set_logger_verbose(options->verbose);
   _show_progress = options->show_progress;
   Kmer::k = options->kmer_len;
 
-  init(15, 16);
   run(worker, options);
   finalize();
   return 0;

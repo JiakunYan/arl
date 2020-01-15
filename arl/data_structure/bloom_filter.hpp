@@ -5,7 +5,6 @@
 #ifndef ARL_BLOOM_FILTER_HPP
 #define ARL_BLOOM_FILTER_HPP
 
-#include "detail/hash_funcs.h"
 #include <math.h>
 
 namespace arl {
@@ -108,6 +107,22 @@ namespace arl {
 //        printf("find %s: (%lu, %016lx) old %016lx, %s\n", data.str, bucket_id, my_bucket, the_bucket, is_contained? "true": "false");
 
         return is_contained;
+      }
+
+      void clear() {
+        std::vector<std::atomic<bucket_t>>().swap(buckets);
+      }
+
+      size_t estimate_num_items() const {
+        size_t bits_on = 0, m = buckets.size()* sizeof(bucket_t)*8, k = hash_n;
+        for (auto it = buckets.begin(); it != buckets.end(); it++) {
+          bucket_t n = *it;
+          while (n) {
+            n &= (n - 1);
+            bits_on++;
+          }
+        }
+        return (size_t) (- ((double) m/ (double) k) * log( 1.0 - ((double) bits_on / (double) m) ) + 0.5);
       }
     };
   }

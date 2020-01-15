@@ -9,10 +9,10 @@
 #include <fstream>
 #include <limits>
 #include <regex>
-#include <upcxx/upcxx.hpp>
 
 #include "bytell_hash_map.hpp"
 #include "colors.h"
+#include "arl/arl.hpp"
 
 using std::string;
 using std::stringstream;
@@ -40,9 +40,30 @@ using std::min;
 #define HASH_TABLE std::unordered_map
 #endif
 
+#define DIE(...) arl::ARL_Error(__VA_ARGS__)
+#define SDIE(...) arl::ARL_Error(__VA_ARGS__)
+#define WARN(...) arl::ARL_Warn(__VA_ARGS__)
+#define SWARN(...) arl::ARL_Warn(__VA_ARGS__)
+#define DBG(...)
 
 extern ofstream _logstream;
 extern bool _verbose;
+
+#define SLOG_VERBOSE(...) verbose(__VA_ARGS__)
+#define SLOG(...) slog(__VA_ARGS__)
+
+template <typename... Args>
+void slog(Args... args) {
+  string str = arl::string_format(args...);
+  arl::print("%s", str);
+}
+
+template <typename... Args>
+void verbose(Args... args) {
+  if (_verbose) {
+    slog(args...);
+  }
+}
 
 inline void find_and_replace(std::string& subject, const std::string& search, const std::string& replace) {
   size_t pos = 0;
@@ -51,81 +72,6 @@ inline void find_and_replace(std::string& subject, const std::string& search, co
     pos += replace.length();
   }
 }
-
-inline void init_logger() {
-  if (!arl::backend::rank_me()) _logstream.open("kcount.log");
-}
-
-inline void set_logger_verbose(bool verbose) {
-  _verbose = verbose;
-}
-
-inline void logger(ostringstream &os) {}
-
-template <typename T, typename... Params>
-inline void logger(ostringstream &os, T first, Params... params) {
-  os << first;
-  logger(os, params ...);
-}
-
-template <typename T, typename... Params>
-inline void logger(ostream &stream, bool fail, bool serial, bool flush, T first, Params... params) {
-  if (serial && upcxx::rank_me()) return;
-  ostringstream os;
-  os << first;
-  logger(os, params ...);
-  if (fail) {
-    std::cerr << "\n" << KNORM;
-    throw std::runtime_error(os.str());
-  }
-  if (stream.rdbuf() != std::cout.rdbuf() && stream.rdbuf() != std::cerr.rdbuf()) {
-    // strip out colors for log file
-    string outstr = os.str();
-    for (auto c : COLORS) find_and_replace(outstr, c, "");
-    stream << outstr;
-  } else {
-    stream << os.str();
-  }
-  if (flush) stream.flush();
-}
-
-
-#define SOUT(...) do {                                   \
-    logger(cout, false, true, true, ##__VA_ARGS__);      \
-  } while (0)
-#define WARN(...)                                                       \
-  logger(cerr, false, false, true, KRED, "\n[", upcxx::rank_me(), "] <", __FILENAME__, ":", __LINE__, \
-         "> WARNING: ", ##__VA_ARGS__, KNORM, "\n")
-#define DIE(...)                                                        \
-  logger(cerr, true, false, true, KLRED, "\n[", upcxx::rank_me(), "] <", __FILENAME__ , ":", __LINE__, \
-         "> ERROR: ", ##__VA_ARGS__, KNORM, "\n")
-#define SWARN(...)                                                      \
-  logger(cerr, false, true, true, KRED, "\nWARNING: ", ##__VA_ARGS__, KNORM, "\n\n")
-#define SDIE(...)                                                       \
-  logger(cerr, true, true, true, KLRED, "\n[", upcxx::rank_me(), "] <", __FILENAME__ , ":", __LINE__, \
-         "> ERROR: ", ##__VA_ARGS__, KNORM, "\n")
-
-
-#define SLOG(...) do {                                              \
-    logger(cout, false, true, true, ##__VA_ARGS__);                 \
-    logger(_logstream, false, true, true, ##__VA_ARGS__);           \
-  } while (0)
-
-#define SLOG_VERBOSE(...) do {                                       \
-    if (_verbose) logger(cout, false, true, true, ##__VA_ARGS__);    \
-    logger(_logstream, false, true, true, ##__VA_ARGS__);           \
-  } while (0)
-
-#ifdef DEBUG
-extern ofstream _dbgstream;
-#define DBG(...) do {                                                   \
-    if (_dbgstream) {                                                   \
-      logger(_dbgstream, false, false, true, "<", __FILENAME__, ":", __LINE__, "> ", ##__VA_ARGS__); \
-    }                                                                   \
-  } while(0)
-#else
-#define DBG(...)
-#endif
 
 static double get_free_mem_gb(void) {
   string buf;
@@ -146,83 +92,6 @@ static double get_free_mem_gb(void) {
   }
   return mem_free;
 }
-
-class IntermittentTimer {
-
-  std::chrono::time_point<std::chrono::high_resolution_clock> t;
-  double t_elapsed, t_interval;
-  string name, interval_label;
-public:
-  IntermittentTimer(const string &name, string interval_label = "") : name{name}, interval_label{interval_label} {
-    t_elapsed = 0;
-    t_interval = 0;
-  }
-
-  void done_barrier() {
-    auto max_t_elapsed = upcxx::reduce_one(t_elapsed, upcxx::op_fast_max, 0).wait();
-    auto avg_t_elapsed = upcxx::reduce_one(t_elapsed, upcxx::op_fast_add, 0).wait() / upcxx::rank_n();
-    SLOG_VERBOSE(KLCYAN, "--- Elapsed time for ", name, ": ", std::setprecision(2), std::fixed, " avg ", avg_t_elapsed,
-                 " s max ", max_t_elapsed, " s balance ", (avg_t_elapsed / max_t_elapsed), " ---\n", KNORM);
-    DBG("--- Elapsed time for ", name, ": ", std::setprecision(2), std::fixed, t_elapsed, " s ---\n");
-  }
-
-  void done() {
-    SLOG_VERBOSE(KLCYAN, "--- Elapsed time for ", name, ": ", std::setprecision(2), std::fixed, t_elapsed, " s ---\n");
-    DBG("--- Elapsed time for ", name, ": ", std::setprecision(2), std::fixed, t_elapsed, " s ---\n");
-  }
-
-  string get_final() {
-    ostringstream os;
-    os << name << ": " << std::setprecision(2) << std::fixed << t_elapsed;
-    return os.str();
-  }
-
-  void start() {
-    if (!interval_label.empty() && !_verbose) SLOG(KBLUE, std::left, std::setw(40), interval_label + ":", KNORM);
-    t = std::chrono::high_resolution_clock::now();
-  }
-
-  void stop() {
-    std::chrono::duration<double> interval = std::chrono::high_resolution_clock::now() - t;
-    t_interval = interval.count();
-    t_elapsed += t_interval;
-    if (!interval_label.empty() && !_verbose) SLOG(KBLUE, std::setprecision(2), std::fixed, t_interval, " s", KNORM, "\n");
-  }
-
-  double get_interval() {
-    return t_interval;
-  }
-};
-
-
-class Timer {
-  std::chrono::time_point<std::chrono::high_resolution_clock> t;
-  string name;
-  double init_free_mem;
-  bool always_show;
-public:
-  Timer(const string &name, bool always_show=false) : always_show(always_show) {
-    t = std::chrono::high_resolution_clock::now();
-    this->name = name;
-    if (!upcxx::rank_me()) init_free_mem = get_free_mem_gb();
-    if (always_show) SLOG(KLCYAN, "-- ", name, " (", init_free_mem, " GB free) --\n", KNORM);
-    else SLOG_VERBOSE(KLCYAN, "-- ", name, " (", init_free_mem, " GB free) --\n", KNORM);
-  }
-
-  ~Timer() {
-    std::chrono::duration<double> t_elapsed = std::chrono::high_resolution_clock::now() - t;
-    DBG(KLCYAN, "-- ", name, " took ", std::setprecision(2), std::fixed, t_elapsed.count(), " s --\n", KNORM);
-    upcxx::barrier();
-    t_elapsed = std::chrono::high_resolution_clock::now() - t;
-    if (always_show) {
-      SLOG(KLCYAN, "-- ", name, " took ", std::setprecision(2), std::fixed, t_elapsed.count(), " s (used ",
-           (init_free_mem - get_free_mem_gb()), " GB) --\n", KNORM);
-    } else {
-      SLOG_VERBOSE(KLCYAN, "-- ", name, " took ", std::setprecision(2), std::fixed, t_elapsed.count(), " s (used ",
-                   (init_free_mem - get_free_mem_gb()), " GB) --\n", KNORM);
-    }
-  }
-};
 
 inline string perc_str(int64_t num, int64_t tot) {
   ostringstream os;

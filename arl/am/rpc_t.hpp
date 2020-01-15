@@ -23,7 +23,7 @@ namespace arl {
   struct FutureData;
 
   struct result_t {
-    static constexpr size_t max_payload_size = 24; // return value data size
+    static constexpr size_t max_payload_size = 8; // return value data size
     using payload_t = std::array<char, max_payload_size>;
 
     FutureData* future_p_; // 8 Bytes
@@ -54,7 +54,7 @@ namespace arl {
   struct rpc_invoker;
 
   struct rpc_t {
-    static constexpr size_t max_payload_size = 40; // argument value data size
+    static constexpr size_t max_payload_size = 48; // argument value data size
     using payload_t = std::array<char, max_payload_size>;
     using rpc_result_t = result_t;
 

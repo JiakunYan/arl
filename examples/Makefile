@@ -4,13 +4,13 @@ SHELL='bash'
 # out of current directory.
 ARLROOT=$(PWD)/../
 
-PLATFORM = $(shell echo $(ARL_PLATFORM) | tr '[:lower:]' '[:upper:]')
+PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 
 TIMER_CMD=time
 
 BACKEND=GASNET_EX
 # make on Cori
-ifeq ($(PLATFORM), CORI)
+ifeq (CORI,$(findstring CORI,$(PLATFORM)))
     include $(gasnet_prefix)/include/aries-conduit/aries-par.mak
     CXX = CC
 # make on docker

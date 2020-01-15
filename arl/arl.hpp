@@ -20,7 +20,7 @@
 #include "global_decl.hpp"
 #include "base/op.hpp"
 // tools
-#include "arl/tool/utils.hpp"
+#include "tool/utils.hpp"
 #include "tool/timer.hpp"
 // backend
 #include "backend/backend.hpp"

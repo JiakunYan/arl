@@ -5,15 +5,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <zlib.h>
-#include <upcxx/upcxx.hpp>
 
+#include "arl/arl.hpp"
 #include "utils.hpp"
-
 
 using std::string;
 
-using upcxx::rank_me;
-using upcxx::rank_n;
+using arl::rank_me;
+using arl::rank_n;
 
 #define INT_CEIL(numerator, denominator) (((numerator) - 1) / (denominator) + 1)
 #define BUF_SIZE 2047
@@ -86,7 +85,7 @@ class FastqReader {
     // first record is the first record, include it.  Every other partition will be at least 1 full record after offset.
     if (offset == 0) return 0;
     if (offset >= file_size) return file_size;
-    if (fseek(f, offset, SEEK_SET) != 0) DIE("Could not fseek in ", fname, " to ", offset, ": ", strerror(errno));
+    if (fseek(f, offset, SEEK_SET) != 0) ARL_Error("Could not fseek in ", fname, " to ", offset, ": ", strerror(errno));
     // skip first (likely partial) line after this offset to ensure we start at the beginning of a line
     if (!fgets(buf, BUF_SIZE, f)) return ftell(f);
 
@@ -101,12 +100,12 @@ class FastqReader {
         if (header[header.length() - 1] == '2') {
           // now read another three lines and be done
           for (int j = 0; j < 3; j++) {
-            if (!fgets(buf, BUF_SIZE, f)) DIE("Missing record info at pos ", ftell(f));
+            if (!fgets(buf, BUF_SIZE, f)) ARL_Error("Missing record info at pos ", ftell(f));
           }
           break;
         }
       }
-      if (i > 13) DIE("Could not find a valid line in the fastq file ", fname, ", last line: ", buf);
+      if (i > 13) ARL_Error("Could not find a valid line in the fastq file ", fname, ", last line: ", buf);
     }
     return ftell(f);
   }
@@ -122,12 +121,12 @@ public:
     if (!per_rank_file) {
       // only one rank gets the file size, to prevent many hits on metadata
       if (!rank_me()) file_size = get_file_size(fname);
-      file_size = upcxx::broadcast(file_size, 0).wait();
+      file_size = arl::broadcast(file_size, 0);
     }
     f = fopen(fname.c_str(), "r");
     if (!f) {
-      if (!upcxx::rank_me()) DIE("Could not open file ", fname, ": ", strerror(errno));
-      upcxx::barrier();
+      if (!arl::rank_me()) ARL_Error("Could not open file ", fname, ": ", strerror(errno));
+      arl::barrier();
     }
     // just a part of the file is read by this thread
     int max_rank = (per_rank_file ? 1 : rank_n());
@@ -138,10 +137,10 @@ public:
     if (my_rank) start_read = get_fptr_for_next_record(start_read);
     if (my_rank == max_rank - 1) end_read = file_size;
     else end_read = get_fptr_for_next_record(end_read);
-    if (fseek(f, start_read, SEEK_SET) != 0) DIE("Could not fseek on ", fname, " to ", start_read, ": ", strerror(errno));
+    if (fseek(f, start_read, SEEK_SET) != 0) ARL_Error("Could not fseek on ", fname, " to ", start_read, ": ", strerror(errno));
     posix_fadvise(fileno(f), start_read, end_read - start_read, POSIX_FADV_SEQUENTIAL);
-    SLOG_VERBOSE("Reading FASTQ file ", fname, "\n");
-    DBG("Reading fastq file ", fname, " at pos ", start_read, " ", (f ? ftell(f) : gztell(gzf)), "\n");
+    arl::print("%s", string_format("Reading FASTQ file ", fname, "\n"));
+//    DBG("Reading fastq file ", fname, " at pos ", start_read, " ", (f ? ftell(f) : gztell(gzf)), "\n");
   }
 
   ~FastqReader() {
@@ -166,7 +165,7 @@ public:
     size_t bytes_read = 0;
     for (int i = 0; i < 4; i++) {
       char *bytes = (f ? fgets(buf, BUF_SIZE, f) : gzgets(gzf, buf, BUF_SIZE));
-      if (!bytes) DIE("Read record terminated on file ", fname, " before full record at position ", (f ? ftell(f) : gztell(gzf)));
+      if (!bytes) ARL_Error("Read record terminated on file ", fname, " before full record at position ", (f ? ftell(f) : gztell(gzf)));
       if (i == 0) id.assign(buf);
       else if (i == 1) seq.assign(buf);
       else if (i == 3) quals.assign(buf);
@@ -176,15 +175,15 @@ public:
     rtrim(seq);
     rtrim(quals);
     if (id[0] != '@')
-      DIE("Invalid FASTQ in ", fname, ": expected read name (@), got: ", id);
+      ARL_Error("Invalid FASTQ in ", fname, ": expected read name (@), got: ", id);
     // construct universally formatted name (illumina 1 format)
     if (!get_fq_name(id))
-      DIE("Invalid FASTQ in ", fname, ": incorrect name format '", id, "'");
+      ARL_Error("Invalid FASTQ in ", fname, ": incorrect name format '", id, "'");
     // get rid of spaces
     // FIXME: this should be hexify
     replace_spaces(id);
     if (seq.length() != quals.length())
-      DIE("Invalid FASTQ in ", fname, ": sequence length ", seq.length(), " != ", quals.length(), " quals length\n");
+      ARL_Error("Invalid FASTQ in ", fname, ": sequence length ", seq.length(), " != ", quals.length(), " quals length\n");
     if (seq.length() > max_read_len) max_read_len = seq.length();
     return bytes_read;
   }
@@ -192,7 +191,7 @@ public:
   size_t get_next_fq_record(uint64_t &id, uint8_t pair_idx, string &seq, string &quals) {
     string id_str;
     auto res = get_next_fq_record(id_str, seq, quals);
-    if (id_str[0] != 'r') DIE("Expected compressed read id beginning with r and then a number. Found ", id_str);
+    if (id_str[0] != 'r') ARL_Error("Expected compressed read id beginning with r and then a number. Found ", id_str);
     id = std::stoull(id_str.substr(1, id_str.length() - 3));
     pair_idx = id_str[id_str.length() - 1] == '1' ? 1 : 2;
     return res;
