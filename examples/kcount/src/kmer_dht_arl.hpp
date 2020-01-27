@@ -119,25 +119,21 @@ public:
     int64_t cardinality2 = bloom_filter_repeats.estimate_num_items();
     bloom_filter_singletons.clear(); // no longer need it
 
-    barrier();
     // two bloom false positive rates applied
     initial_kmer_dht_reservation = (int64_t) (cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000);
     kmers.reserve( initial_kmer_dht_reservation );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
-    barrier();
   }
 
   int64_t purge_kmers(int threshold) {
     int64_t num_purged = 0;
-    if (local::rank_me() == 0) {
-      auto locked_kmers = kmers.lock_table();
-      for (auto it = locked_kmers.begin(); it != locked_kmers.end(); ) {
-        if (it->second.count < threshold) {
-          num_purged++;
-          it = locked_kmers.erase(it);
-        } else {
-          ++it;
-        }
+    auto locked_kmers = kmers.lock_table();
+    for (auto it = locked_kmers.begin(); it != locked_kmers.end(); ) {
+      if (it->second.count < threshold) {
+        num_purged++;
+        it = locked_kmers.erase(it);
+      } else {
+        ++it;
       }
     }
     return num_purged;
@@ -149,6 +145,28 @@ public:
 
   size_t load_factor() const {
     return kmers.load_factor();
+  }
+
+  // one line per kmer, format:
+  // KMERCHARS COUNT
+  void dump_kmers(const string &dump_fname) {
+    zstr::ofstream dump_file(dump_fname);
+    ostringstream out_buf;
+    ProgressBar progbar(kmers.size(), "Dumping kmers to " + dump_fname);
+    int64_t i = 0;
+    auto locked_kmers = kmers.lock_table();
+    for (auto it = locked_kmers.begin(); it != locked_kmers.end(); it++) {
+      out_buf << it->first << " " << it->second.count << endl;
+      i++;
+      if (!(i % 1000)) {
+        dump_file << out_buf.str();
+        out_buf = ostringstream();
+      }
+      progbar.update();
+    }
+    if (!out_buf.str().empty()) dump_file << out_buf.str();
+    dump_file.close();
+    progbar.done(false);
   }
 };
 
@@ -178,17 +196,17 @@ public:
     }
   }
 
-  Future<void> add_kmer_set(Kmer kmer) {
+  void add_kmer_set(Kmer kmer) {
     size_t target_proc = get_target_proc(kmer);
-    return rpc(target_proc * local::rank_n(),
+    rpc_ff(target_proc * local::rank_n(),
                [](KmerLHT* lmap, Kmer kmer){
                  lmap->add_kmer_set(kmer);
                }, map_ptrs[target_proc], kmer);
   }
 
-  Future<void> add_kmer_count(Kmer kmer) {
+  void add_kmer_count(Kmer kmer) {
     size_t target_proc = get_target_proc(kmer);
-    return rpc(target_proc * local::rank_n(),
+    rpc_ff(target_proc * local::rank_n(),
                [](KmerLHT* lmap, Kmer kmer){
                  lmap->add_kmer_count(kmer);
                }, map_ptrs[target_proc], kmer);
@@ -201,7 +219,10 @@ public:
   }
 
   int64_t purge_kmers(int threshold) {
-    int64_t num_purged = map_ptrs[proc::rank_me()]->purge_kmers(threshold);
+    int64_t num_purged = 0;
+    if (local::rank_me() == 0) {
+      num_purged = map_ptrs[proc::rank_me()]->purge_kmers(threshold);
+    }
     auto all_num_purged = reduce_all(num_purged, op_plus());
     return all_num_purged;
   }
@@ -220,6 +241,14 @@ public:
       factor = map_ptrs[proc::rank_me()]->load_factor();
     }
     return reduce_all(factor, op_plus()) / rank_n();
+  }
+
+  void dump_kmers(const string &fname, int k) {
+    string dump_fname = fname + "-" + to_string(k) + ".kmers.gz";
+    get_rank_path(dump_fname, proc::rank_me());
+    if (local::rank_me() == 0) {
+      map_ptrs[proc::rank_me()]->dump_kmers(dump_fname);
+    }
   }
 };
 

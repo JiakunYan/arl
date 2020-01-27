@@ -126,7 +126,6 @@ public:
     f = fopen(fname.c_str(), "r");
     if (!f) {
       if (!arl::rank_me()) ARL_Error("Could not open file ", fname, ": ", strerror(errno));
-      arl::barrier();
     }
     // just a part of the file is read by this thread
     int max_rank = (per_rank_file ? 1 : rank_n());
@@ -139,7 +138,7 @@ public:
     else end_read = get_fptr_for_next_record(end_read);
     if (fseek(f, start_read, SEEK_SET) != 0) ARL_Error("Could not fseek on ", fname, " to ", start_read, ": ", strerror(errno));
     posix_fadvise(fileno(f), start_read, end_read - start_read, POSIX_FADV_SEQUENTIAL);
-    arl::print("%s", string_format("Reading FASTQ file ", fname, "\n"));
+//    print("%s", string_format("Reading FASTQ file ", fname, "\n"));
 //    DBG("Reading fastq file ", fname, " at pos ", start_read, " ", (f ? ftell(f) : gztell(gzf)), "\n");
   }
 

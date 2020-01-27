@@ -49,13 +49,28 @@ using std::min;
 extern ofstream _logstream;
 extern bool _verbose;
 
+#define SLOG_VERBOSE_ALL(...) verbose_all(__VA_ARGS__)
 #define SLOG_VERBOSE(...) verbose(__VA_ARGS__)
 #define SLOG(...) slog(__VA_ARGS__)
+#define SLOG_ALL(...) slog_all(__VA_ARGS__)
+
+template <typename... Args>
+void slog_all(Args... args) {
+  string str = arl::string_format(args...);
+  arl::print("%s", str.c_str());
+}
 
 template <typename... Args>
 void slog(Args... args) {
   string str = arl::string_format(args...);
-  arl::print("%s", str);
+  printf("%s", str.c_str());
+}
+
+template <typename... Args>
+void verbose_all(Args... args) {
+  if (_verbose) {
+    slog_all(args...);
+  }
 }
 
 template <typename... Args>
@@ -260,7 +275,7 @@ static string get_basename(const string &fname) {
 static int64_t get_file_size(string fname) {
   struct stat s;
   if (stat(fname.c_str(), &s) != 0) return -1;
-  return s.st_size;
+  return s.st_size / 512;
 }
 
 #endif

@@ -105,19 +105,26 @@ public:
     }
   }
 
-  void done() {
+  void done(bool collective = false) {
     if (_show_progress) {
       //display(true);
       std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
       auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
-      DBG("Time ", prefix_str, ": ", (double)time_elapsed / 1000, "\n");
-      double max_time = (double)arl::reduce_one(time_elapsed, arl::op_plus(), 0) / 1000;
-      double tot_time = (double)arl::reduce_one(time_elapsed, arl::op_plus(), 0) / 1000;
-      double av_time = tot_time / arl::rank_n();
-      if (arl::rank_me() == RANK_FOR_PROGRESS) {
-        std::cout << std::setprecision(2) << std::fixed;
-        std::cout << "  Average " << av_time << " max " << max_time << " (balance " <<  (max_time == 0.0 ? 1.0 : (av_time / max_time))
-                  << ")"<< KNORM << std::endl;
+//      DBG("Time ", prefix_str, ": ", (double)time_elapsed / 1000, "\n");
+      if (collective) {
+        double max_time = (double)arl::reduce_one(time_elapsed, arl::op_max(), RANK_FOR_PROGRESS) / 1000;
+        double tot_time = (double)arl::reduce_one(time_elapsed, arl::op_plus(), RANK_FOR_PROGRESS) / 1000;
+        double av_time = tot_time / arl::rank_n();
+        if (arl::rank_me() == RANK_FOR_PROGRESS) {
+          std::cout << std::setprecision(2) << std::fixed;
+          std::cout << "  Average " << av_time << " max " << max_time << " (balance " <<  (max_time == 0.0 ? 1.0 : (av_time / max_time))
+                    << ")"<< KNORM << std::endl;
+        }
+      } else {
+        if (arl::rank_me() == RANK_FOR_PROGRESS) {
+          std::cout << std::setprecision(2) << std::fixed;
+          std::cout << "  Elapsed " << (double) time_elapsed / 1000 << KNORM << std::endl;
+        }
       }
     }
   }

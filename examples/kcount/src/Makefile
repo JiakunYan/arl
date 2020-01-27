@@ -3,7 +3,7 @@ SHELL='bash'
 # Modify ARLROOT if you want to move this Makefile
 # out of current directory.
 ARLROOT=$(PWD)/../../../
-KCOUNTFLAG=-I$(PWD)/../include/ -I$(PWD)/zstr/src/ -lz
+KCOUNTFLAG=-I$(PWD)/../include/ -I$(PWD)/zstr/src/ -lz -O0
 
 PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 
@@ -20,9 +20,9 @@ include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
 CXX = mpic++
 endif
 
-ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT) $(KCOUNTFLAG)
+ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
 
-CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
+CXXFLAGS = -std=gnu++17 $(ARLFLAGS) $(KCOUNTFLAG)
 
 SOURCES += $(wildcard *.cpp)
 TARGETS := $(patsubst %.cpp, %, $(SOURCES))

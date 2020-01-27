@@ -1,6 +1,6 @@
 // kcount - kmer counting
 // Steven Hofmeyr, LBNL, June 2019
-
+#define ARL_DEBUG
 #include <iostream>
 #include <math.h>
 #include <algorithm>
@@ -11,8 +11,8 @@
 
 #include "config.hpp"
 #include "utils.hpp"
-#include "progressbar.hpp"
 #include "options.hpp"
+#include "progressbar.hpp"
 #include "kmer_dht_arl.hpp"
 #include "fastq.hpp"
 
@@ -23,9 +23,7 @@ bool _verbose = false;
 bool _show_progress = false;
 
 unsigned int Kmer::k = 0;
-
 using options_t = decltype(make_shared<Options>());
-
 
 uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list) {
   int64_t num_reads = 0;
@@ -38,7 +36,7 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
     string id, seq, quals;
     ProgressBar progbar(fqr.my_file_size(), "Scanning reads file to estimate number of kmers");
     size_t tot_bytes_read = 0;
-    int64_t records_processed = 0; 
+    int64_t records_processed = 0;
     while (true) {
       size_t bytes_read = fqr.get_next_fq_record(id, seq, quals);
       if (!bytes_read) break;
@@ -48,24 +46,24 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
       progbar.update(tot_bytes_read);
       records_processed++;
       // do not read the entire data set for just an estimate
-      if (records_processed > 100000) break; 
+      if (records_processed > 100000) break;
       if (seq.length() < kmer_len) continue;
       num_kmers += seq.length() - kmer_len + 1;
     }
     total_records_processed += records_processed;
     int64_t bytes_per_record = tot_bytes_read / records_processed;
     estimated_total_records += fqr.my_file_size() / bytes_per_record;
-    progbar.done();
+    progbar.done(true);
     barrier();
   }
   double fraction = (double) total_records_processed / (double) estimated_total_records;
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads), and found ", num_kmers, " kmers\n");
   auto all_num_lines = reduce_one(num_lines / fraction, op_plus(), 0);
   auto all_num_reads = reduce_one(num_reads / fraction, op_plus(), 0);
-  auto all_num_kmers = reduce_all(num_kmers / fraction, op_plus());
+  auto all_num_kmers = reduce_one(num_kmers / fraction, op_plus(), 0);
   int percent = 100.0 * fraction;
-  SLOG("Processed ", percent, " % of the estimated total of ", (int64_t)all_num_lines,
-               " lines (", (int64_t)all_num_reads, " reads), and found an estimated maximum of ", 
+  SLOG_ALL("Processed ", percent, " % of the estimated total of ", (int64_t)all_num_lines,
+               " lines (", (int64_t)all_num_reads, " reads), and found an estimated maximum of ",
                (int64_t)all_num_kmers, " kmers\n");
   return num_kmers / fraction;
 }
@@ -104,23 +102,23 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
           case BLOOM_COUNT_PASS:
             kmer_dht.add_kmer_count(kmers[i]);
             break;
-        };
+        }
         num_kmers++;
       }
       progress();
     }
-    progbar.done();
-    flush_agg_buffer();
+    progbar.done(true);
+    barrier();
   }
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
   auto all_num_reads = reduce_one(num_reads, op_plus(), 0);
   auto all_num_kmers = reduce_one(num_kmers, op_plus(), 0);
   auto all_distinct_kmers = kmer_dht.size();
-  SLOG("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
-  if (pass_type != BLOOM_SET_PASS) SLOG("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
+  SLOG_ALL("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
+  if (pass_type != BLOOM_SET_PASS) SLOG_ALL("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
-
+//
 void worker(const options_t& options) {
   auto start_t = chrono::high_resolution_clock::now();
 
@@ -131,26 +129,29 @@ void worker(const options_t& options) {
     SLOG("Total size of ", options->reads_fname_list.size(), " input file", (options->reads_fname_list.size() > 1 ? "s" : ""),
          " is ", get_size_str(tot_file_size), "\n");
   }
-  auto my_num_kmers = estimate_num_kmers(options->kmer_len, options->reads_fname_list);
+  uint64_t my_num_kmers = estimate_num_kmers(options->kmer_len, options->reads_fname_list);
   KmerDHT kmer_dht(my_num_kmers);
   barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_SET_PASS);
   kmer_dht.reserve_space_and_clear_bloom();
+  barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_COUNT_PASS);
   barrier();
-  SLOG_VERBOSE("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
+  SLOG_VERBOSE_ALL("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
   barrier();
   kmer_dht.purge_kmers(options->depth_thres);
   int64_t new_count = kmer_dht.size();
-  SLOG_VERBOSE("After purge of kmers < ", options->depth_thres, " there are ", new_count, " unique kmers\n");
+  SLOG_VERBOSE_ALL("After purge of kmers < ", options->depth_thres, " there are ", new_count, " unique kmers\n");
   barrier();
   chrono::duration<double> t_elapsed = chrono::high_resolution_clock::now() - start_t;
-  SLOG("Finished in ", setprecision(2), fixed, t_elapsed.count(), " s at ", get_current_time(), "\n");
-//  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
+  SLOG_ALL("Finished in ", setprecision(2), fixed, t_elapsed.count(), " s at ", get_current_time(), "\n");
+  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
+  SLOG_VERBOSE("Dumped ", kmer_dht.size(), " kmers\n");
 }
 
 int main(int argc, char **argv) {
   init(15, 16);
+
   auto options = make_shared<Options>();
   if (!options->load(argc, argv)) return 0;
   _show_progress = options->show_progress;
