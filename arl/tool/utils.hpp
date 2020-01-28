@@ -40,7 +40,7 @@ namespace arl {
   }
 
   template<typename T, typename... Params>
-  inline void __ARL_Print(std::ostream &stream, T first, Params... params) {
+  inline void os_print(std::ostream &stream, T first, Params... params) {
     ostringstream os;
     os << first;
     os_format(os, params ...);

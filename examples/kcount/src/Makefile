@@ -3,7 +3,7 @@ SHELL='bash'
 # Modify ARLROOT if you want to move this Makefile
 # out of current directory.
 ARLROOT=$(PWD)/../../../
-KCOUNTFLAG=-I$(PWD)/../include/ -I$(PWD)/zstr/src/ -lz -O0
+KCOUNTFLAG=-I$(PWD)/../include/ -I$(PWD)/zstr/src/ -lz -O3
 
 PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 

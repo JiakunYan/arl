@@ -1,6 +1,5 @@
 // kcount - kmer counting
 // Steven Hofmeyr, LBNL, June 2019
-#define ARL_DEBUG
 #include <iostream>
 #include <math.h>
 #include <algorithm>

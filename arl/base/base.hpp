@@ -148,6 +148,17 @@ namespace arl {
     barrier();
   }
 
+  template <typename ...Args>
+  void cout(Args... args) {
+    std::cout.flush();
+    barrier();
+    if (rank_me() == 0) {
+      os_print(std::cout, args...);
+    }
+    std::cout.flush();
+    barrier();
+  }
+
   namespace local {
     inline void barrier() {
       threadBarrier.wait();
