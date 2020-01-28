@@ -120,7 +120,7 @@ public:
     bloom_filter_singletons.clear(); // no longer need it
 
     // two bloom false positive rates applied
-    initial_kmer_dht_reservation = (int64_t) (cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000);
+    initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 1.25);
     kmers.reserve( initial_kmer_dht_reservation );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
   }

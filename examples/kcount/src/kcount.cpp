@@ -6,9 +6,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "arl/arl.hpp"
 
 #include "config.hpp"
+#include "arl/arl.hpp"
 #include "utils.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"

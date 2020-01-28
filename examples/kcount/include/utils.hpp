@@ -10,7 +10,6 @@
 #include <limits>
 #include <regex>
 
-#include "colors.h"
 #include "arl/arl.hpp"
 
 using std::string;
@@ -272,7 +271,7 @@ static string get_basename(const string &fname) {
 static int64_t get_file_size(string fname) {
   struct stat s;
   if (stat(fname.c_str(), &s) != 0) return -1;
-  return s.st_size / 4;
+  return s.st_size;
 }
 
 #endif
