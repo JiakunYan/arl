@@ -54,7 +54,6 @@ class KmerLHT {
   local::BloomFilter<Kmer> bloom_filter_singletons;
   // the second bloom filer stores only kmers that are above the repeat depth, and is used for sizing the kmer hash table
   local::BloomFilter<Kmer> bloom_filter_repeats;
-  int64_t initial_kmer_dht_reservation;
 
   size_t get_kmer_target_rank(Kmer &kmer) {
     return std::hash<Kmer>{}(kmer) % rank_n();
@@ -65,8 +64,7 @@ public:
   KmerLHT(uint64_t cardinality)
     : kmers({})
     , bloom_filter_singletons(cardinality, BLOOM_FP)
-    , bloom_filter_repeats(cardinality, BLOOM_FP)
-    , initial_kmer_dht_reservation(0) {}
+    , bloom_filter_repeats(cardinality, BLOOM_FP) {}
 
   void clear() {
     kmers.clear();
@@ -112,7 +110,7 @@ public:
     bloom_filter_singletons.clear(); // no longer need it
 
     // two bloom false positive rates applied
-    initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 1.25);
+    int64_t initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 1.25);
     kmers.reserve( initial_kmer_dht_reservation );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
   }
@@ -166,87 +164,70 @@ class KmerDHT {
 private:
   std::vector<KmerLHT *> map_ptrs;
   // map the key to a target process
-  int get_target_proc(const Kmer &kmer) {
+  int get_target_rank(const Kmer &kmer) {
     return std::hash<Kmer>{}(kmer) % map_ptrs.size();
   }
 public:
   // initialize the local map
   KmerDHT(uint64_t cardinality) {
-    map_ptrs.resize(proc::rank_n());
-    if (local::rank_me() == 0) {
-      map_ptrs[proc::rank_me()] = new KmerLHT(cardinality);
-    }
-    for (size_t i = 0; i < proc::rank_n(); ++i) {
-      broadcast(map_ptrs[i], i * local::rank_n());
+    map_ptrs.resize(rank_n());
+    map_ptrs[rank_me()] = new KmerLHT(cardinality);
+    for (size_t i = 0; i < rank_n(); ++i) {
+      broadcast(map_ptrs[i], i);
     }
   }
 
   ~KmerDHT() {
     arl::barrier();
-    if (local::rank_me() == 0) {
-      delete map_ptrs[proc::rank_me()];
-    }
+    delete map_ptrs[rank_me()];
   }
 
   void add_kmer_set(Kmer kmer) {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_proc = get_target_proc(kmer);
-    rpc_ff(target_proc * local::rank_n(),
+    size_t target_rank = get_target_rank(kmer);
+    rpc_ff(target_rank,
                [](KmerLHT* lmap, Kmer kmer){
                  lmap->add_kmer_set(kmer);
-               }, map_ptrs[target_proc], kmer);
+               }, map_ptrs[target_rank], kmer);
   }
 
   void add_kmer_count(Kmer kmer) {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_proc = get_target_proc(kmer);
-    rpc_ff(target_proc * local::rank_n(),
+    size_t target_rank = get_target_rank(kmer);
+    rpc_ff(target_rank,
                [](KmerLHT* lmap, Kmer kmer){
                  lmap->add_kmer_count(kmer);
-               }, map_ptrs[target_proc], kmer);
+               }, map_ptrs[target_rank], kmer);
   }
 
   void reserve_space_and_clear_bloom() {
-    if (local::rank_me() == 0) {
-      map_ptrs[proc::rank_me()]->reserve_space_and_clear_bloom();
-    }
+    map_ptrs[rank_me()]->reserve_space_and_clear_bloom();
   }
 
   int64_t purge_kmers(int threshold) {
-    int64_t num_purged = 0;
-    if (local::rank_me() == 0) {
-      num_purged = map_ptrs[proc::rank_me()]->purge_kmers(threshold);
-    }
+    int64_t num_purged = map_ptrs[rank_me()]->purge_kmers(threshold);
     auto all_num_purged = reduce_all(num_purged, op_plus());
     return all_num_purged;
   }
 
   size_t size() const {
-    size_t n = 0;
-    if (local::rank_me() == 0) {
-      n = map_ptrs[proc::rank_me()]->size();
-    }
+    size_t n = map_ptrs[rank_me()]->size();
     return reduce_all(n, op_plus());
   }
 
   size_t load_factor() const {
-    size_t factor = 0;
-    if (local::rank_me() == 0) {
-      factor = map_ptrs[proc::rank_me()]->load_factor();
-    }
+    size_t factor = map_ptrs[rank_me()]->load_factor();
     return reduce_all(factor, op_plus()) / rank_n();
   }
 
   void dump_kmers(const string &fname, int k) {
     string dump_fname = fname + "-" + to_string(k) + ".kmers.gz";
-    get_rank_path(dump_fname, proc::rank_me());
-    if (local::rank_me() == 0) {
-      map_ptrs[proc::rank_me()]->dump_kmers(dump_fname);
-    }
+    get_rank_path(dump_fname, rank_me());
+    map_ptrs[rank_me()]->dump_kmers(dump_fname);
   }
 };
 
