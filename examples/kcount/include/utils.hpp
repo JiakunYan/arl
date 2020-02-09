@@ -10,8 +10,6 @@
 #include <limits>
 #include <regex>
 
-#include "bytell_hash_map.hpp"
-#include "colors.h"
 #include "arl/arl.hpp"
 
 using std::string;
@@ -56,14 +54,12 @@ extern bool _verbose;
 
 template <typename... Args>
 void slog_all(Args... args) {
-  string str = arl::string_format(args...);
-  arl::print("%s", str.c_str());
+  arl::cout(args...);
 }
 
 template <typename... Args>
 void slog(Args... args) {
-  string str = arl::string_format(args...);
-  printf("%s", str.c_str());
+  arl::os_print(std::cout, args...);
 }
 
 template <typename... Args>
@@ -275,7 +271,7 @@ static string get_basename(const string &fname) {
 static int64_t get_file_size(string fname) {
   struct stat s;
   if (stat(fname.c_str(), &s) != 0) return -1;
-  return s.st_size / 512;
+  return s.st_size;
 }
 
 #endif

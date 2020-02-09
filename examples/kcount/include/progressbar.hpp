@@ -8,7 +8,6 @@
 #include <fstream>
 
 #include "arl/arl.hpp"
-#include "colors.h"
 
 using std::string;
 

@@ -84,10 +84,6 @@ public:
   }
 
   void add_kmer_set(Kmer kmer) {
-    // get the lexicographically smallest
-    Kmer kmer_rc = kmer.revcomp();
-    if (kmer_rc < kmer) kmer = kmer_rc;
-
     if (!bloom_filter_singletons.possibly_contains(kmer))
       bloom_filter_singletons.add(kmer);
     else
@@ -95,10 +91,6 @@ public:
   }
 
   void add_kmer_count(Kmer kmer) {
-    // get the lexicographically smallest
-    Kmer kmer_rc = kmer.revcomp();
-    if (kmer_rc < kmer) kmer = kmer_rc;
-
     // if the kmer is not found in the bloom filter, skip it
     if (!bloom_filter_repeats.possibly_contains(kmer)) return;
     // add or update the kmer count
@@ -120,7 +112,7 @@ public:
     bloom_filter_singletons.clear(); // no longer need it
 
     // two bloom false positive rates applied
-    initial_kmer_dht_reservation = (int64_t) (cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000);
+    initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 1.5);
     kmers.reserve( initial_kmer_dht_reservation );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
   }
@@ -197,6 +189,9 @@ public:
   }
 
   void add_kmer_set(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_proc = get_target_proc(kmer);
     rpc_ff(target_proc * local::rank_n(),
                [](KmerLHT* lmap, Kmer kmer){
@@ -205,6 +200,9 @@ public:
   }
 
   void add_kmer_count(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_proc = get_target_proc(kmer);
     rpc_ff(target_proc * local::rank_n(),
                [](KmerLHT* lmap, Kmer kmer){

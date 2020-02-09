@@ -18,6 +18,7 @@
 #define MIN_INFLIGHT_BYTES 4194304
 #define USE_COLORS
 #define USE_BYTELL
+#define NDEBUG
 #define USE_PROGBAR
 #define MHM_VERSION "unknown version ARL"
 #define ALL_DEFNS "all defns"

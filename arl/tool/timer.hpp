@@ -18,6 +18,10 @@ namespace arl {
     return ticks_to_ns(val) / 1e3;
   }
 
+  double ticks_to_ms(tick_t val) {
+    return ticks_to_ns(val) / 1e6;
+  }
+
   double ticks_to_s(tick_t val) {
     return ticks_to_ns(val) / 1e9;
   }
