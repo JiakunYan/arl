@@ -69,7 +69,6 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
-//  static size_t set_num_kmers[15];
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -79,8 +78,6 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
   //char special = qual_offset + 2;
-//  auto start_t = ticks_now();
-//  double tmp = 0.95;
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
     string id, seq, quals;
@@ -97,20 +94,6 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       // split into kmers
       auto kmers = Kmer::get_kmers(kmer_len, seq);
       for (int i = 1; i < kmers.size() - 1; i++) {
-//        if (num_kmers >= set_num_kmers[local::rank_me()] * tmp && pass_type == BLOOM_COUNT_PASS) {
-//          auto now_t = ticks_now() - start_t;
-//          printf("time %lf rank %lu enter barrier %lu/%lu(%lf)\n", ticks_to_s(now_t),rank_me(), num_kmers, set_num_kmers[local::rank_me()], tmp);
-//          fflush(stdout);
-//          barrier();
-//          now_t = ticks_now() - start_t;
-//          printf("time %lf rank %lu leave barrier %lu/%lu(%lf)\n", ticks_to_s(now_t),rank_me(), num_kmers, set_num_kmers[local::rank_me()], tmp);
-//          fflush(stdout);
-//          tmp += 0.001;
-//        }
-//        if (num_kmers > set_num_kmers[local::rank_me()] - 2 && pass_type == BLOOM_COUNT_PASS) {
-//          printf("rank %lu enter kmers: %s\n", rank_me(), kmers[i].to_string().c_str());
-//          fflush(stdout);
-//        }
         switch (pass_type) {
           case BLOOM_SET_PASS:
             kmer_dht.add_kmer_set(kmers[i]);
@@ -119,19 +102,12 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
             kmer_dht.add_kmer_count(kmers[i]);
             break;
         }
-//        if (num_kmers > set_num_kmers[local::rank_me()] - 2 && pass_type == BLOOM_COUNT_PASS) {
-//          printf("rank %lu leave kmers: %s\n", rank_me(), kmers[i].to_string().c_str());
-//          fflush(stdout);
-//        }
         num_kmers++;
       }
       progress();
     }
     progbar.done(true);
     barrier();
-//    if (pass_type == BLOOM_SET_PASS) {
-//      set_num_kmers[local::rank_me()] = num_kmers;
-//    }
   }
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
