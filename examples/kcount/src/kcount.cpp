@@ -157,19 +157,22 @@ void worker(const options_t& options) {
   barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_SET_PASS);
   kmer_dht.reserve_space_and_clear_bloom();
+  SLOG_VERBOSE_ALL("Reserve space for ", kmer_dht.capacity(), " kmers\n");
   barrier();
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_COUNT_PASS);
   barrier();
+  SLOG_VERBOSE_ALL("After counting, there are ", kmer_dht.size(), " kmers; capacity:", kmer_dht.capacity(), "\n");
   SLOG_VERBOSE_ALL("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
   barrier();
   kmer_dht.purge_kmers(options->depth_thres);
-  int64_t new_count = kmer_dht.size();
-  SLOG_VERBOSE_ALL("After purge of kmers < ", options->depth_thres, " there are ", new_count, " unique kmers\n");
+  SLOG_VERBOSE_ALL("After purge of kmers < ", options->depth_thres, " there are ", kmer_dht.size(), " unique kmers\n");
   barrier();
   chrono::duration<double> t_elapsed = chrono::high_resolution_clock::now() - start_t;
   SLOG_ALL("Finished in ", setprecision(2), fixed, t_elapsed.count(), " s at ", get_current_time(), "\n");
-  if (!options->output_fname.empty()) kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
-  SLOG_VERBOSE("Dumped ", kmer_dht.size(), " kmers\n");
+  if (!options->output_fname.empty()) {
+    kmer_dht.dump_kmers(options->output_fname, options->kmer_len);
+    SLOG_VERBOSE_ALL("Dumped ", kmer_dht.size(), " kmers\n");
+  }
 }
 
 int main(int argc, char **argv) {
@@ -178,6 +181,7 @@ int main(int argc, char **argv) {
   auto options = make_shared<Options>();
   if (!options->load(argc, argv)) return 0;
   _show_progress = options->show_progress;
+  _verbose = options->verbose;
   Kmer::k = options->kmer_len;
 
   run(worker, options);

@@ -110,7 +110,7 @@ public:
     bloom_filter_singletons.clear(); // no longer need it
 
     // two bloom false positive rates applied
-    int64_t initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 1.25);
+    auto initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 2);
     kmers.reserve( initial_kmer_dht_reservation );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
   }
@@ -133,7 +133,11 @@ public:
     return kmers.size();
   }
 
-  size_t load_factor() const {
+  size_t capacity() const {
+    return kmers.capacity();
+  }
+
+  double load_factor() const {
     return kmers.load_factor();
   }
 
@@ -219,8 +223,13 @@ public:
     return reduce_all(n, op_plus());
   }
 
-  size_t load_factor() const {
-    size_t factor = map_ptrs[rank_me()]->load_factor();
+  size_t capacity() const {
+    size_t n = map_ptrs[rank_me()]->capacity();
+    return reduce_all(n, op_plus());
+  }
+
+  double load_factor() const {
+    double factor = map_ptrs[rank_me()]->load_factor();
     return reduce_all(factor, op_plus()) / rank_n();
   }
 
