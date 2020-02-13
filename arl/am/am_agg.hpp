@@ -72,7 +72,7 @@ namespace arl {
 
     if (remote_proc == proc::rank_me()) {
       // lpc
-      rpc_as_lpc(my_rpc);
+      rpc_as_lpc(std::move(my_rpc));
     } else {
       // rpc
       auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
@@ -102,7 +102,7 @@ namespace arl {
 
     if (remote_proc == proc::rank_me()) {
       // lpc
-      rpc_as_lpc(my_rpc);
+      rpc_as_lpc(std::move(my_rpc));
     } else {
       // rpc
       auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
@@ -115,7 +115,7 @@ namespace arl {
       }
       requesteds[local::rank_me()].val++;
     }
-    
+
     return;
   }
 }

@@ -159,7 +159,7 @@ namespace arl {
     std::unique_ptr<FutureData> data_p;
   };
 
-  void rpc_as_lpc(rpc_t my_rpc) {
+  void rpc_as_lpc(rpc_t &&my_rpc) {
     // run rpc
     size_t mContext = get_context();
     set_context((size_t) my_rpc.target_worker_local_);
@@ -188,7 +188,7 @@ namespace arl {
 
     if (remote_proc == proc::rank_me()) {
       // lpc
-      rpc_as_lpc(my_rpc);
+      rpc_as_lpc(std::move(my_rpc));
     } else {
       // rpc
       std::vector<rpc_t> rpcs;
