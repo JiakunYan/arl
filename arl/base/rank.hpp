@@ -38,6 +38,16 @@ namespace arl {
     }
   }
 
+  namespace proc {
+      inline rank_t rank_me() {
+        return backend::rank_me();
+      }
+
+      inline rank_t rank_n() {
+        return backend::rank_n();
+      }
+  }
+
   inline rank_t rank_me() {
     return local::rank_me() + proc::rank_me() * num_workers_per_proc;
   }

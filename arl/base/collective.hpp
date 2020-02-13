@@ -21,7 +21,13 @@ namespace arl {
       local::barrier();
       return val;
     }
+  }
 
+  namespace proc {
+    template <typename T>
+    inline T broadcast(T& val, rank_t root) {
+      return backend::broadcast(val, root);
+    }
   }
 
   template <typename T>
@@ -51,6 +57,18 @@ namespace arl {
       }
       local::barrier();
       return result;
+    }
+  }
+
+  namespace proc {
+    template <typename T, typename BinaryOp>
+    inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
+      return backend::reduce_one(value, op, root);
+    }
+
+    template <typename T, typename BinaryOp>
+    inline T reduce_all(const T& value, const BinaryOp& op) {
+      return backend::reduce_all(value, op);
     }
   }
 

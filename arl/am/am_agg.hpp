@@ -63,7 +63,7 @@ namespace arl {
   rpc_agg(size_t remote_worker, Fn&& fn, Args&&... args) {
     ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / local::rank_n();
+    rank_t remote_proc = remote_worker / local::rank_n();
     u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     Future<std::invoke_result_t<Fn, Args...>> future;
@@ -87,7 +87,7 @@ namespace arl {
     static_assert(std::is_same<std::invoke_result_t<Fn, Args...>, void>::value, "rpc_ff must return void!");
     ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / local::rank_n();
+    rank_t remote_proc = remote_worker / local::rank_n();
     u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     rpc_t my_rpc(NULL, remote_worker_local);

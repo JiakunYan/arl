@@ -93,8 +93,6 @@ namespace arl {
       barrier();
     }
   }
-
-  namespace proc = backend;
 }
 
 #endif //ARL_BACKEND_HPP

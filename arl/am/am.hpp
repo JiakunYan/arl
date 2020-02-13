@@ -164,7 +164,7 @@ namespace arl {
   rpc(size_t remote_worker, Fn&& fn, Args&&... args) {
     ARL_Assert(remote_worker < rank_n(), "");
 
-    size_t remote_proc = remote_worker / local::rank_n();
+    rank_t remote_proc = remote_worker / local::rank_n();
     u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
     Future<std::invoke_result_t<Fn, Args...>> future;

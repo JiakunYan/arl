@@ -27,7 +27,7 @@ namespace arl {
     using payload_t = std::array<char, max_payload_size>;
 
     FutureData* future_p_; // 8 Bytes
-    payload_t data_; // 8 Bytes
+    payload_t data_; // X Bytes
     u_int8_t source_worker_local_; // 1 Byte
 
     result_t(FutureData* future_p, u_int8_t source_worker_local) : future_p_(future_p), source_worker_local_(source_worker_local) {}
@@ -61,7 +61,7 @@ namespace arl {
     FutureData* future_p_; // 8 Bytes
     std::uintptr_t fn_; // 8 Bytes
     std::uintptr_t invoker_; // 8 Bytes
-    payload_t data_; // 8 Bytes
+    payload_t data_; // X Bytes
     u_int8_t source_worker_local_; // 1 Byte
     u_int8_t target_worker_local_; // 1 Byte
 

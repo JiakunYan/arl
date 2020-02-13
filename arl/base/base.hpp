@@ -164,6 +164,12 @@ namespace arl {
       threadBarrier.wait();
     }
   }
+
+  namespace proc {
+    inline void barrier() {
+      backend::barrier();
+    }
+  }
 }
 
 #endif //ARL_BASE_HPP
