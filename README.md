@@ -35,6 +35,21 @@ int main(int argc, char** argv) {
 }
 ```
 
+## Build
+ARL is a header-only library, so you just need to add the `arl` subdirectory to your include path 
+and include the header file `arl.hpp` in your application source code.
+
+ARL is built upon the [GASNet-EX](https://gasnet.lbl.gov/) communication library, 
+so you need to install GASNet-EX in your system, add its header files to your include path, and link it.
+
+ARL needs the `GCC` compiler with the flag `-std=gnu++17`.
+
+We provide a `Makefile` under the `examples` and `tests` subdirectories.
+To build our examples and tests, set the environment variable `gasnet_prefix` as your GASNet-EX install directory path
+and call `make [target_name]`.
+
+You could also modify our `Makefile` for your own applications.
+
 ## Bug
 Please let us know if you identify any bugs or general usability issues by creating
 an issue on GitHub or directly contacting the authors.
