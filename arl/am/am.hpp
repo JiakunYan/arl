@@ -159,6 +159,21 @@ namespace arl {
     std::unique_ptr<FutureData> data_p;
   };
 
+  void rpc_as_lpc(rpc_t my_rpc) {
+    // run rpc
+    size_t mContext = get_context();
+    set_context((size_t) my_rpc.target_worker_local_);
+    rpc_result_t result = my_rpc.run();
+    set_context(mContext);
+
+    // store result
+    if (result.future_p_ != NULL) {
+      result.future_p_->payload = result.data_;
+      result.future_p_->ready = true;
+    }
+    // else {fire and forget}
+  }
+
   template <typename Fn, typename... Args>
   Future<std::invoke_result_t<Fn, Args...>>
   rpc(size_t remote_worker, Fn&& fn, Args&&... args) {
@@ -171,10 +186,16 @@ namespace arl {
     rpc_t my_rpc(future.get_p(), remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
 
-    std::vector<rpc_t> rpcs;
-    rpcs.push_back(std::move(my_rpc));
-    generic_handler_request_impl_(remote_proc, std::move(rpcs));
-    requesteds[local::rank_me()].val++;
+    if (remote_proc == proc::rank_me()) {
+      // lpc
+      rpc_as_lpc(my_rpc);
+    } else {
+      // rpc
+      std::vector<rpc_t> rpcs;
+      rpcs.push_back(std::move(my_rpc));
+      generic_handler_request_impl_(remote_proc, std::move(rpcs));
+      requesteds[local::rank_me()].val++;
+    }
 
     return std::move(future);
   }

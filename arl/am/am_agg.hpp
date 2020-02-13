@@ -69,15 +69,22 @@ namespace arl {
     Future<std::invoke_result_t<Fn, Args...>> future;
     rpc_t my_rpc(future.get_p(), remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
-    auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
-    while (status == AggBuffer<rpc_t>::status_t::FAIL) {
-      progress();
-      status = agg_buffers[remote_proc].push(std::move(my_rpc));
+
+    if (remote_proc == proc::rank_me()) {
+      // lpc
+      rpc_as_lpc(my_rpc);
+    } else {
+      // rpc
+      auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      while (status == AggBuffer<rpc_t>::status_t::FAIL) {
+        progress();
+        status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      }
+      if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
+        flush_agg_buffer_single(remote_proc);
+      }
+      requesteds[local::rank_me()].val++;
     }
-    if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
-      flush_agg_buffer_single(remote_proc);
-    }
-    requesteds[local::rank_me()].val++;
 
     return std::move(future);
   }
@@ -92,16 +99,23 @@ namespace arl {
 
     rpc_t my_rpc(NULL, remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
-    auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
-    while (status == AggBuffer<rpc_t>::status_t::FAIL) {
-      progress();
-      status = agg_buffers[remote_proc].push(std::move(my_rpc));
-    }
-    if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
-      flush_agg_buffer_single(remote_proc);
-    }
-    requesteds[local::rank_me()].val++;
 
+    if (remote_proc == proc::rank_me()) {
+      // lpc
+      rpc_as_lpc(my_rpc);
+    } else {
+      // rpc
+      auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      while (status == AggBuffer<rpc_t>::status_t::FAIL) {
+        progress();
+        status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      }
+      if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
+        flush_agg_buffer_single(remote_proc);
+      }
+      requesteds[local::rank_me()].val++;
+    }
+    
     return;
   }
 }
