@@ -82,9 +82,7 @@ public:
   }
 
   void add_kmer_set(Kmer kmer) {
-    if (!bloom_filter_singletons.possibly_contains(kmer))
-      bloom_filter_singletons.add(kmer);
-    else
+    if (bloom_filter_singletons.add(kmer))
       bloom_filter_repeats.add(kmer);
   }
 
