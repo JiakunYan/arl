@@ -55,7 +55,7 @@ void worker(int id) {
 }
 
 int main() {
-  BCL::init();
+  arl::backend::init();
 #ifdef GASNETC_GNI_MULTI_DOMAIN
   if (BCL::rank() == 0)
     std::printf("enable gasnet multi domain\n");

@@ -1,43 +1,27 @@
 SHELL='bash'
 
-# XXX: Modify BCLROOT if you move this Makefile
-#      out of an examples/* directory.
-BCLROOT=$(PWD)/../../../
+# Modify ARLROOT if you want to move this Makefile
+# out of current directory.
+ARLROOT=$(PWD)/../../
 
-BACKEND = $(shell echo $(BCL_BACKEND) | tr '[:lower:]' '[:upper:]')
-PLATFORM = $(shell echo $(BCL_PLATFORM) | tr '[:lower:]' '[:upper:]')
+PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 
 TIMER_CMD=time
 
-ifeq ($(BACKEND),SHMEM)
-  BACKEND=SHMEM
-  BCLFLAGS = -lpthread -DSHMEM -I$(BCLROOT)
-  CXX=oshc++
-
-  BCL_RUN=oshrun -n 4
-else ifeq ($(BACKEND),GASNET_EX)
-  BACKEND=GASNET_EX
-  # XXX: Allow selection of conduit.
-  ifeq ($(PLATFORM), CORI)
+BACKEND=GASNET_EX
+# make on Cori
+ifeq (CORI,$(findstring CORI,$(PLATFORM)))
     include $(gasnet_prefix)/include/aries-conduit/aries-par.mak
     CXX = CC
-  else
-    include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
-    CXX = mpic++
-  endif
-
-  BCLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(BCLROOT)
-
-  BCL_RUN=mpirun -n 4
+# make on docker
 else
-  BACKEND=MPI
-  BCLFLAGS = -lpthread -I$(BCLROOT)
-  CXX=mpic++
-
-  BCL_RUN=mpirun -n 4
+include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
+CXX = mpic++
 endif
 
-CXXFLAGS = -std=gnu++17 $(BCLFLAGS)
+ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
+
+CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
 
 SOURCES += $(wildcard *.cpp)
 TARGETS := $(patsubst %.cpp, %, $(SOURCES))
@@ -48,16 +32,13 @@ all: $(TARGETS)
 	@echo "C $@ $(BACKEND)"
 	@time $(CXX) -o $@ $^ $(CXXFLAGS) || echo "$@ $(BACKEND) BUILD FAIL"
 
-ifeq ($(BACKEND),MPI)
-test: all
-	@echo "Not running RPC tests with MPI"
-else
+TEST_RUN=mpirun -n 4
+
 test: all
 	@for target in $(TARGETS) ; do \
 		echo "R $$target $(BACKEND)" ;\
-  	time $(BCL_RUN) ./$$target || (echo "$$target $(BACKEND) FAIL $$?"; exit 1) ;\
+  	time $(TEST_RUN) ./$$target || (echo "$$target $(BACKEND) FAIL $$?"; exit 1);\
 	done
-endif
 
 clean:
 	@rm -f $(TARGETS)

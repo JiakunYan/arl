@@ -41,7 +41,7 @@ namespace arl {
       gex_Event_Wait(event);
     }
 
-    inline void init(uint64_t shared_segment_size = 256, bool thread_safe = false) {
+    inline void init(uint64_t shared_segment_size, bool thread_safe) {
       shared_segment_size = 1024*1024*shared_segment_size;
 
       gex_Client_Init(&client, &ep, &tm, clientName, NULL, NULL, 0);
@@ -80,6 +80,7 @@ namespace arl {
 //      finalize_atomics();
       free(gasnet_seginfo);
       finalized = true;
+      gasnet_exit(0);
     }
 
     template <typename ...Args>
