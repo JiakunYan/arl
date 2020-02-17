@@ -159,7 +159,7 @@ namespace arl {
     std::unique_ptr<FutureData> data_p;
   };
 
-  void rpc_as_lpc(rpc_t &&my_rpc) {
+  inline void rpc_as_lpc(rpc_t &&my_rpc) {
     // run rpc
     size_t mContext = get_context();
     set_context((size_t) my_rpc.target_worker_local_);
