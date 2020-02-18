@@ -89,13 +89,13 @@ namespace arl {
       timer_buf_push_one.start();
       timer_buf_push_all.start();
 #endif
-      auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      auto status = agg_buffers[remote_proc].push(my_rpc);
 #ifdef ARL_PROFILE
       timer_buf_push_one.end_and_update();
 #endif
       while (status == AggBuffer<rpc_t>::status_t::FAIL) {
         progress();
-        status = agg_buffers[remote_proc].push(std::move(my_rpc));
+        status = agg_buffers[remote_proc].push(my_rpc);
       }
 #ifdef ARL_PROFILE
       timer_buf_push_all.end_and_update();
@@ -138,10 +138,10 @@ namespace arl {
 #endif
     {
       // rpc
-      auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
+      auto status = agg_buffers[remote_proc].push(my_rpc);
       while (status == AggBuffer<rpc_t>::status_t::FAIL) {
         progress();
-        status = agg_buffers[remote_proc].push(std::move(my_rpc));
+        status = agg_buffers[remote_proc].push(my_rpc);
       }
       if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
         flush_agg_buffer_single(remote_proc);

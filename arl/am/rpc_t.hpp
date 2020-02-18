@@ -68,6 +68,7 @@ namespace arl {
     rpc_t(FutureData* future_p, u_int8_t target_worker_local) :
       future_p_(future_p), source_worker_local_((u_int8_t)local::rank_me()), target_worker_local_(target_worker_local) {}
     rpc_t() = default;
+    rpc_t(const rpc_t& t) = default;
     rpc_t(rpc_t&& t) = default;
     rpc_t& operator=(rpc_t&& t) = default;
 
