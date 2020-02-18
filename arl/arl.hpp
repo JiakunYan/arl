@@ -2,6 +2,7 @@
 #define ARL_HPP
 
 #define ARL_THREAD_PIN
+#define ARL_RPC_AS_LPC
 
 #include <functional>
 #include <iostream>

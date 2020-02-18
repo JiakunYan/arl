@@ -186,10 +186,13 @@ namespace arl {
     rpc_t my_rpc(future.get_p(), remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
 
+#ifdef ARL_RPC_AS_LPC
     if (remote_proc == proc::rank_me()) {
       // lpc
       rpc_as_lpc(std::move(my_rpc));
-    } else {
+    } else
+#endif
+    {
       // rpc
       std::vector<rpc_t> rpcs;
       rpcs.push_back(std::move(my_rpc));

@@ -70,10 +70,13 @@ namespace arl {
     rpc_t my_rpc(future.get_p(), remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
 
+#ifdef ARL_RPC_AS_LPC
     if (remote_proc == proc::rank_me()) {
       // lpc
       rpc_as_lpc(std::move(my_rpc));
-    } else {
+    } else
+#endif
+    {
       // rpc
       auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
       while (status == AggBuffer<rpc_t>::status_t::FAIL) {
@@ -100,10 +103,13 @@ namespace arl {
     rpc_t my_rpc(NULL, remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
 
+#ifdef ARL_RPC_AS_LPC
     if (remote_proc == proc::rank_me()) {
       // lpc
       rpc_as_lpc(std::move(my_rpc));
-    } else {
+    } else
+#endif
+    {
       // rpc
       auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
       while (status == AggBuffer<rpc_t>::status_t::FAIL) {

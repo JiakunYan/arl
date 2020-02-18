@@ -14,7 +14,7 @@ void empty_handler() {
 
 void worker() {
 
-  int num_ops = 100000;
+  int num_ops = 1000000;
   int total_num_ops = num_ops * (int) rank_n();
   double ticks_step = 0;
 #ifdef ARL_PROFILE
