@@ -1,4 +1,4 @@
-//#define ARL_PROFILE
+#define ARL_PROFILE
 #include "arl/arl.hpp"
 #include <cassert>
 #include "external/cxxopts.hpp"
@@ -18,11 +18,11 @@ void worker() {
   int total_num_ops = num_ops * (int) rank_n();
   double ticks_step = 0;
 #ifdef ARL_PROFILE
-  AverageTimer timer_rand;
-  AverageTimer timer_rpc;
-  AverageTimer timer_push;
-  AverageTimer timer_barrier;
-  AverageTimer timer_get;
+  SimpleTimer timer_rand;
+  SimpleTimer timer_rpc;
+  SimpleTimer timer_push;
+  SimpleTimer timer_barrier;
+  SimpleTimer timer_get;
 #endif
   size_t my_rank = rank_me();
   size_t nworkers = rank_n();
@@ -88,7 +88,7 @@ void worker() {
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_ns(end_wait - start) / 1e3;
-  print("Setting: aggr_size = %lu; duration = %.2lf s; num_ops = %lu\n", aggr_size * sizeof(rpc_t), duration_total / 1e6, num_ops);
+  print("Setting: aggr_size = %lu (%lu B); duration = %.2lf s; num_ops = %lu\n", aggr_size, aggr_size * sizeof(rpc_t), duration_total / 1e6, num_ops);
   print("Total single-direction node bandwidth: %lu MB/s\n", (unsigned long) (sizeof(rpc_t) * num_ops * local::rank_n() * 2 / duration_total));
 #ifdef ARL_PROFILE
   // fine-grained
@@ -99,9 +99,13 @@ void worker() {
   print("get: %.3lf us\n", timer_get.to_us());
   // rpc backend
   print("rpc/future preparation: %.3lf us\n", timer_load.to_us());
-  print("agg buffer without pop: %.3lf us\n", timer_buf_npop.to_us());
-  print("agg buffer with pop: %.3lf us\n", timer_buf_pop.to_us());
-  print("agg buffer ave: %.3lf us\n", (timer_buf_pop.to_us() + timer_buf_npop.to_us() * MAX(aggr_size - 1, 0)) / MAX(aggr_size, 1));
+  print("agg buffer push (one): %.3lf us\n", timer_buf_push_one.to_us());
+  print("agg buffer push (all): %.3lf us\n", timer_buf_push_all.to_us());
+  print("agg buffer pop (one): %.3lf us\n", timer_buf_pop_one.to_us());
+  print("agg buffer pop (amortized): %.3lf us\n", timer_buf_pop_ave.to_us());
+//  print("agg buffer without pop: %.3lf us\n", timer_buf_npop.to_us());
+//  print("agg buffer with pop: %.3lf us\n", timer_buf_pop.to_us());
+//  print("agg buffer ave: %.3lf us\n", (timer_buf_pop.to_us() + timer_buf_npop.to_us() * MAX(aggr_size - 1, 0)) / MAX(aggr_size, 1));
   print("Gasnet_ex req: %.3lf us (ave: %.3lf us)\n", timer_gex_req.to_us(), timer_gex_req.to_us() / aggr_size);
 #endif
 }

@@ -2,7 +2,9 @@
 #define ARL_AM_HPP
 
 namespace arl {
-
+#ifdef ARL_PROFILE
+  alignas(alignof_cacheline) arl::SharedTimer timer_gex_req;
+#endif
   void progress(void);
 
   alignas(alignof_cacheline) size_t handler_num;
@@ -46,8 +48,14 @@ namespace arl {
   }
 
   void generic_handler_request_impl_(size_t remote_proc, std::vector<rpc_t> &&rpcs) {
+#ifdef ARL_PROFILE
+    timer_gex_req.start();
+#endif
     gex_AM_RequestMedium0(backend::tm, remote_proc, hidx_generic_rpc_reqhandler_, rpcs.data(),
     rpcs.size() * sizeof(rpc_t), GEX_EVENT_NOW, 0);
+#ifdef ARL_PROFILE
+    timer_gex_req.end_and_update();
+#endif
   }
 
   void generic_rpc_ackhandler_(gex_Token_t token, void *buf, size_t nbytes) {

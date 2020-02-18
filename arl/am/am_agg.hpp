@@ -6,9 +6,10 @@
 namespace arl {
 #ifdef ARL_PROFILE
   alignas(alignof_cacheline) arl::SharedTimer timer_load;
-  alignas(alignof_cacheline) arl::SharedTimer timer_buf_npop;
-  alignas(alignof_cacheline) arl::SharedTimer timer_buf_pop;
-  alignas(alignof_cacheline) arl::SharedTimer timer_gex_req;
+  alignas(alignof_cacheline) arl::SharedTimer timer_buf_pop_one;
+  alignas(alignof_cacheline) arl::SharedTimer timer_buf_pop_ave;
+  alignas(alignof_cacheline) arl::SharedTimer timer_buf_push_one;
+  alignas(alignof_cacheline) arl::SharedTimer timer_buf_push_all;
 #endif
   alignas(alignof_cacheline) std::vector<AggBuffer<rpc_t>> agg_buffers;
   alignas(alignof_cacheline) size_t max_agg_size;
@@ -66,9 +67,15 @@ namespace arl {
     rank_t remote_proc = remote_worker / local::rank_n();
     u_int8_t remote_worker_local = (u_int8_t) remote_worker % local::rank_n();
 
+#ifdef ARL_PROFILE
+    timer_load.start();
+#endif
     Future<std::invoke_result_t<Fn, Args...>> future;
     rpc_t my_rpc(future.get_p(), remote_worker_local);
     my_rpc.load(std::forward<Fn>(fn), std::forward<Args>(args)...);
+#ifdef ARL_PROFILE
+    timer_load.end_and_update();
+#endif
 
 #ifdef ARL_RPC_AS_LPC
     if (remote_proc == proc::rank_me()) {
@@ -78,14 +85,34 @@ namespace arl {
 #endif
     {
       // rpc
+#ifdef ARL_PROFILE
+      timer_buf_push_one.start();
+      timer_buf_push_all.start();
+#endif
       auto status = agg_buffers[remote_proc].push(std::move(my_rpc));
+#ifdef ARL_PROFILE
+      timer_buf_push_one.end_and_update();
+#endif
       while (status == AggBuffer<rpc_t>::status_t::FAIL) {
         progress();
         status = agg_buffers[remote_proc].push(std::move(my_rpc));
       }
+#ifdef ARL_PROFILE
+      timer_buf_push_all.end_and_update();
+      timer_buf_pop_ave.start();
+#endif
       if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
+#ifdef ARL_PROFILE
+        timer_buf_pop_one.start();
+#endif
         flush_agg_buffer_single(remote_proc);
+#ifdef ARL_PROFILE
+        timer_buf_pop_one.end_and_update();
+#endif
       }
+#ifdef ARL_PROFILE
+      timer_buf_pop_ave.end_and_update();
+#endif
       requesteds[local::rank_me()].val++;
     }
 
