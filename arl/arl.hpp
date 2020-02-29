@@ -31,8 +31,9 @@
 // base
 #include "base/detail/threadbarrier.hpp"
 #include "base/rank.hpp"
-#include "base/base.hpp"
 #include "base/collective.hpp"
+#include "base/malloc.hpp"
+#include "base/base.hpp"
 #include "base/worker_object.hpp"
 // am
 #include "am/rpc_t.hpp"

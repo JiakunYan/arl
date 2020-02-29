@@ -47,7 +47,8 @@ void worker() {
   if (run) {
 
     for (size_t i = 0; i < num_ops; i++) {
-      size_t remote_proc = lrand48() % ARH::nprocs();
+      size_t remote_proc = distribution(generator);
+
       while (remote_proc == ARH::my_proc()) {
         remote_proc = lrand48() % ARH::nprocs();
       }

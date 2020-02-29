@@ -23,10 +23,25 @@ ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) 
 
 CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
 
+##################### UPCXX part
+
+CFLAGS = --std=c++11
+# upcxx-meta PPFLAGS are really CFLAGS to be used during compilation
+# upcxx-meta LDFLAGS are really CFLAGS to be used during linking
+# upcxx-meta LIBFLAGS are really a comsbination of LDLIBS and LDFLAGS
+
+UPCXXFLAGS = `upcxx-meta PPFLAGS` `upcxx-meta LDFLAGS`
+LDFLAGS = -L/usr/common/ftg/upcxx/2019.9.4-snapshot-2020.01.15/hsw/gnu/PrgEnv-gnu-6.0.5-8.3.0/upcxx.O3.gasnet_seq.aries/lib -lupcxx -L/usr/common/ftg/upcxx/2019.9.4-snapshot-2020.01.15/hsw/gnu/PrgEnv-gnu-6.0.5-8.3.0/gasnet.opt/lib -lgasnet-aries-seq $(GASNET_LIBS)
+
+############################################################3
+
 SOURCES += $(wildcard *.cpp)
 TARGETS := $(patsubst %.cpp, %, $(SOURCES))
 
 all: $(TARGETS)
+
+upcxx_bw: upcxx_bw.cpp
+	$(CXX) $(CFLAGS) $^ -o $@ $(UPCXXFLAGS) $(LDFLAGS)
 
 %: %.cpp
 	@echo "C $@ $(BACKEND)"

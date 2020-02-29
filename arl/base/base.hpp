@@ -7,26 +7,11 @@
 
 namespace arl {
   extern void init_am(void);
-  extern void flush_am(void);
   extern void init_agg(void);
-  extern void flush_agg_buffer(void);
   extern void progress(void);
 
-  alignas(alignof_cacheline) ThreadBarrier threadBarrier;
   alignas(alignof_cacheline) std::atomic<bool> thread_run = false;
   alignas(alignof_cacheline) std::atomic<bool> worker_exit = false;
-
-  inline void barrier() {
-    threadBarrier.wait();
-    if (local::rank_me() == 0) {
-      flush_agg_buffer();
-    }
-    flush_am();
-    if (local::rank_me() == 0) {
-      backend::barrier();
-    }
-    threadBarrier.wait();
-  }
 
   // progress thread
   void progress_handler() {
@@ -157,18 +142,6 @@ namespace arl {
     }
     std::cout.flush();
     barrier();
-  }
-
-  namespace local {
-    inline void barrier() {
-      threadBarrier.wait();
-    }
-  }
-
-  namespace proc {
-    inline void barrier() {
-      backend::barrier();
-    }
   }
 }
 

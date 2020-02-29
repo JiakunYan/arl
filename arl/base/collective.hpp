@@ -6,6 +6,36 @@
 #define ARL_BASE_COLLECTIVE_HPP
 
 namespace arl {
+
+  alignas(alignof_cacheline) ThreadBarrier threadBarrier;
+  extern void flush_am(void);
+  extern void flush_agg_buffer(void);
+  extern void progress(void);
+
+  inline void barrier() {
+    threadBarrier.wait();
+    if (local::rank_me() == 0) {
+      flush_agg_buffer();
+    }
+    flush_am();
+    if (local::rank_me() == 0) {
+      backend::barrier();
+    }
+    threadBarrier.wait();
+  }
+
+  namespace local {
+    inline void barrier() {
+      threadBarrier.wait();
+    }
+  }
+
+  namespace proc {
+    inline void barrier() {
+      backend::barrier();
+    }
+  }
+
   namespace local {
     template <typename T>
     inline T broadcast(T& val, rank_t root) {

@@ -11,7 +11,7 @@ PLATFORM = $(shell echo $(ARL_PLATFORM) | tr '[:lower:]' '[:upper:]')
 TIMER_CMD=time
 
 BACKEND=GASNET_EX
-ifeq ($(PLATFORM), CORI)
+ifeq (CORI,$(findstring CORI,$(PLATFORM)))
 include $(gasnet_prefix)/include/aries-conduit/aries-par.mak
 CXX = CC
 else
