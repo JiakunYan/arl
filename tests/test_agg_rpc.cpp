@@ -33,7 +33,7 @@ void worker() {
 int main(int argc, char** argv) {
   // one process per node
   arl::init();
-  arl::set_agg_size(50);
+  arl::set_agg_size(2048);
 
   arl::run(worker);
 

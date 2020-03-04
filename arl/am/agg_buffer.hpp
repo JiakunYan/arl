@@ -7,14 +7,18 @@
 
 #include <atomic>
 #include <vector>
+#include <cstring>
+
+using std::unique_ptr;
+using std::make_unique;
+using std::vector;
 
 namespace arl {
-  template <typename T>
   class AggBuffer {
-    alignas(alignof_cacheline) std::vector<T> buffer;
+    alignas(alignof_cacheline) unique_ptr<char[]> buffer;
     alignas(alignof_cacheline) std::atomic<size_t> tail;
     alignas(alignof_cacheline) std::atomic<size_t> reserved_tail;
-    alignas(alignof_cacheline) size_t len;
+    alignas(alignof_cacheline) size_t cap;
     alignas(alignof_cacheline) std::mutex mutex_pop;
 
   public:
@@ -24,64 +28,65 @@ namespace arl {
       SUCCESS_AND_FULL
     };
 
-    AggBuffer(): len(0), tail(0), reserved_tail(0) {
-      ARL_Assert_Align(buffer, alignof_cacheline);
-      ARL_Assert_Align(tail, alignof_cacheline);
-      ARL_Assert_Align(reserved_tail, alignof_cacheline);
-      ARL_Assert_Align(len, alignof_cacheline);
+    AggBuffer(): cap(0), tail(0), reserved_tail(0), buffer(nullptr) {
     }
 
-    explicit AggBuffer(size_t _size): len(_size), tail(0), reserved_tail(0) {
-      buffer = std::vector<T>(len);
-      ARL_Assert_Align(buffer, alignof_cacheline);
-      ARL_Assert_Align(tail, alignof_cacheline);
-      ARL_Assert_Align(reserved_tail, alignof_cacheline);
-      ARL_Assert_Align(len, alignof_cacheline);
+    explicit AggBuffer(size_t size_): cap(size_), tail(0), reserved_tail(0) {
+      buffer = make_unique<char[]>(cap);
     }
 
-    void init(size_t _size) {
-      len = _size;
+    ~AggBuffer() {
+    }
+
+    template <typename T>
+    void init(size_t size_) {
+      cap = size_ / sizeof(T) * sizeof(T);
       tail = 0;
       reserved_tail = 0;
-      buffer = std::vector<T>(len);
+      buffer = make_unique<char[]>(cap);
     }
 
     size_t size() const {
       return reserved_tail.load();
     }
 
-    status_t push(T val) {
-      size_t current_tail = tail++;
-      if (current_tail >= len) {
-        if (current_tail == std::numeric_limits<size_t>::max()) {
-          throw std::overflow_error("arl::AggBuffer::push: tail overflow");
+    template <typename T>
+    status_t push(const T& val) {
+      static_assert(std::is_trivially_copyable<T>::value);
+      size_t current_tail = tail.fetch_add(sizeof(val));
+      if (current_tail + sizeof(val) > cap) {
+#ifdef ARL_DEBUG
+        if (current_tail > std::numeric_limits<size_t>::max() / 4 * 3) {
+          throw std::overflow_error("arl::AggBuffer::push: tail might overflow");
         }
+#endif
         return status_t::FAIL;
       }
-      buffer[current_tail] = std::move(val);
-      size_t temp = ++reserved_tail;
-      if (temp == len) {
+      std::memcpy(buffer.get() + current_tail, &val, sizeof(val));
+      size_t temp = reserved_tail.fetch_add(sizeof(val));
+//      printf("push real %lu reserved %lu\n", tail.load(), reserved_tail.load());
+      if (temp + 2 * sizeof(val) > cap) {
         return status_t::SUCCESS_AND_FULL;
       } else {
         return status_t::SUCCESS;
       }
     }
 
-    size_t pop_all(std::vector<T>& receiver) {
+    size_t pop_all(unique_ptr<char[]>& target) {
+      if (tail.load() == 0) {
+        return 0;
+      }
       if (mutex_pop.try_lock()) {
-        size_t real_tail = std::min(tail.fetch_add(len), len); // prevent others from begining pushing
+        size_t real_tail = std::min(tail.fetch_add(cap), cap); // prevent others from begining pushing
         // wait until those who is pushing finish
         while (reserved_tail != real_tail) {
         }
 
-        receiver = std::move(buffer);
-        buffer = std::vector<T>(len);
+        target = std::move(buffer);
+        buffer = make_unique<char[]>(cap);
 
-        ARL_Assert(real_tail <= len, "");
+        ARL_Assert(real_tail <= cap, "");
         ARL_Assert(real_tail == reserved_tail, "");
-        for (int i = 0; i < len - real_tail; ++i) {
-          receiver.pop_back();
-        }
 
         reserved_tail = 0;
         tail = 0;

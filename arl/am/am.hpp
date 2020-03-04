@@ -1,6 +1,9 @@
 #ifndef ARL_AM_HPP
 #define ARL_AM_HPP
 
+using std::unique_ptr;
+using std::make_unique;
+
 namespace arl {
 #ifdef ARL_PROFILE
   alignas(alignof_cacheline) arl::SharedTimer timer_gex_req;
@@ -47,12 +50,12 @@ namespace arl {
         results.size() * sizeof(rpc_result_t), GEX_EVENT_NOW, 0);
   }
 
-  void generic_handler_request_impl_(size_t remote_proc, std::vector<rpc_t> &&rpcs) {
+  void generic_handler_request_impl_(size_t remote_proc, void* buffer, size_t len) {
 #ifdef ARL_PROFILE
     timer_gex_req.start();
 #endif
-    gex_AM_RequestMedium0(backend::tm, remote_proc, hidx_generic_rpc_reqhandler_, rpcs.data(),
-    rpcs.size() * sizeof(rpc_t), GEX_EVENT_NOW, 0);
+    gex_AM_RequestMedium0(backend::tm, remote_proc, hidx_generic_rpc_reqhandler_, buffer,
+    len, GEX_EVENT_NOW, 0);
 #ifdef ARL_PROFILE
     timer_gex_req.end_and_update();
 #endif
@@ -202,9 +205,7 @@ namespace arl {
 #endif
     {
       // rpc
-      std::vector<rpc_t> rpcs;
-      rpcs.push_back(std::move(my_rpc));
-      generic_handler_request_impl_(remote_proc, std::move(rpcs));
+      generic_handler_request_impl_(remote_proc, &my_rpc, sizeof(my_rpc));
       requesteds[local::rank_me()].val++;
     }
 

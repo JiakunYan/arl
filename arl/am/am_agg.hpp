@@ -2,6 +2,8 @@
 #define ARL_AM_AGGREGATE_HPP
 
 #include <vector>
+using std::unique_ptr;
+using std::make_unique;
 
 namespace arl {
 #ifdef ARL_PROFILE
@@ -11,28 +13,29 @@ namespace arl {
   alignas(alignof_cacheline) arl::SharedTimer timer_buf_push_one;
   alignas(alignof_cacheline) arl::SharedTimer timer_buf_push_all;
 #endif
-  alignas(alignof_cacheline) std::vector<AggBuffer<rpc_t>> agg_buffers;
+  alignas(alignof_cacheline) std::vector<AggBuffer> agg_buffers;
   alignas(alignof_cacheline) size_t max_agg_size;
   alignas(alignof_cacheline) std::atomic<size_t> agg_size;
 
   void init_agg() {
     max_agg_size = std::min(
-        gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0) / sizeof(rpc_t),
-        gex_AM_MaxReplyMedium  (backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0) / sizeof(rpc_result_t)
+        gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0),
+        gex_AM_MaxReplyMedium  (backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0)
         );
     agg_size = max_agg_size;
 
-    agg_buffers = std::vector<AggBuffer<rpc_t>>(proc::rank_n());
+    agg_buffers = std::vector<AggBuffer>(proc::rank_n());
     for (size_t i = 0; i < proc::rank_n(); ++i) {
-      agg_buffers[i].init(agg_size);
+      agg_buffers[i].init<rpc_t>(agg_size);
     }
   }
 
   size_t set_agg_size(size_t custom_agg_size) {
-    ARL_Assert(custom_agg_size > 0, "");
+    ARL_Assert(custom_agg_size >= sizeof(rpc_t), "");
+    ARL_Assert(custom_agg_size >= sizeof(rpc_result_t), "");
     agg_size = std::min(max_agg_size, custom_agg_size);
     for (size_t i = 0; i < proc::rank_n(); ++i) {
-      agg_buffers[i].init(agg_size);
+      agg_buffers[i].init<rpc_t>(agg_size);
     }
     return agg_size.load();
   }
@@ -46,10 +49,10 @@ namespace arl {
   }
 
   void flush_agg_buffer_single(size_t id) {
-    std::vector<rpc_t> send_buf;
-    size_t len = agg_buffers[id].pop_all(send_buf);
+    unique_ptr<char[]> buffer;
+    size_t len = agg_buffers[id].pop_all(buffer);
     if (len > 0) {
-      generic_handler_request_impl_(id, std::move(send_buf));
+      generic_handler_request_impl_(id, buffer.get(), len);
     }
   }
 
@@ -93,7 +96,7 @@ namespace arl {
 #ifdef ARL_PROFILE
       timer_buf_push_one.end_and_update();
 #endif
-      while (status == AggBuffer<rpc_t>::status_t::FAIL) {
+      while (status == AggBuffer::status_t::FAIL) {
         progress();
         status = agg_buffers[remote_proc].push(my_rpc);
       }
@@ -101,7 +104,7 @@ namespace arl {
       timer_buf_push_all.end_and_update();
       timer_buf_pop_ave.start();
 #endif
-      if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
+      if (status == AggBuffer::status_t::SUCCESS_AND_FULL) {
 #ifdef ARL_PROFILE
         timer_buf_pop_one.start();
 #endif
@@ -139,11 +142,11 @@ namespace arl {
     {
       // rpc
       auto status = agg_buffers[remote_proc].push(my_rpc);
-      while (status == AggBuffer<rpc_t>::status_t::FAIL) {
+      while (status == AggBuffer::status_t::FAIL) {
         progress();
         status = agg_buffers[remote_proc].push(my_rpc);
       }
-      if (status == AggBuffer<rpc_t>::status_t::SUCCESS_AND_FULL) {
+      if (status == AggBuffer::status_t::SUCCESS_AND_FULL) {
         flush_agg_buffer_single(remote_proc);
       }
       requesteds[local::rank_me()].val++;
