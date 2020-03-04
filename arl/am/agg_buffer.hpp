@@ -20,6 +20,7 @@ namespace arl {
     alignas(alignof_cacheline) std::atomic<size_t> reserved_tail;
     alignas(alignof_cacheline) size_t cap;
     alignas(alignof_cacheline) std::mutex mutex_pop;
+    alignas(alignof_cacheline) size_t element_size;
 
   public:
     enum class status_t {
@@ -28,11 +29,7 @@ namespace arl {
       SUCCESS_AND_FULL
     };
 
-    AggBuffer(): cap(0), tail(0), reserved_tail(0), buffer(nullptr) {
-    }
-
-    explicit AggBuffer(size_t size_): cap(size_), tail(0), reserved_tail(0) {
-      buffer = make_unique<char[]>(cap);
+    AggBuffer(): cap(0), tail(0), reserved_tail(0), element_size(0), buffer(nullptr) {
     }
 
     ~AggBuffer() {
@@ -43,6 +40,7 @@ namespace arl {
       cap = size_ / sizeof(T) * sizeof(T);
       tail = 0;
       reserved_tail = 0;
+      element_size = sizeof(T);
       buffer = make_unique<char[]>(cap);
     }
 
@@ -53,6 +51,7 @@ namespace arl {
     template <typename T>
     status_t push(const T& val) {
       static_assert(std::is_trivially_copyable<T>::value);
+      ARL_Assert(element_size == sizeof(T), "AggBuffer should keep elements of the same type until calling another init");
       size_t current_tail = tail.fetch_add(sizeof(val));
       if (current_tail + sizeof(val) > cap) {
 #ifdef ARL_DEBUG
@@ -64,8 +63,7 @@ namespace arl {
       }
       std::memcpy(buffer.get() + current_tail, &val, sizeof(val));
       size_t temp = reserved_tail.fetch_add(sizeof(val));
-//      printf("push real %lu reserved %lu\n", tail.load(), reserved_tail.load());
-      if (temp + 2 * sizeof(val) > cap) {
+      if (temp + sizeof(val) == cap) {
         return status_t::SUCCESS_AND_FULL;
       } else {
         return status_t::SUCCESS;

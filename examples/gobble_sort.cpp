@@ -67,22 +67,20 @@ void worker() {
 
 int main(int argc, char** argv) {
   // one process per node
+
   size_t agg_size = 0;
   cxxopts::Options options("ARL Benchmark", "Benchmark of ARL system");
   options.add_options()
-      ("size", "Aggregation size", cxxopts::value<size_t>())
+      ("size", "Aggregation size", cxxopts::value<size_t>()->default_value("65536"))
       ;
   auto result = options.parse(argc, argv);
   try {
     agg_size = result["size"].as<size_t>();
-  } catch (...) {
-    agg_size = 102;
   }
-  ARL_Assert(agg_size >= 0, "");
 
   arl::init(15, 16);
-
   mObjects.init();
+  ARL_Assert(agg_size >= 0, "");
   arl::set_agg_size(agg_size);
 
   partition_size = (range + arl::rank_n() - 1) / arl::rank_n();

@@ -62,13 +62,11 @@ int main(int argc, char** argv) {
   size_t agg_size = 0;
   cxxopts::Options options("ARL Benchmark", "Benchmark of ARL system");
   options.add_options()
-      ("size", "Aggregation size", cxxopts::value<size_t>())
+      ("size", "Aggregation size", cxxopts::value<size_t>()->default_value("65536"))
       ;
   auto result = options.parse(argc, argv);
   try {
     agg_size = result["size"].as<size_t>();
-  } catch (...) {
-    agg_size = 0;
   }
   ARL_Assert(agg_size >= 0, "");
 
