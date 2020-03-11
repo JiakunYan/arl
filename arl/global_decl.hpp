@@ -6,8 +6,8 @@
 #define ARL_GLOBAL_HPP
 
 namespace arl {
-  using rank_t = uint64_t;
-  using tick_t = uint64_t;
+  using rank_t = int64_t;
+  using tick_t = int64_t;
 
   inline const int alignof_cacheline = 64;
 }
