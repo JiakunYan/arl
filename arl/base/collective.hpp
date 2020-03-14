@@ -14,9 +14,7 @@ namespace arl {
 
   inline void barrier() {
     threadBarrier.wait();
-    if (local::rank_me() == 0) {
-      flush_agg_buffer();
-    }
+    flush_agg_buffer();
     flush_am();
     if (local::rank_me() == 0) {
       backend::barrier();

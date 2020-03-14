@@ -66,7 +66,9 @@ int main() {
                           offset + sizeof(Payload), GEX_EVENT_NOW, 0);
   }
 
+  // ---
   arl::rpc_ff(0, foo1, 'c', 34, true);
+  arl::flush_agg_buffer();
   cout << "ack counter is " << *arl::am_internal::am_ack_counter << endl;
 
   arl::finalize();

@@ -13,6 +13,8 @@
 #include "kmer.hpp"
 #include "zstr.hpp"
 
+#include "external/libcuckoo/cuckoohash_map.hh"
+
 using std::vector;
 using std::pair;
 using std::ostream;

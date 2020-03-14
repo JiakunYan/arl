@@ -44,7 +44,7 @@
 #include "am/am_ff.hpp"
 // data structure
 //#include "data_structure/hash_map.hpp"
-//#include "data_structure/bloom_filter.hpp"
+#include "data_structure/bloom_filter.hpp"
 
 namespace arl {
 }

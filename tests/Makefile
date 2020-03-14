@@ -21,7 +21,7 @@ endif
 
 ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
 
-CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
+CXXFLAGS = -std=gnu++17 $(ARLFLAGS) -g -rdynamic
 
 SOURCES += $(wildcard *.cpp)
 TARGETS := $(patsubst %.cpp, %, $(SOURCES))

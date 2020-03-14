@@ -19,7 +19,7 @@ alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_am_ff_ackhandler;
 void generic_am_ff_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
 void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 
-AggBufferSimple* amff_agg_buffer_p;
+AggBuffer* amff_agg_buffer_p;
 
 // Currently, init_am_ff should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
@@ -42,7 +42,7 @@ void init_am_ff() {
 
   gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable)/sizeof(gex_AM_Entry_t));
 
-  amff_agg_buffer_p = new AggBufferSimple[proc::rank_n()];
+  amff_agg_buffer_p = new AggBuffer[proc::rank_n()];
 
   int max_buffer_size = gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
   for (int i = 0; i < proc::rank_n(); ++i) {
@@ -79,7 +79,7 @@ class AmffTypeWrapper {
 
   static void req_invoker(intptr_t fn_p, int context, char* buf, int nbytes) {
     static_assert(is_void_v<Result>);
-    ARL_Assert(nbytes >= sizeof(Payload), "nbytes is ", nbytes, "; sizeof(Payload) is ", sizeof(Payload));
+    ARL_Assert(nbytes >= (int) sizeof(Payload), "(", nbytes, " >= ", sizeof(Payload), ")");
     Fn* fn = resolve_pi_fnptr<Fn>(fn_p);
     Payload *ptr = reinterpret_cast<Payload*>(buf);
 
@@ -102,23 +102,23 @@ class AmffTypeWrapper {
 void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
   using payload_size_t = int();
   using req_invoker_t = void(intptr_t, int, char*, int);
+//  printf("reqhandler %p, %lu\n", void_buf, unbytes);
 
   char* buf = static_cast<char*>(void_buf);
   int nbytes = static_cast<int>(unbytes);
   int n = 0;
   int consumed = 0;
-  printf("nbytes %d\n", nbytes);
   while (nbytes > consumed) {
+    ARL_Assert(nbytes >= consumed + (int) sizeof(AmffReqMeta), "(", nbytes, " >= ", consumed, " + ", sizeof(AmffReqMeta), ")");
     AmffReqMeta& meta = *reinterpret_cast<AmffReqMeta*>(buf + consumed);
+//    printf("meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
     consumed += sizeof(AmffReqMeta);
-    printf("meta %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 
     auto invoker = resolve_pi_fnptr<intptr_t(const string&)>(meta.type_wrapper_p);
 
     intptr_t payload_size_p = invoker("payload_size");
     auto payload_size = resolve_pi_fnptr<payload_size_t>(payload_size_p);
     int payload_nbytes = payload_size();
-    printf("payload_nbytes %d\n", payload_nbytes);
 
     intptr_t req_invoker_p = invoker("req_invoker");
     auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
@@ -134,14 +134,39 @@ void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
 }
 
 void flush_am_ff_buffer() {
-  for (int i = local::rank_me(); i < proc::rank_n(); ++i) {
-    amff_agg_buffer_p[i].flush();
+  if constexpr (is_same_v<AggBuffer, AggBufferLocal>) {
+    for (int ii = 0; ii < proc::rank_n(); ++ii) {
+      int i = (ii + local::rank_me()) % proc::rank_n();
+      vector<pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+      for (auto result: results) {
+        if (get<0>(result) != nullptr) {
+          if (get<1>(result) != 0) {
+            gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
+                                  get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+          }
+          delete [] get<0>(result);
+        }
+      }
+    }
+  } else {
+    for (int i = local::rank_me(); i < proc::rank_n(); i += local::rank_n()) {
+      vector<pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+      for (auto result: results) {
+        if (get<0>(result) != nullptr) {
+          if (get<1>(result) != 0) {
+            gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
+                                  get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+          }
+          delete [] get<0>(result);
+        }
+      }
+    }
   }
 }
 } // namespace am_internal
 
 template <typename Fn, typename... Args>
-void rpc_ff(rank_t remote_worker, Fn fn, Args&&... args) {
+void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
   using Payload = tuple<Args...>;
   using am_internal::AmffTypeWrapper;
   using am_internal::AmffReqMeta;
@@ -151,21 +176,22 @@ void rpc_ff(rank_t remote_worker, Fn fn, Args&&... args) {
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
 
-  intptr_t fn_p = am_internal::get_pi_fnptr(fn);
-  intptr_t wrapper_p = am_internal::get_pi_fnptr(AmffTypeWrapper<Fn, Args...>::invoker);
+  intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
+  intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<remove_reference_t<Fn>, Args...>::invoker);
   AmffReqMeta meta{fn_p, wrapper_p, remote_worker_local};
   Payload payload(forward<Args>(args)...);
-  pair<am_internal::AmffReqMeta, Payload> data{meta, payload};
+//  pair<am_internal::AmffReqMeta, Payload> data{meta, payload};
 
-  pair<char*, int> result = am_internal::amff_agg_buffer_p[remote_proc].push(std::move(data));
+  pair<char*, int> result = am_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
   if (get<0>(result) != nullptr) {
-    gex_AM_RequestMedium0(backend::tm, remote_proc, am_internal::hidx_generic_am_ff_reqhandler,
-                          get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+    if (get<1>(result) != 0) {
+      gex_AM_RequestMedium0(backend::tm, remote_proc, am_internal::hidx_generic_am_ff_reqhandler,
+                            get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+    }
     delete [] get<0>(result);
   }
   ++(*am_internal::am_req_counter);
 }
-
 
 } // namespace arl
 

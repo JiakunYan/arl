@@ -2,9 +2,13 @@
 #include "arl/arl.hpp"
 #include <sstream>
 #include <random>
+#include "external/typename.hpp"
 
-arl::AggBuffer aggBuffer;
-size_t buf_size = 100;
+using namespace std;
+
+using AggBuffer = arl::am_internal::AggBufferLocal;
+AggBuffer* aggBuffer_p;
+const int buf_size = 99;
 
 const int MAX_VAL = 100;
 const size_t N_STEPS = 50;
@@ -13,7 +17,7 @@ std::vector<std::atomic<int>> counts(MAX_VAL);
 const bool print_verbose = false;
 
 void worker() {
-  using status_t = arl::AggBuffer::status_t;
+  using BufPair = pair<char*, int>;
   std::default_random_engine generator(arl::rank_me());
   std::uniform_int_distribution<int> distribution(1, MAX_VAL);
 
@@ -21,78 +25,50 @@ void worker() {
 
   for (int i = 0; i < N_STEPS; ++i) {
     int val = distribution(generator);
-    status_t status = aggBuffer.push(val);
-    while (status == status_t::FAIL) {
-      status = aggBuffer.push(val);
-    }
-    // successful push
+    BufPair result = aggBuffer_p->push(val);
     int count = counts[val]++;
-    if (print_verbose) {
-      printf("Rank %lu push val: (%d, %d), buf_size = %lu\n",
-             arl::rank_me(), val, count, aggBuffer.size());
-    }
-    fflush(stdout);
-    if (status == status_t::SUCCESS_AND_FULL) {
-      fflush(stdout);
-      std::unique_ptr<char[]> buf;
-      size_t len = aggBuffer.pop_all(buf) / sizeof(int);
-      int* p = (int*) buf.release();
-      std::unique_ptr<int[]> buf_int(p);
-      if (!print_verbose)
-        for (int i = 0; i < len; ++i) {
-          counts[buf_int[i]]--;
-        }
-      else {
-        std::ostringstream ostr;
-        ostr << "Rank " << arl::rank_me() << " pop vec: ";
-        for (int i = 0; i < len; ++i) {
-          int count = --counts[buf_int[i]];
-          ostr << "(" << val << ", " << count << "), ";
-        }
-        ostr << "buf_size = " << aggBuffer.size();
-        std::cout << ostr.str() << std::endl;
+
+    if (get<0>(result) != nullptr) {
+      char* ptr = get<0>(result);
+      int n = get<1>(result) / sizeof(int);
+      for (int i = 0; i < n; ++i) {
+        int val = *reinterpret_cast<int*>(ptr + i * sizeof(int));
+        counts[val]--;
       }
+      delete [] ptr;
     }
   }
 
   arl::barrier();
   arl::print("Finish pushing...\n");
+  vector<BufPair> results = aggBuffer_p->flush();
 
-  if (arl::local::rank_me() == 0) {
-    std::unique_ptr<char[]> buf;
-    size_t len = aggBuffer.pop_all(buf) / sizeof(int);
-    int* p = (int*) buf.release();
-    std::unique_ptr<int[]> buf_int(p);
-    if (!print_verbose) {
-      for (int i = 0; i < len; ++i) {
-        counts[buf_int[i]]--;
+  for (auto result: results) {
+    if (get<0>(result) != nullptr) {
+      char* ptr = get<0>(result);
+      int n = get<1>(result) / sizeof(int);
+      for (int i = 0; i < n; ++i) {
+        int val = *reinterpret_cast<int*>(ptr + i * sizeof(int));
+        counts[val]--;
       }
-    } else {
-      std::ostringstream ostr;
-      ostr << "Rank " << arl::rank_me() << " pop vec: ";
-      for (int i = 0; i < len; ++i) {
-        int val = buf_int[i];
-        int count = --counts[val];
-        ostr << "(" << val << ", " << count << "), ";
-      }
-      ostr << "buf_size = " << aggBuffer.size();
-      std::cout << ostr.str() << std::endl;
+      delete [] ptr;
     }
+  }
 
+  arl::barrier();
+  if (arl::local::rank_me() == 0) {
     bool success = true;
     for (int i = 0; i < MAX_VAL; ++i) {
       int sum = counts[i].load();
-      if (print_verbose && sum != 0) {
+      if (sum != 0) {
         printf("Error! Proc %lu, val = %d, sum = %d\n", arl::proc::rank_me(), i, sum);
         success = false;
-      } else {
-        assert(sum == 0);
       }
     }
-    if (print_verbose && success) {
+    if (success) {
       printf("Pass!\n");
     } else {
-      printf("Pass!\n");
+      exit(1);
     }
   }
 }
@@ -100,7 +76,9 @@ void worker() {
 int main(int argc, char** argv) {
   // one process per node
   arl::init(15, 16);
-  aggBuffer.init<int>(buf_size);
+  cout << "Testing " << type_name<AggBuffer>() << endl;
+  aggBuffer_p = new AggBuffer();
+  aggBuffer_p->init(buf_size);
   for (int i = 0; i < MAX_VAL; ++i) {
     counts[i] = 0;
   }
