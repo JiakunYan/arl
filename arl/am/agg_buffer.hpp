@@ -296,8 +296,8 @@ class AggBufferAdvanced {
 };
 
 //using AggBuffer = AggBufferSimple;
-using AggBuffer = AggBufferLocal;
-//using AggBuffer = AggBufferAdvanced;
+//using AggBuffer = AggBufferLocal;
+using AggBuffer = AggBufferAdvanced;
 
 } // namespace am_internal
 } // namespace arl

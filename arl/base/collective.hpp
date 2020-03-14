@@ -12,6 +12,14 @@ namespace arl {
   extern void flush_agg_buffer(void);
   extern void progress(void);
 
+  inline void pure_barrier() {
+    threadBarrier.wait();
+    if (local::rank_me() == 0) {
+      backend::barrier();
+    }
+    threadBarrier.wait();
+  }
+
   inline void barrier() {
     threadBarrier.wait();
     flush_agg_buffer();

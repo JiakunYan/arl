@@ -122,7 +122,7 @@ void run(Fn &&fn, Args &&... args) {
 template <typename ...Args>
 void print(std::string format, Args... args) {
   fflush(stdout);
-  barrier();
+  pure_barrier();
   if (rank_me() == 0) {
     if constexpr (sizeof...(args) == 0) {
       printf("%s", format.c_str());
@@ -131,7 +131,7 @@ void print(std::string format, Args... args) {
     }
   }
   fflush(stdout);
-  barrier();
+  pure_barrier();
 }
 
 template <typename ...Args>

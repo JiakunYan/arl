@@ -102,7 +102,7 @@ class AmffTypeWrapper {
 void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
   using payload_size_t = int();
   using req_invoker_t = void(intptr_t, int, char*, int);
-//  printf("reqhandler %p, %lu\n", void_buf, unbytes);
+//  printf("rank %ld reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
   char* buf = static_cast<char*>(void_buf);
   int nbytes = static_cast<int>(unbytes);
@@ -119,6 +119,7 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     intptr_t payload_size_p = invoker("payload_size");
     auto payload_size = resolve_pi_fnptr<payload_size_t>(payload_size_p);
     int payload_nbytes = payload_size();
+//    printf("payload_nbytes: %d\n", payload_nbytes);
 
     intptr_t req_invoker_p = invoker("req_invoker");
     auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
@@ -127,6 +128,7 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     ++n;
   }
   gex_AM_ReplyShort1(token, hidx_generic_am_ff_ackhandler, 0, static_cast<gex_AM_Arg_t>(n));
+//  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
 void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
@@ -167,7 +169,7 @@ void flush_am_ff_buffer() {
 
 template <typename Fn, typename... Args>
 void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
-  using Payload = tuple<Args...>;
+  using Payload = tuple<remove_reference_t<Args>...>;
   using am_internal::AmffTypeWrapper;
   using am_internal::AmffReqMeta;
 
@@ -177,10 +179,12 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
   int remote_worker_local = remote_worker % local::rank_n();
 
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
-  intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<remove_reference_t<Fn>, Args...>::invoker);
+  intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<remove_reference_t<Fn>, remove_reference_t<Args>...>::invoker);
   AmffReqMeta meta{fn_p, wrapper_p, remote_worker_local};
   Payload payload(forward<Args>(args)...);
 //  pair<am_internal::AmffReqMeta, Payload> data{meta, payload};
+//  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
+//  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
   pair<char*, int> result = am_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
   if (get<0>(result) != nullptr) {
