@@ -5,11 +5,6 @@
 #ifndef ARL_AM_FF_HPP
 #define ARL_AM_FF_HPP
 
-#include <atomic>
-#include "arl/global_decl.hpp"
-#include "arl/base/rank.hpp"
-#include <gasnetex.h>
-
 namespace arl {
 namespace am_internal {
 

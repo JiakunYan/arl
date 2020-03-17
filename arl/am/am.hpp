@@ -6,6 +6,14 @@
 #define ARL_AM_HPP
 
 namespace arl {
+
+namespace amffrd_internal {
+extern void init_amffrd();
+extern void exit_amffrd();
+extern void flush_amffrd();
+extern void wait_amffrd();
+}
+
 namespace am_internal {
 // Get a *position independent* function pointer
 template<typename T>
@@ -36,9 +44,11 @@ void init_am() {
   *am_req_counter = 0;
 
   init_am_ff();
+  amffrd_internal::init_amffrd();
 }
 
 void exit_am() {
+  amffrd_internal::exit_amffrd();
   exit_am_ff();
   delete am_ack_counter;
   delete am_req_counter;
@@ -48,12 +58,14 @@ void exit_am() {
 
 void flush_agg_buffer() {
   am_internal::flush_am_ff_buffer();
+  amffrd_internal::flush_amffrd();
 }
 
 void flush_am() {
   while (*am_internal::am_req_counter > *am_internal::am_ack_counter) {
     progress();
   }
+  amffrd_internal::wait_amffrd();
 }
 
 void progress() {

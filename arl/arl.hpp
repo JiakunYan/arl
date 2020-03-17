@@ -19,6 +19,8 @@
 // GASNet-EX as backend
 #include <gasnetex.h>
 
+#include "external/typename.hpp"
+
 #include "global_decl.hpp"
 #include "base/op.hpp"
 // tools
@@ -42,6 +44,7 @@
 #include "am/am.hpp"
 //#include "am/am_agg.hpp"
 #include "am/am_ff.hpp"
+#include "arl/am/am_ffrd.hpp"
 // data structure
 //#include "data_structure/hash_map.hpp"
 #include "data_structure/bloom_filter.hpp"
