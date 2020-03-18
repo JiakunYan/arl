@@ -69,6 +69,14 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
+  switch (pass_type) {
+    case BLOOM_SET_PASS:
+      kmer_dht.register_add_kmer_set();
+      break;
+    case BLOOM_COUNT_PASS:
+      kmer_dht.register_add_kmer_count();
+      break;
+  }
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;

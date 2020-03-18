@@ -186,15 +186,26 @@ public:
     delete map_ptrs[rank_me()];
   }
 
+  void register_add_kmer_set() {
+    auto fn = [](KmerLHT* lmap, Kmer kmer){
+      lmap->add_kmer_set(kmer);
+    };
+    register_amffrd<decltype(fn), KmerLHT*, Kmer>(fn);
+  }
+
+  void register_add_kmer_count() {
+    auto fn = [](KmerLHT* lmap, Kmer kmer){
+      lmap->add_kmer_count(kmer);
+    };
+    register_amffrd<decltype(fn), KmerLHT*, Kmer>(fn);
+  }
+
   void add_kmer_set(Kmer kmer) {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer);
-    rpc_ff(target_rank,
-               [](KmerLHT* lmap, Kmer kmer){
-                 lmap->add_kmer_set(kmer);
-               }, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, map_ptrs[target_rank], kmer);
   }
 
   void add_kmer_count(Kmer kmer) {
@@ -202,10 +213,7 @@ public:
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer);
-    rpc_ff(target_rank,
-               [](KmerLHT* lmap, Kmer kmer){
-                 lmap->add_kmer_count(kmer);
-               }, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, map_ptrs[target_rank], kmer);
   }
 
   void reserve_space_and_clear_bloom() {

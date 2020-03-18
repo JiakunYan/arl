@@ -149,31 +149,16 @@ void exit_amffrd() {
 }
 
 void flush_amffrd() {
-  if constexpr (is_same_v<amffrd_internal::AggBuffer, am_internal::AggBufferLocal>) {
-    for (int ii = 0; ii < proc::rank_n(); ++ii) {
-      int i = (ii + local::rank_me()) % proc::rank_n();
-      vector<pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
-      for (auto result: results) {
-        if (get<0>(result) != nullptr) {
-          if (get<1>(result) != 0) {
-            amffrd_internal::send_amffrd_to_gex(i, *amffrd_internal::global_meta_p,
-                                                get<0>(result), get<1>(result));
-          }
-          delete [] get<0>(result);
+  for (int ii = 0; ii < proc::rank_n(); ++ii) {
+    int i = (ii + local::rank_me()) % proc::rank_n();
+    vector<pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
+    for (auto result: results) {
+      if (get<0>(result) != nullptr) {
+        if (get<1>(result) != 0) {
+          amffrd_internal::send_amffrd_to_gex(i, *amffrd_internal::global_meta_p,
+                                              get<0>(result), get<1>(result));
         }
-      }
-    }
-  } else {
-    for (int i = local::rank_me(); i < proc::rank_n(); i += local::rank_n()) {
-      vector<pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
-      for (auto result: results) {
-        if (get<0>(result) != nullptr) {
-          if (get<1>(result) != 0) {
-            amffrd_internal::send_amffrd_to_gex(i, *amffrd_internal::global_meta_p,
-                                                get<0>(result), get<1>(result));
-          }
-          delete [] get<0>(result);
-        }
+        delete [] get<0>(result);
       }
     }
   }
@@ -186,6 +171,20 @@ void wait_amffrd() {
 }
 
 } // namespace amffrd_internal
+
+// TODO: handle function pointer situation
+template <typename Fn, typename... Args>
+void register_amffrd(const Fn& fn) {
+  pure_barrier();
+  if (local::rank_me() == 0) {
+    delete amffrd_internal::global_meta_p;
+    intptr_t fn_p = amffrd_internal::get_pi_fnptr(&fn);
+    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<remove_reference_t<Fn>, remove_reference_t<Args>...>::invoker);
+    amffrd_internal::global_meta_p = new amffrd_internal::AmffrdReqMeta{fn_p, wrapper_p};
+//    printf("register meta: %ld, %ld\n", amffrd_internal::global_meta_p->fn_p, amffrd_internal::global_meta_p->type_wrapper_p);
+  }
+  pure_barrier();
+}
 
 // TODO: handle function pointer situation
 template <typename Fn, typename... Args>
