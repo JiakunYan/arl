@@ -14,12 +14,13 @@ void worker() {
   using rv = decltype(arl::rpc(0, fn, my_rank, my_rank));
   std::vector<rv> futures;
 
-  for (int i = 0 ; i < 10; i++) {
+  for (int i = 0 ; i < 1; i++) {
     size_t target_rank = rand() % arl::rank_n();
     auto f = arl::rpc(target_rank, fn, my_rank, my_rank);
     futures.push_back(std::move(f));
   }
 
+  arl::barrier();
   for (auto& f : futures) {
     int val = f.get();
     assert(val == my_rank*my_rank);

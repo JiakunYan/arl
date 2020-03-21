@@ -68,13 +68,13 @@ int main() {
   Foo3 foo3;
 
   intptr_t wrapper_p1 = get_pi_fnptr(arl::amffrd_internal::AmffrdTypeWrapper<decltype(foo1), char, int, bool>::invoker);
-  auto invoker1 = resolve_pi_fnptr<intptr_t(const string&)>(wrapper_p1);
+  auto invoker1 = resolve_pi_fnptr<intptr_t(const std::string&)>(wrapper_p1);
   intptr_t req_invoker_p1 = invoker1("req_invoker");
   auto req_invoker = resolve_pi_fnptr<req_invoker_t >(req_invoker_p1);
 
   intptr_t fn_p1 = get_pi_fnptr(&foo1);
-  Payload data1{0, make_tuple('a', 233, true)};
-  Payload data2{1, make_tuple('b', 144, false)};
+  Payload data1{0, std::make_tuple('a', 233, true)};
+  Payload data2{1, std::make_tuple('b', 144, false)};
 
   arl::amffrd_internal::AmffrdReqMeta meta{fn_p1, wrapper_p1};
   gex_AM_Arg_t* meta_p1 = reinterpret_cast<gex_AM_Arg_t*>(&meta);

@@ -17,7 +17,7 @@ std::vector<std::atomic<int>> counts(MAX_VAL);
 const bool print_verbose = false;
 
 void worker() {
-  using BufPair = pair<char*, int>;
+  using BufPair = std::pair<char*, int>;
   std::default_random_engine generator(arl::rank_me());
   std::uniform_int_distribution<int> distribution(1, MAX_VAL);
 
@@ -41,7 +41,7 @@ void worker() {
 
   arl::barrier();
   arl::print("Finish pushing...\n");
-  vector<BufPair> results = aggBuffer_p->flush();
+  std::vector<BufPair> results = aggBuffer_p->flush();
 
   for (auto result: results) {
     if (get<0>(result) != nullptr) {

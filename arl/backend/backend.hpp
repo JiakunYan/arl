@@ -83,17 +83,27 @@ namespace arl {
       gasnet_exit(0);
     }
 
-    template <typename ...Args>
-    void print(std::string format, Args... args) {
-      fflush(stdout);
-      barrier();
-      if (rank_me() == 0) {
-        printf(format.c_str(), args...);
-      }
-      fflush(stdout);
-      barrier();
-    }
+void print(const std::string& format) {
+  fflush(stdout);
+  barrier();
+  if (rank_me() == 0) {
+    printf("%s\n", format.c_str());
   }
+  fflush(stdout);
+  barrier();
+}
+
+template <typename T, typename ...Args>
+void print(const std::string& format, T arg, Args... args) {
+  fflush(stdout);
+  barrier();
+  if (rank_me() == 0) {
+    printf(format.c_str(), arg, args...);
+  }
+  fflush(stdout);
+  barrier();
+}
+}
 }
 
 #endif //ARL_BACKEND_HPP

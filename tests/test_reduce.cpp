@@ -1,6 +1,7 @@
 #define ARL_DEBUG
 #include "arl/arl.hpp"
 #include <vector>
+#include <cassert>
 
 using namespace arl;
 

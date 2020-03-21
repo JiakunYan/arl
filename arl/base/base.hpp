@@ -120,7 +120,7 @@ void run(Fn &&fn, Args &&... args) {
 }
 
 template <typename ...Args>
-void print(std::string format, Args... args) {
+void print(const std::string& format, Args... args) {
   fflush(stdout);
   pure_barrier();
   if (rank_me() == 0) {
@@ -133,6 +133,13 @@ void print(std::string format, Args... args) {
   fflush(stdout);
   pure_barrier();
 }
+
+namespace proc {
+template <typename ...Args>
+void print(const std::string& format, Args... args) {
+  backend::print(format, std::forward<Args>(args)...);
+}
+} // namespace proc
 
 template <typename ...Args>
 void cout(Args... args) {

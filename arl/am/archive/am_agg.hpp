@@ -49,7 +49,7 @@ namespace arl {
   }
 
   void flush_agg_buffer_single(size_t id) {
-    unique_ptr<char[]> buffer;
+    std::unique_ptr<char[]> buffer;
     size_t len = agg_buffers[id].pop_all(buffer);
     if (len > 0) {
       generic_handler_request_impl_(id, buffer.get(), len);

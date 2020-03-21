@@ -16,7 +16,7 @@ using std::vector;
 
 struct Options {
 
-  vector<string> reads_fname_list;
+  std::vector<string> reads_fname_list;
   int kmer_len = 51;
   bool verbose = false;
 //  int max_kmer_store_mb = 50;

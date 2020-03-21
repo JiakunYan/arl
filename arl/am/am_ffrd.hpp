@@ -32,7 +32,7 @@ struct AmffrdReqMeta {
 template <typename... Args>
 struct AmffrdReqPayload {
   int target_local_rank;
-  tuple<Args...> data;
+  std::tuple<Args...> data;
 };
 
 template <typename Fn, typename... Args>
@@ -42,12 +42,12 @@ class AmffrdTypeWrapper {
     if (cmd == "req_invoker") {
       return get_pi_fnptr(req_invoker);
     } else {
-      throw runtime_error("Unknown function call");
+      throw std::runtime_error("Unknown function call");
     }
   }
 
   static int req_invoker(intptr_t fn_p, char* buf, int nbytes) {
-    static_assert(is_void_v<Result>);
+    static_assert( std::is_void_v<Result>);
     ARL_Assert(nbytes >= (int) sizeof(Payload), "(", nbytes, " >= ", sizeof(Payload), ")");
     ARL_Assert(nbytes % (int) sizeof(Payload) == 0, "(", nbytes, " % ", sizeof(Payload), " == 0)");
 //    printf("req_invoker: fn_p %ld, buf %p, nbytes %d, sizeof(Payload) %lu\n", fn_p, buf, nbytes, sizeof(Payload));
@@ -58,7 +58,7 @@ class AmffrdTypeWrapper {
       Payload& payload = *reinterpret_cast<Payload*>(buf + i);
       rank_t mContext = get_context();
       set_context(payload.target_local_rank);
-      run_fn(fn, payload.data, index_sequence_for<Args...>());
+      run_fn(fn, payload.data, std::index_sequence_for<Args...>());
       set_context(mContext);
     }
     return nbytes / (int) sizeof(Payload);
@@ -69,8 +69,8 @@ class AmffrdTypeWrapper {
   using Result = std::invoke_result_t<Fn, Args...>;
 
   template <size_t... I>
-  static void run_fn(Fn* fn, const tuple<Args...>& data, index_sequence<I...>) {
-    invoke(*fn, get<I>(data)...);
+  static void run_fn(Fn* fn, const std::tuple<Args...>& data, std::index_sequence<I...>) {
+    std::invoke(*fn, std::get<I>(data)...);
   }
 };
 
@@ -87,7 +87,7 @@ void generic_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes
   t[0] = t0; t[1] = t1; t[2] = t2; t[3] = t3;
 //  printf("recv meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
 
-  auto invoker = resolve_pi_fnptr<intptr_t(const string&)>(meta.type_wrapper_p);
+  auto invoker = resolve_pi_fnptr<intptr_t(const std::string&)>(meta.type_wrapper_p);
   intptr_t req_invoker_p = invoker("req_invoker");
   auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
   int ack_n = req_invoker(meta.fn_p, buf, nbytes);
@@ -151,14 +151,14 @@ void exit_amffrd() {
 void flush_amffrd() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    vector<pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
     for (auto result: results) {
-      if (get<0>(result) != nullptr) {
-        if (get<1>(result) != 0) {
+      if (std::get<0>(result) != nullptr) {
+        if (std::get<1>(result) != 0) {
           amffrd_internal::send_amffrd_to_gex(i, *amffrd_internal::global_meta_p,
-                                              get<0>(result), get<1>(result));
+                                              std::get<0>(result), std::get<1>(result));
         }
-        delete [] get<0>(result);
+        delete [] std::get<0>(result);
       }
     }
   }
@@ -179,7 +179,7 @@ void register_amffrd(const Fn& fn) {
   if (local::rank_me() == 0) {
     delete amffrd_internal::global_meta_p;
     intptr_t fn_p = amffrd_internal::get_pi_fnptr(&fn);
-    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<remove_reference_t<Fn>, remove_reference_t<Args>...>::invoker);
+    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
     amffrd_internal::global_meta_p = new amffrd_internal::AmffrdReqMeta{fn_p, wrapper_p};
 //    printf("register meta: %ld, %ld\n", amffrd_internal::global_meta_p->fn_p, amffrd_internal::global_meta_p->type_wrapper_p);
   }
@@ -193,7 +193,7 @@ void register_amffrd(Fn&& fn, Args&&...) {
   if (local::rank_me() == 0) {
     delete amffrd_internal::global_meta_p;
     intptr_t fn_p = amffrd_internal::get_pi_fnptr(&fn);
-    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<remove_reference_t<Fn>, remove_reference_t<Args>...>::invoker);
+    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
     amffrd_internal::global_meta_p = new amffrd_internal::AmffrdReqMeta{fn_p, wrapper_p};
 //    printf("register meta: %ld, %ld\n", amffrd_internal::global_meta_p->fn_p, amffrd_internal::global_meta_p->type_wrapper_p);
   }
@@ -203,7 +203,7 @@ void register_amffrd(Fn&& fn, Args&&...) {
 // TODO: memcpy on tuple is dangerous
 template <typename... Args>
 void rpc_ffrd(rank_t remote_worker, Args&&... args) {
-  using Payload = amffrd_internal::AmffrdReqPayload<remove_reference_t<Args>...>;
+  using Payload = amffrd_internal::AmffrdReqPayload<std::remove_reference_t<Args>...>;
   using amffrd_internal::AmffrdTypeWrapper;
   using amffrd_internal::AmffrdReqMeta;
 
@@ -212,17 +212,17 @@ void rpc_ffrd(rank_t remote_worker, Args&&... args) {
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
-  Payload payload{remote_worker_local, make_tuple(forward<Args>(args)...)};
+  Payload payload{remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
 //  printf("Rank %ld send rpc to rank %ld\n", rank_me(), remote_worker);
 //  std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
 
-  pair<char*, int> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
-  if (get<0>(result) != nullptr) {
-    if (get<1>(result) != 0) {
+  std::pair<char*, int> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  if (std::get<0>(result) != nullptr) {
+    if (std::get<1>(result) != 0) {
       amffrd_internal::send_amffrd_to_gex(remote_proc, *amffrd_internal::global_meta_p,
-                                          get<0>(result), get<1>(result));
+                                          std::get<0>(result), std::get<1>(result));
     }
-    delete [] get<0>(result);
+    delete [] std::get<0>(result);
   }
   ++(*amffrd_internal::amffrd_req_counter);
 }

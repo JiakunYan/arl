@@ -40,9 +40,9 @@ class AggBuffer {
     return Status::SUCCESS;
   }
 
-  pair<char*, int> pop_all() {
+  std::pair<char*, int> pop_all() {
     if (tail_.load() == 0) {
-      return make_pair(nullptr, 0);
+      return std::make_pair(nullptr, 0);
     }
     if (mutex_pop_.try_lock()) {
       size_t real_tail = std::min(tail_.fetch_add(cap_), cap_); // prevent others from begining pushing
@@ -60,10 +60,10 @@ class AggBuffer {
       tail_ = 0;
 
       mutex_pop_.unlock();
-      return make_pair(result, real_tail);
+      return std::make_pair(result, real_tail);
     } else {
       // someone is poping
-      return make_pair(nullptr, 0);
+      return std::make_pair(nullptr, 0);
     }
   }
 

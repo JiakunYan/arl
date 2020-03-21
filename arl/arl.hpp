@@ -15,6 +15,8 @@
 #include <utility>
 #include <future>
 #include <cstring>
+#include <type_traits>
+#include <sstream>
 
 // GASNet-EX as backend
 #include <gasnetex.h>
@@ -40,13 +42,14 @@
 #include "base/worker_object.hpp"
 // am
 //#include "am/rpc_t.hpp"
-#include "arl/am/agg_buffer.hpp"
+#include "am/future.hpp"
+#include "am/agg_buffer.hpp"
 #include "am/am.hpp"
-//#include "am/am_agg.hpp"
+#include "am/am_agg.hpp"
 #include "am/am_ff.hpp"
-#include "arl/am/am_ffrd.hpp"
+#include "am/am_ffrd.hpp"
 // data structure
-//#include "data_structure/hash_map.hpp"
+#include "data_structure/hash_map.hpp"
 #include "data_structure/bloom_filter.hpp"
 
 namespace arl {

@@ -7,12 +7,18 @@
 
 namespace arl {
 
+namespace amagg_internal {
+extern void init_amagg();
+extern void exit_amagg();
+extern void flush_amagg();
+}
+
 namespace amffrd_internal {
 extern void init_amffrd();
 extern void exit_amffrd();
 extern void flush_amffrd();
 extern void wait_amffrd();
-}
+} // amffrd_internal
 
 namespace am_internal {
 // Get a *position independent* function pointer
@@ -43,6 +49,8 @@ void init_am() {
   am_req_counter = new std::atomic<int64_t>;
   *am_req_counter = 0;
 
+  gex_am_handler_num = GEX_AM_INDEX_BASE;
+  amagg_internal::init_amagg();
   init_am_ff();
   amffrd_internal::init_amffrd();
 }
@@ -50,6 +58,7 @@ void init_am() {
 void exit_am() {
   amffrd_internal::exit_amffrd();
   exit_am_ff();
+  amagg_internal::exit_amagg();
   delete am_ack_counter;
   delete am_req_counter;
 }
@@ -57,6 +66,7 @@ void exit_am() {
 } // namespace am_internal
 
 void flush_agg_buffer() {
+  amagg_internal::flush_amagg();
   am_internal::flush_am_ff_buffer();
   amffrd_internal::flush_amffrd();
 }
@@ -70,6 +80,10 @@ void flush_am() {
 
 void progress() {
   gasnet_AMPoll();
+}
+
+int get_agg_size() {
+  return gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
 }
 } // namespace arl
 

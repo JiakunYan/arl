@@ -27,13 +27,13 @@ class AggBufferSimple {
   }
 
   template <typename T, typename U>
-  pair<char*, int> push(const T& val1, const U& val2) {
+  std::pair<char*, int> push(const T& val1, const U& val2) {
     while (!lock.try_lock()) {
       progress();
     }
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (tail_ + sizeof(val1) + sizeof(val2) > cap_) {
-      result = make_pair(ptr_, tail_);
+      result = std::make_pair(ptr_, tail_);
       ptr_ = new char [cap_];
       tail_ = 0;
     }
@@ -46,13 +46,13 @@ class AggBufferSimple {
   }
 
   template <typename T>
-  pair<char*, int> push(const T& value) {
+  std::pair<char*, int> push(const T& value) {
     while (!lock.try_lock()) {
       progress();
     }
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (tail_ + sizeof(value) > cap_) {
-      result = make_pair(ptr_, tail_);
+      result = std::make_pair(ptr_, tail_);
       ptr_ = new char [cap_];
       tail_ = 0;
     }
@@ -62,11 +62,11 @@ class AggBufferSimple {
     return result;
   }
 
-  vector<pair<char*, int>> flush() {
+  std::vector<std::pair<char*, int>> flush() {
     while (!lock.try_lock()) {
       progress();
     }
-    vector<pair<char*, int>> result;
+    std::vector<std::pair<char*, int>> result;
     if (tail_ > 0) {
       result.emplace_back(ptr_, tail_);
       ptr_ = new char [cap_];
@@ -80,7 +80,7 @@ class AggBufferSimple {
   char* ptr_;
   int cap_;
   int tail_;
-  mutex lock;
+  std::mutex lock;
 };
 
 class AggBufferLocal {
@@ -122,12 +122,12 @@ class AggBufferLocal {
   }
 
   template <typename T, typename U>
-  pair<char*, int> push(const T& val1, const U& val2) {
+  std::pair<char*, int> push(const T& val1, const U& val2) {
     int my_rank = local::rank_me();
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank] + sizeof(val1) + sizeof(val2) > cap_) {
       // push my
-      result = make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
+      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
       thread_ptr_[my_rank] = new char [cap_];
       thread_tail_[my_rank] = 0;
     }
@@ -139,12 +139,12 @@ class AggBufferLocal {
   }
 
   template <typename T>
-  pair<char*, int> push(const T& value) {
+  std::pair<char*, int> push(const T& value) {
     int my_rank = local::rank_me();
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank] + sizeof(value) > cap_) {
       // push my
-      result = make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
+      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
       thread_ptr_[my_rank] = new char [cap_];
       thread_tail_[my_rank] = 0;
     }
@@ -153,17 +153,17 @@ class AggBufferLocal {
     return result;
   }
 
-  vector<pair<char*, int>> flush() {
-//    vector<pair<int, int>> data;
+  std::vector<std::pair<char*, int>> flush() {
+//    std::vector<std::pair<int, int>> data;
 //    for (int i = 0; i < thread_num_; ++i) {
 //      data.emplace_back(i, thread_tail_[i]);
 //    }
 //    std::sort(data.begin(), data.end(),
-//              [](pair<int, int> a, pair<int, int> b) {
-//                return (get<1>(a) < get<1>(b));
+//              [](std::pair<int, int> a, std::pair<int, int> b) {
+//                return (std::get<1>(a) < std::get<1>(b));
 //              });
     int my_rank = local::rank_me();
-    vector<pair<char*, int>> results;
+    std::vector<std::pair<char*, int>> results;
     if (thread_tail_[my_rank] > 0) {
       results.emplace_back(thread_ptr_[my_rank], thread_tail_[my_rank]);
       thread_ptr_[my_rank] = new char [cap_];
@@ -190,7 +190,7 @@ class AggBufferAdvanced {
     thread_num_ = thread_num;
 
     delete [] lock_ptr_;
-    lock_ptr_ = new mutex [thread_num_];
+    lock_ptr_ = new std::mutex [thread_num_];
 
     delete [] thread_tail_;
     thread_tail_ = new int [thread_num_];
@@ -222,15 +222,15 @@ class AggBufferAdvanced {
   }
 
   template <typename T, typename U>
-  pair<char*, int> push(const T& val1, const U& val2) {
+  std::pair<char*, int> push(const T& val1, const U& val2) {
     int my_rank = local::rank_me();
     while (!lock_ptr_[my_rank].try_lock()) {
       progress();
     }
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank] + sizeof(val1) + sizeof(val2) > cap_) {
       // push my
-      result = make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
+      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
       thread_ptr_[my_rank] = new char [cap_];
       thread_tail_[my_rank] = 0;
     }
@@ -243,15 +243,15 @@ class AggBufferAdvanced {
   }
 
   template <typename T>
-  pair<char*, int> push(const T& value) {
+  std::pair<char*, int> push(const T& value) {
     int my_rank = local::rank_me();
     while (!lock_ptr_[my_rank].try_lock()) {
       progress();
     }
-    pair<char*, int> result(nullptr, 0);
+    std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank] + sizeof(value) > cap_) {
       // push my
-      result = make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
+      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
       thread_ptr_[my_rank] = new char [cap_];
       thread_tail_[my_rank] = 0;
     }
@@ -261,17 +261,17 @@ class AggBufferAdvanced {
     return result;
   }
 
-  vector<pair<char*, int>> flush() {
-//    vector<pair<int, int>> data;
+  std::vector<std::pair<char*, int>> flush() {
+//    std::vector<std::pair<int, int>> data;
 //    for (int i = 0; i < thread_num_; ++i) {
 //      data.emplace_back(i, thread_tail_[i]);
 //    }
 //    std::sort(data.begin(), data.end(),
-//              [](pair<int, int> a, pair<int, int> b) {
-//                return (get<1>(a) < get<1>(b));
+//              [](std::pair<int, int> a, std::pair<int, int> b) {
+//                return (std::get<1>(a) < std::get<1>(b));
 //              });
     int my_rank = local::rank_me();
-    vector<pair<char*, int>> results;
+    std::vector<std::pair<char*, int>> results;
     for (int ii = 0; ii < thread_num_; ++ii) {
       int i = (ii + my_rank) % thread_num_;
       while (!lock_ptr_[i].try_lock()) {
@@ -292,7 +292,7 @@ class AggBufferAdvanced {
   int* thread_tail_;
   int cap_;
   int thread_num_;
-  mutex* lock_ptr_;
+  std::mutex* lock_ptr_;
 };
 
 //using AggBuffer = AggBufferSimple;

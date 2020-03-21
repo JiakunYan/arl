@@ -4,9 +4,9 @@ SHELL='bash'
 
 # XXX: Modify ARLROOT if you move this Makefile
 #      out of an examples/* directory.
-ARLROOT=$(PWD)/../../../../
+ARLROOT=$(PWD)/../../
 
-PLATFORM = $(shell echo $(ARL_PLATFORM) | tr '[:lower:]' '[:upper:]')
+PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 
 TIMER_CMD=time
 

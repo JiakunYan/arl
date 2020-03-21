@@ -16,6 +16,7 @@ void worker() {
     futures.push_back(std::move(f));
   }
 
+  arl::barrier();
   for (auto& f : futures) {
     f.get();
   }

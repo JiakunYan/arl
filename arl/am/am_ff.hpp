@@ -19,8 +19,6 @@ AggBuffer* amff_agg_buffer_p;
 // Currently, init_am_ff should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_am_ff() {
-  gex_am_handler_num = GEX_AM_INDEX_BASE;
-
   hidx_generic_am_ff_reqhandler = gex_am_handler_num++;
   hidx_generic_am_ff_ackhandler = gex_am_handler_num++;
   ARL_Assert(gex_am_handler_num < 256, "GASNet handler index overflow!");
@@ -64,7 +62,7 @@ class AmffTypeWrapper {
     } else if (cmd == "req_invoker") {
       return get_pi_fnptr(req_invoker);
     } else {
-      throw runtime_error("Unknown function call");
+      throw std::runtime_error("Unknown function call");
     }
   }
 
@@ -73,14 +71,14 @@ class AmffTypeWrapper {
   }
 
   static void req_invoker(intptr_t fn_p, int context, char* buf, int nbytes) {
-    static_assert(is_void_v<Result>);
+    static_assert( std::is_void_v<Result>);
     ARL_Assert(nbytes >= (int) sizeof(Payload), "(", nbytes, " >= ", sizeof(Payload), ")");
     Fn* fn = resolve_pi_fnptr<Fn>(fn_p);
     Payload *ptr = reinterpret_cast<Payload*>(buf);
 
     rank_t mContext = get_context();
     set_context(context);
-    run_fn(fn, *ptr, index_sequence_for<Args...>());
+    run_fn(fn, *ptr, std::index_sequence_for<Args...>());
     set_context(mContext);
   }
 
@@ -89,8 +87,8 @@ class AmffTypeWrapper {
   using Result = std::invoke_result_t<Fn, Args...>;
 
   template <size_t... I>
-  static void run_fn(Fn* fn, const Payload& data, index_sequence<I...>) {
-    invoke(*fn, get<I>(data)...);
+  static void run_fn(Fn* fn, const Payload& data, std::index_sequence<I...>) {
+    std::invoke(*fn,  std::get<I>(data)...);
   }
 };
 
@@ -109,7 +107,7 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 //    printf("meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
     consumed += sizeof(AmffReqMeta);
 
-    auto invoker = resolve_pi_fnptr<intptr_t(const string&)>(meta.type_wrapper_p);
+    auto invoker = resolve_pi_fnptr<intptr_t(const std::string&)>(meta.type_wrapper_p);
 
     intptr_t payload_size_p = invoker("payload_size");
     auto payload_size = resolve_pi_fnptr<payload_size_t>(payload_size_p);
@@ -131,30 +129,30 @@ void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
 }
 
 void flush_am_ff_buffer() {
-  if constexpr (is_same_v<AggBuffer, AggBufferLocal>) {
+  if constexpr (std::is_same_v<AggBuffer, AggBufferLocal>) {
     for (int ii = 0; ii < proc::rank_n(); ++ii) {
       int i = (ii + local::rank_me()) % proc::rank_n();
-      vector<pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+      std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
       for (auto result: results) {
-        if (get<0>(result) != nullptr) {
-          if (get<1>(result) != 0) {
+        if ( std::get<0>(result) != nullptr) {
+          if (std::get<1>(result) != 0) {
             gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
-                                  get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+                                  std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
           }
-          delete [] get<0>(result);
+          delete [] std::get<0>(result);
         }
       }
     }
   } else {
     for (int i = local::rank_me(); i < proc::rank_n(); i += local::rank_n()) {
-      vector<pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+      std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
       for (auto result: results) {
-        if (get<0>(result) != nullptr) {
-          if (get<1>(result) != 0) {
+        if (std::get<0>(result) != nullptr) {
+          if (std::get<1>(result) != 0) {
             gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
-                                  get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+                                  std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
           }
-          delete [] get<0>(result);
+          delete [] std::get<0>(result);
         }
       }
     }
@@ -164,7 +162,7 @@ void flush_am_ff_buffer() {
 
 template <typename Fn, typename... Args>
 void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
-  using Payload = tuple<remove_reference_t<Args>...>;
+  using Payload = std::tuple<std::remove_reference_t<Args>...>;
   using am_internal::AmffTypeWrapper;
   using am_internal::AmffReqMeta;
 
@@ -174,20 +172,20 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
   int remote_worker_local = remote_worker % local::rank_n();
 
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
-  intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<remove_reference_t<Fn>, remove_reference_t<Args>...>::invoker);
+  intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
   AmffReqMeta meta{fn_p, wrapper_p, remote_worker_local};
-  Payload payload(forward<Args>(args)...);
-//  pair<am_internal::AmffReqMeta, Payload> data{meta, payload};
+  Payload payload(std::forward<Args>(args)...);
+//  std::pair<am_internal::AmffReqMeta, Payload> data{meta, payload};
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  pair<char*, int> result = am_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
-  if (get<0>(result) != nullptr) {
-    if (get<1>(result) != 0) {
+  std::pair<char*, int> result = am_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
+  if (std::get<0>(result) != nullptr) {
+    if (std::get<1>(result) != 0) {
       gex_AM_RequestMedium0(backend::tm, remote_proc, am_internal::hidx_generic_am_ff_reqhandler,
-                            get<0>(result), get<1>(result), GEX_EVENT_NOW, 0);
+                            std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
     }
-    delete [] get<0>(result);
+    delete [] std::get<0>(result);
   }
   ++(*am_internal::am_req_counter);
 }

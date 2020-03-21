@@ -26,16 +26,16 @@ void worker() {
     size_t target_rank = distribution(generator);
     am_internal::AmffReqMeta meta{1, 1, 1};
     Payload payload{0};
-    pair<char*, int> result = am_internal::amff_agg_buffer_p[target_rank].push(meta, payload);
-    delete [] get<0>(result);
+    std::pair<char*, int> result = am_internal::amff_agg_buffer_p[target_rank].push(meta, payload);
+    delete []  std::get<0>(result);
   }
 
 //  arl::threadBarrier.wait();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    vector<pair<char*, int>> results = am_internal::amff_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int>> results = am_internal::amff_agg_buffer_p[i].flush();
     for (auto result: results) {
-//      printf("rank %ld delete [] %p\n", rank_me(), get<0>(result));
-      delete [] get<0>(result);
+//      printf("rank %ld delete [] %p\n", rank_me(),  std::get<0>(result));
+      delete []  std::get<0>(result);
     }
   }
   barrier();

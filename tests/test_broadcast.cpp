@@ -1,6 +1,7 @@
 #define ARL_DEBUG
 #include "arl/arl.hpp"
 #include <vector>
+#include <cassert>
 
 void worker() {
   std::vector<size_t> v(arl::rank_n(), -1);

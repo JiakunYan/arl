@@ -117,7 +117,7 @@ void worker(size_t n_kmers) {
     if (!is_active) {
       // flush buffer
       arl::flush_agg_buffer();
-      arl::flush_am();
+//      arl::flush_am();
     }
   }
 
@@ -145,7 +145,7 @@ void worker(size_t n_kmers) {
   }
 
   if (run_type == "verbose" || run_type == "verbose_test") {
-    printf("Rank %d reconstructed %d contigs with %d nodes from %d start nodes."
+    printf("Rank %ld reconstructed %lu contigs with %d nodes from %lu start nodes."
            " (%lf read, %lf insert, %lf total)\n", arl::rank_me(), contigs.size(),
            numKmers, start_nodes.size(), read, insert, total);
   }
