@@ -109,7 +109,7 @@ void send_amffrd_to_gex(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_
 
 AmffrdReqMeta* global_meta_p = nullptr;
 
-// Currently, init_am_ff should only be called once. Multiple call might run out of gex_am_handler_id.
+// Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amffrd() {
   amffrd_internal::hidx_generic_amffrd_reqhandler = am_internal::gex_am_handler_num++;

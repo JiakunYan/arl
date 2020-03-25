@@ -21,7 +21,7 @@ void generic_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);
 
 AggBuffer* amagg_agg_buffer_p;
 
-// Currently, init_am_ff should only be called once. Multiple call might run out of gex_am_handler_id.
+// Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amagg() {
   hidx_generic_amagg_reqhandler = am_internal::gex_am_handler_num++;

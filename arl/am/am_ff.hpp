@@ -16,7 +16,7 @@ void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 
 AggBuffer* amff_agg_buffer_p;
 
-// Currently, init_am_ff should only be called once. Multiple call might run out of gex_am_handler_id.
+// Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_am_ff() {
   hidx_generic_am_ff_reqhandler = gex_am_handler_num++;
