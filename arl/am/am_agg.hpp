@@ -204,7 +204,7 @@ void flush_amagg() {
     }
   }
 }
-} // namespace am_internal
+} // namespace amagg_internal
 
 template <typename Fn, typename... Args>
 Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Args&&... args) {
