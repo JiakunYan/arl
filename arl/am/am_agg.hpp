@@ -69,19 +69,13 @@ template <typename Fn, typename... Args>
 class AmaggTypeWrapper {
  public:
   static intptr_t invoker(const std::string& cmd) {
-    if (cmd == "payload_size") {
-      return get_pi_fnptr(payload_size);
-    } else if (cmd == "req_invoker") {
+    if (cmd == "req_invoker") {
       return get_pi_fnptr(req_invoker);
     } else if (cmd == "ack_invoker") {
       return get_pi_fnptr(ack_invoker);
     } else {
       throw std::runtime_error("Unknown function call");
     }
-  }
-
-  static constexpr int payload_size() {
-    return sizeof(Payload);
   }
 
   static std::pair<int, int> req_invoker(intptr_t fn_p, int context, char* buf, int nbytes, char* output, int onbytes) {
