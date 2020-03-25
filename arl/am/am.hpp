@@ -69,6 +69,7 @@ void flush_agg_buffer() {
   amagg_internal::flush_amagg();
   am_internal::flush_am_ff_buffer();
   amffrd_internal::flush_amffrd();
+
 }
 
 void flush_am() {

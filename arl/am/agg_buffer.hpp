@@ -295,9 +295,9 @@ class AggBufferAdvanced {
   std::mutex* lock_ptr_;
 };
 
-//using AggBuffer = AggBufferSimple;
+using AggBuffer = AggBufferSimple;
 //using AggBuffer = AggBufferLocal;
-using AggBuffer = AggBufferAdvanced;
+//using AggBuffer = AggBufferAdvanced;
 
 } // namespace am_internal
 } // namespace arl

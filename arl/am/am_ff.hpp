@@ -95,7 +95,7 @@ class AmffTypeWrapper {
 void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
   using payload_size_t = int();
   using req_invoker_t = void(intptr_t, int, char*, int);
-//  printf("rank %ld reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+//  printf("rank %ld amff reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
   char* buf = static_cast<char*>(void_buf);
   int nbytes = static_cast<int>(unbytes);
@@ -120,44 +120,32 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     consumed += payload_nbytes;
     ++n;
   }
+//  printf("rank %ld send amff ack %d\n", rank_me(), n);
   gex_AM_ReplyShort1(token, hidx_generic_am_ff_ackhandler, 0, static_cast<gex_AM_Arg_t>(n));
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
 void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
+//  printf("rank %ld amff ackhandler %d\n", rank_me(), static_cast<int>(n));
   *am_ack_counter += static_cast<int>(n);
 }
 
 void flush_am_ff_buffer() {
-  if constexpr (std::is_same_v<AggBuffer, AggBufferLocal>) {
-    for (int ii = 0; ii < proc::rank_n(); ++ii) {
-      int i = (ii + local::rank_me()) % proc::rank_n();
-      std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
-      for (auto result: results) {
-        if ( std::get<0>(result) != nullptr) {
-          if (std::get<1>(result) != 0) {
-            gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
-                                  std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
-          }
-          delete [] std::get<0>(result);
+  for (int ii = 0; ii < proc::rank_n(); ++ii) {
+    int i = (ii + local::rank_me()) % proc::rank_n();
+    std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+    for (auto result: results) {
+      if ( std::get<0>(result) != nullptr) {
+        if (std::get<1>(result) != 0) {
+          gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
+                                std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
         }
-      }
-    }
-  } else {
-    for (int i = local::rank_me(); i < proc::rank_n(); i += local::rank_n()) {
-      std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
-      for (auto result: results) {
-        if (std::get<0>(result) != nullptr) {
-          if (std::get<1>(result) != 0) {
-            gex_AM_RequestMedium0(backend::tm, i, am_internal::hidx_generic_am_ff_reqhandler,
-                                  std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
-          }
-          delete [] std::get<0>(result);
-        }
+        delete [] std::get<0>(result);
       }
     }
   }
 }
+
 } // namespace am_internal
 
 template <typename Fn, typename... Args>

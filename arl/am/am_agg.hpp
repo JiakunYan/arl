@@ -105,11 +105,15 @@ class AmaggTypeWrapper {
   static int ack_invoker(intptr_t raw_future_p, char* buf, int nbytes) {
     ARL_Assert(nbytes >= (int) my_sizeof<Result>(), "(", nbytes, " >= ", my_sizeof<Result>(), ")");
     auto* future_p = reinterpret_cast<FutureData<Result>*>(raw_future_p);
-    auto* ptr = reinterpret_cast<Result*>(buf);
 
-    if constexpr (! std::is_void_v<Result>)
+    if constexpr (!std::is_void_v<Result>) {
+      auto* ptr = reinterpret_cast<Result*>(buf);
       future_p->load(*ptr);
-    future_p->set_ready();
+    } else {
+      future_p->load();
+    }
+//    future_p->set_ready();
+
     return my_sizeof<Result>();
   }
 
@@ -125,7 +129,7 @@ class AmaggTypeWrapper {
 
 void generic_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
   using req_invoker_t = std::pair<int, int>(intptr_t, int, char*, int, char*, int);
-//  printf("rank %ld reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+//  printf("rank %ld amagg reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
   char* buf = static_cast<char*>(void_buf);
   int nbytes = static_cast<int>(unbytes);
@@ -162,7 +166,7 @@ void generic_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 
 void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
   using ack_invoker_t = int(intptr_t, char*, int);
-//  printf("rank %ld ackhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+//  printf("rank %ld amagg ackhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
   char* buf = static_cast<char*>(void_buf);
   int nbytes = static_cast<int>(unbytes);

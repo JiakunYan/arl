@@ -17,7 +17,7 @@ class FutureData {
   }
   void load(const T& val) {
     if (ready_.load()) {
-      throw std::runtime_error("load but already ready!");
+      throw std::runtime_error(string_format("load ", this, " but already ready!"));
     }
     data_ = val;
     ready_ = true;
@@ -29,9 +29,9 @@ class FutureData {
       throw std::runtime_error("get without ready!");
     }
   }
-  void set_ready() {
-    ready_ = true;
-  }
+//  void set_ready() {
+//    ready_ = true;
+//  }
  private:
   std::atomic<bool> ready_;
   T data_;
@@ -46,7 +46,7 @@ class FutureData<void> {
   }
   void load() {
     if (ready_.load()) {
-      throw std::runtime_error("load but already ready!");
+      throw std::runtime_error(string_format("load ", this, " but already ready!"));
     }
     ready_ = true;
   }
@@ -58,9 +58,9 @@ class FutureData<void> {
     }
   }
 
-  void set_ready() {
-    ready_ = true;
-  }
+//  void set_ready() {
+//    ready_ = true;
+//  }
  private:
   std::atomic<bool> ready_;
 };
@@ -77,7 +77,9 @@ class Future {
 
   ~Future() {
     if (data_p_ != nullptr) {
-      get();
+      while (!data_p_->ready()) {
+        progress();
+      }
     }
   }
 

@@ -89,7 +89,7 @@ void worker(size_t n_kmers) {
     for (auto it = taskPool.begin(); it != taskPool.end();) {
       task_t& current_task = *it;
 
-      if (current_task.future.check() == std::future_status::ready) {
+      if (current_task.future.ready()) {
         // current task is ready
         is_active = true;
         kmer_pair kmer = current_task.future.get();
