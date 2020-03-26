@@ -201,8 +201,8 @@ void register_amffrd(Fn&& fn, Args&&...) {
 }
 
 // TODO: memcpy on tuple is dangerous
-template <typename... Args>
-void rpc_ffrd(rank_t remote_worker, Args&&... args) {
+template <typename Fn, typename... Args>
+void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
   using Payload = amffrd_internal::AmffrdReqPayload<std::remove_reference_t<Args>...>;
   using amffrd_internal::AmffrdTypeWrapper;
   using amffrd_internal::AmffrdReqMeta;

@@ -44,7 +44,7 @@ void worker() {
 
   for (int i = 0; i < num_ops; i++) {
     int target_rank = distribution(generator);
-    rpc_ffrd(target_rank, 'a', (int)my_rank, true);
+    rpc_ffrd(target_rank, foo1, 'a', (int)my_rank, true);
   }
 
   barrier();
@@ -96,9 +96,9 @@ int main() {
 //  arl::amffrd_internal::send_amffrd_to_gex(0, meta, buf, buf_len);
   // ---
 //  cout << "ack counter is " << *arl::amffrd_internal::amffrd_ack_counter << endl;
-//  arl::rpc_ffrd(0, 'c', 34, true);
-//  arl::rpc_ffrd(0, 'd', 35, true);
-//  arl::rpc_ffrd(0, 'e', 36, true);
+//  arl::rpc_ffrd(0, foo1, 'c', 34, true);
+//  arl::rpc_ffrd(0, foo1, 'd', 35, true);
+//  arl::rpc_ffrd(0, foo1, 'e', 36, true);
 //  arl::flush_amffrd_buffer();
 //  arl::wait_amffrd();
 //  cout << "ack counter is " << *arl::amffrd_internal::amffrd_ack_counter << endl;

@@ -32,7 +32,7 @@ void worker() {
 
   for (int i = 0; i < num_ops; i++) {
     int target_rank = distribution(generator);
-    rpc_ffrd(target_rank, payload);
+    rpc_ffrd(target_rank, empty_handler, payload);
   }
 
   barrier();
