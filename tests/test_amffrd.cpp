@@ -84,7 +84,7 @@ int main() {
   buf_len += sizeof(data1);
   std::memcpy(buf + buf_len, &data2, sizeof(data2));
   buf_len += sizeof(data2);
-  int ack_n = req_invoker(fn_p1, buf + sizeof(meta), buf_len - sizeof(meta));
+  int ack_n = req_invoker(fn_p1, buf, buf_len);
   cout << "ack_n is " << ack_n << endl;
 
   // ---
