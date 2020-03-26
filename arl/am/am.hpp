@@ -13,6 +13,13 @@ extern void exit_amagg();
 extern void flush_amagg();
 }
 
+namespace amaggrd_internal {
+extern void init_amaggrd();
+extern void exit_amaggrd();
+extern void flush_amaggrd();
+extern void wait_amaggrd();
+} // amffrd_internal
+
 namespace amffrd_internal {
 extern void init_amffrd();
 extern void exit_amffrd();
@@ -51,6 +58,7 @@ void init_am() {
 
   gex_am_handler_num = GEX_AM_INDEX_BASE;
   amagg_internal::init_amagg();
+  amaggrd_internal::init_amaggrd();
   init_am_ff();
   amffrd_internal::init_amffrd();
 }
@@ -58,6 +66,7 @@ void init_am() {
 void exit_am() {
   amffrd_internal::exit_amffrd();
   exit_am_ff();
+  amaggrd_internal::exit_amaggrd();
   amagg_internal::exit_amagg();
   delete am_ack_counter;
   delete am_req_counter;
@@ -67,6 +76,7 @@ void exit_am() {
 
 void flush_agg_buffer() {
   amagg_internal::flush_amagg();
+  amaggrd_internal::flush_amaggrd();
   am_internal::flush_am_ff_buffer();
   amffrd_internal::flush_amffrd();
 
@@ -76,6 +86,7 @@ void flush_am() {
   while (*am_internal::am_req_counter > *am_internal::am_ack_counter) {
     progress();
   }
+  amaggrd_internal::wait_amaggrd();
   amffrd_internal::wait_amffrd();
 }
 

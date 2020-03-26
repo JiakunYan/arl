@@ -46,6 +46,7 @@
 #include "am/agg_buffer.hpp"
 #include "am/am.hpp"
 #include "am/am_agg.hpp"
+#include "am/am_aggrd.hpp"
 #include "am/am_ff.hpp"
 #include "am/am_ffrd.hpp"
 // data structure
