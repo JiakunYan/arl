@@ -85,10 +85,10 @@ class AggBufferSimple {
   }
 
  private:
-  char* ptr_;
-  int cap_;
-  int tail_;
-  std::mutex lock;
+  alignas(alignof_cacheline) char* ptr_;
+  alignas(alignof_cacheline) int cap_;
+  alignas(alignof_cacheline) int tail_;
+  alignas(alignof_cacheline) std::mutex lock;
 };
 
 // A thread-local aggregation buffer, no contention between threads.
@@ -105,20 +105,20 @@ class AggBufferLocal {
     thread_num_ = thread_num;
 
     delete [] thread_tail_;
-    thread_tail_ = new int [thread_num_];
+    thread_tail_ = new AlignedInt [thread_num_];
     for (int i = 0; i < thread_num_; ++i) {
-      thread_tail_[i] = 0;
+      thread_tail_[i].val = 0;
     }
 
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i];
+        delete [] thread_ptr_[i].val;
       }
       delete [] thread_ptr_;
     }
-    thread_ptr_ = new char*[thread_num_];
+    thread_ptr_ = new AlignedCharPtr[thread_num_];
     for (int i = 0; i < thread_num_; ++i) {
-      thread_ptr_[i] = new char[cap];
+      thread_ptr_[i].val = new char[cap];
     }
   }
 
@@ -126,7 +126,7 @@ class AggBufferLocal {
     delete [] thread_tail_;
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i];
+        delete [] thread_ptr_[i].val;
       }
       delete [] thread_ptr_;
     }
@@ -136,16 +136,16 @@ class AggBufferLocal {
   std::pair<char*, int> push(const T& val1, const U& val2) {
     int my_rank = local::rank_me();
     std::pair<char*, int> result(nullptr, 0);
-    if (thread_tail_[my_rank] + sizeof(val1) + sizeof(val2) > cap_) {
+    if (thread_tail_[my_rank].val + sizeof(val1) + sizeof(val2) > cap_) {
       // push my
-      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
-      thread_ptr_[my_rank] = new char [cap_];
-      thread_tail_[my_rank] = 0;
+      result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = new char [cap_];
+      thread_tail_[my_rank].val = 0;
     }
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &val1, sizeof(val1));
-    thread_tail_[my_rank] += sizeof(val1);
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &val2, sizeof(val2));
-    thread_tail_[my_rank] += sizeof(val2);
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &val1, sizeof(val1));
+    thread_tail_[my_rank].val += sizeof(val1);
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &val2, sizeof(val2));
+    thread_tail_[my_rank].val += sizeof(val2);
     return result;
   }
 
@@ -153,14 +153,14 @@ class AggBufferLocal {
   std::pair<char*, int> push(const T& value) {
     int my_rank = local::rank_me();
     std::pair<char*, int> result(nullptr, 0);
-    if (thread_tail_[my_rank] + sizeof(value) > cap_) {
+    if (thread_tail_[my_rank].val + sizeof(value) > cap_) {
       // push my
-      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
-      thread_ptr_[my_rank] = new char [cap_];
-      thread_tail_[my_rank] = 0;
+      result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = new char [cap_];
+      thread_tail_[my_rank].val = 0;
     }
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &value, sizeof(T));
-    thread_tail_[my_rank] += sizeof(value);
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &value, sizeof(T));
+    thread_tail_[my_rank].val += sizeof(value);
     return result;
   }
 
@@ -175,20 +175,26 @@ class AggBufferLocal {
 //              });
     int my_rank = local::rank_me();
     std::vector<std::pair<char*, int>> results;
-    if (thread_tail_[my_rank] > 0) {
-      results.emplace_back(thread_ptr_[my_rank], thread_tail_[my_rank]);
-      thread_ptr_[my_rank] = new char [cap_];
-      thread_tail_[my_rank] = 0;
+    if (thread_tail_[my_rank].val > 0) {
+      results.emplace_back(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = new char [cap_];
+      thread_tail_[my_rank].val = 0;
     }
     return results;
   }
 
  private:
-  char** thread_ptr_;
-  int* thread_tail_;
-  int cap_;
-  int thread_num_;
-};
+  struct AlignedCharPtr {
+    alignas(alignof_cacheline) char* val;
+  };
+  alignas(alignof_cacheline) AlignedCharPtr* thread_ptr_;
+  struct AlignedInt {
+    alignas(alignof_cacheline) int val;
+  };
+  alignas(alignof_cacheline) AlignedInt* thread_tail_;
+  alignas(alignof_cacheline) int cap_;
+  alignas(alignof_cacheline) int thread_num_;
+}; // AggBufferLocal
 
 // A process-level aggregation buffer, light contention between threads
 // Each thread has its own memory chunk.
@@ -205,23 +211,23 @@ class AggBufferAdvanced {
     thread_num_ = thread_num;
 
     delete [] lock_ptr_;
-    lock_ptr_ = new std::mutex [thread_num_];
+    lock_ptr_ = new AlignedMutex [thread_num_];
 
     delete [] thread_tail_;
-    thread_tail_ = new int [thread_num_];
+    thread_tail_ = new AlignedInt [thread_num_];
     for (int i = 0; i < thread_num_; ++i) {
-      thread_tail_[i] = 0;
+      thread_tail_[i].val = 0;
     }
 
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i];
+        delete [] thread_ptr_[i].val;
       }
       delete [] thread_ptr_;
     }
-    thread_ptr_ = new char*[thread_num_];
+    thread_ptr_ = new AlignedCharPtr [thread_num_];
     for (int i = 0; i < thread_num_; ++i) {
-      thread_ptr_[i] = new char[cap];
+      thread_ptr_[i].val = new char[cap];
     }
   }
 
@@ -230,7 +236,7 @@ class AggBufferAdvanced {
     delete [] thread_tail_;
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i];
+        delete [] thread_ptr_[i].val;
       }
       delete [] thread_ptr_;
     }
@@ -239,40 +245,40 @@ class AggBufferAdvanced {
   template <typename T, typename U>
   std::pair<char*, int> push(const T& val1, const U& val2) {
     int my_rank = local::rank_me();
-    while (!lock_ptr_[my_rank].try_lock()) {
+    while (!lock_ptr_[my_rank].val.try_lock()) {
       progress();
     }
     std::pair<char*, int> result(nullptr, 0);
-    if (thread_tail_[my_rank] + sizeof(val1) + sizeof(val2) > cap_) {
+    if (thread_tail_[my_rank].val + sizeof(val1) + sizeof(val2) > cap_) {
       // push my
-      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
-      thread_ptr_[my_rank] = new char [cap_];
-      thread_tail_[my_rank] = 0;
+      result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = new char [cap_];
+      thread_tail_[my_rank].val = 0;
     }
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &val1, sizeof(val1));
-    thread_tail_[my_rank] += sizeof(val1);
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &val2, sizeof(val2));
-    thread_tail_[my_rank] += sizeof(val2);
-    lock_ptr_[my_rank].unlock();
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &val1, sizeof(val1));
+    thread_tail_[my_rank].val += sizeof(val1);
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &val2, sizeof(val2));
+    thread_tail_[my_rank].val += sizeof(val2);
+    lock_ptr_[my_rank].val.unlock();
     return result;
   }
 
   template <typename T>
   std::pair<char*, int> push(const T& value) {
     int my_rank = local::rank_me();
-    while (!lock_ptr_[my_rank].try_lock()) {
+    while (!lock_ptr_[my_rank].val.try_lock()) {
       progress();
     }
     std::pair<char*, int> result(nullptr, 0);
-    if (thread_tail_[my_rank] + sizeof(value) > cap_) {
+    if (thread_tail_[my_rank].val + sizeof(value) > cap_) {
       // push my
-      result = std::make_pair(thread_ptr_[my_rank], thread_tail_[my_rank]);
-      thread_ptr_[my_rank] = new char [cap_];
-      thread_tail_[my_rank] = 0;
+      result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = new char [cap_];
+      thread_tail_[my_rank].val = 0;
     }
-    std::memcpy(thread_ptr_[my_rank] + thread_tail_[my_rank], &value, sizeof(T));
-    thread_tail_[my_rank] += sizeof(value);
-    lock_ptr_[my_rank].unlock();
+    std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, &value, sizeof(T));
+    thread_tail_[my_rank].val += sizeof(value);
+    lock_ptr_[my_rank].val.unlock();
     return result;
   }
 
@@ -289,26 +295,35 @@ class AggBufferAdvanced {
     std::vector<std::pair<char*, int>> results;
     for (int ii = 0; ii < thread_num_; ++ii) {
       int i = (ii + my_rank) % thread_num_;
-      if (thread_tail_[i] == 0) continue;
-      while (!lock_ptr_[i].try_lock()) {
+      if (thread_tail_[i].val == 0) continue;
+      while (!lock_ptr_[i].val.try_lock()) {
         progress();
       }
-      if (thread_tail_[i] > 0) {
-        results.emplace_back(thread_ptr_[i], thread_tail_[i]);
-        thread_ptr_[i] = new char [cap_];
-        thread_tail_[i] = 0;
+      if (thread_tail_[i].val > 0) {
+        results.emplace_back(thread_ptr_[i].val, thread_tail_[i].val);
+        thread_ptr_[i].val = new char [cap_];
+        thread_tail_[i].val = 0;
       }
-      lock_ptr_[i].unlock();
+      lock_ptr_[i].val.unlock();
     }
     return results;
   }
 
  private:
-  char** thread_ptr_;
-  int* thread_tail_;
-  int cap_;
-  int thread_num_;
-  std::mutex* lock_ptr_;
+  struct AlignedCharPtr {
+    alignas(alignof_cacheline) char* val;
+  };
+  alignas(alignof_cacheline) AlignedCharPtr* thread_ptr_;
+  struct AlignedInt {
+    alignas(alignof_cacheline) int val;
+  };
+  alignas(alignof_cacheline) AlignedInt* thread_tail_;
+  alignas(alignof_cacheline) int cap_;
+  alignas(alignof_cacheline) int thread_num_;
+  struct AlignedMutex {
+    alignas(alignof_cacheline) std::mutex val;
+  };
+  alignas(alignof_cacheline) AlignedMutex* lock_ptr_;
 }; // class AggBufferAdvanced
 
 template <typename T>

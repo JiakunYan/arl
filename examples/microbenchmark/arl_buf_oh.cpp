@@ -11,9 +11,9 @@ struct Payload {
   char data[payload_size];
 };
 //using AggBuffer = arl::am_internal::AggBufferAtomic<Payload>; // 0.18/118
-//using AggBuffer = arl::am_internal::AggBufferSimple; // 0.42/123
-//using AggBuffer = arl::am_internal::AggBufferLocal; // 0.15/161
-using AggBuffer = arl::am_internal::AggBufferAdvanced; // 0.25/853
+using AggBuffer = arl::am_internal::AggBufferSimple; // (0.42/123) 0.32/95
+//using AggBuffer = arl::am_internal::AggBufferLocal; // (0.15/161) 0.11/162
+//using AggBuffer = arl::am_internal::AggBufferAdvanced; // (0.25/853) 0.16/700
 
 AggBuffer* buffer_p;
 const int buffer_cap = 1023 * 64;
