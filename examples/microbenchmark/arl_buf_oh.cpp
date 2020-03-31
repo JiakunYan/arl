@@ -5,12 +5,15 @@
 
 
 using namespace arl;
-using arl::am_internal::AggBuffer;
 
 const size_t payload_size = 32;
 struct Payload {
   char data[payload_size];
 };
+//using AggBuffer = arl::am_internal::AggBufferAtomic<Payload>; // 0.18/118
+//using AggBuffer = arl::am_internal::AggBufferSimple; // 0.42/123
+//using AggBuffer = arl::am_internal::AggBufferLocal; // 0.15/161
+using AggBuffer = arl::am_internal::AggBufferAdvanced; // 0.25/853
 
 AggBuffer* buffer_p;
 const int buffer_cap = 1023 * 64;

@@ -6,9 +6,9 @@
 
 using namespace std;
 
-using AggBuffer = arl::am_internal::AggBufferLocal;
+using AggBuffer = arl::am_internal::AggBufferAtomic<int>;
 AggBuffer* aggBuffer_p;
-const int buf_size = 99;
+const int buf_size = 100;
 
 const int MAX_VAL = 100;
 const size_t N_STEPS = 50;

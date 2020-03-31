@@ -309,7 +309,87 @@ class AggBufferAdvanced {
   int cap_;
   int thread_num_;
   std::mutex* lock_ptr_;
-};
+}; // class AggBufferAdvanced
+
+template <typename T>
+class AggBufferAtomic {
+ public:
+  AggBufferAtomic() : cap_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
+
+  ~AggBufferAtomic() {
+    delete [] ptr_;
+  }
+
+  void init(int cap) {
+    ARL_Assert(cap > 0);
+    cap_ = cap / sizeof(T) * sizeof(T);
+    delete [] ptr_;
+    ptr_ = new char[cap_];
+    reserved_tail_ = 0;
+    tail_ = 0;
+  }
+
+  std::pair<char*, int> push(const T &val) {
+    static_assert(std::is_trivially_copyable<T>::value);
+
+    std::pair<char*, int> result(nullptr, 0);
+    int current_tail = tail_.fetch_add(sizeof(val));
+    while (current_tail > cap_) {
+      progress();
+      current_tail = tail_.fetch_add(sizeof(val));
+      ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
+    }
+    if (current_tail <= cap_ && current_tail + sizeof(val) > cap_) {
+      while (!mutex_pop_.try_lock()) {
+        progress();
+      }
+
+      while (reserved_tail_ != current_tail) {
+        progress();
+      }
+      result = std::make_pair(ptr_, current_tail);
+      ptr_ = new char[cap_];
+      reserved_tail_ = 0;
+      tail_ = sizeof(val);
+
+      mutex_pop_.unlock();
+      current_tail = 0;
+    }
+    std::memcpy(ptr_ + current_tail, &val, sizeof(val));
+    reserved_tail_.fetch_add(sizeof(val));
+    return result;
+  }
+
+  std::vector<std::pair<char*, int>> flush() {
+    std::vector<std::pair<char*, int>> result;
+    if (tail_.load() == 0) {
+      return result;
+    }
+    while (!mutex_pop_.try_lock()) {
+      progress();
+    }
+    int real_tail = std::min(tail_.fetch_add(cap_), cap_); // prevent others from begining pushing
+    // wait until those who is pushing finish
+    while (reserved_tail_ != real_tail) {
+      progress();
+    }
+
+    result.emplace_back(ptr_, real_tail);
+    ptr_ = new char[cap_];
+    reserved_tail_ = 0;
+    tail_ = 0;
+
+    mutex_pop_.unlock();
+    return result;
+  }
+
+ private:
+  alignas(alignof_cacheline) char* ptr_;
+  alignas(alignof_cacheline) std::atomic<int> tail_;
+  alignas(alignof_cacheline) std::atomic<int> reserved_tail_;
+  alignas(alignof_cacheline) int cap_;
+  alignas(alignof_cacheline) std::mutex mutex_pop_;
+}; // class AggBufferAtomic
 
 //using AggBuffer = AggBufferSimple;
 //using AggBuffer = AggBufferLocal;
