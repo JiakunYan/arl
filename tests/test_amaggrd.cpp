@@ -12,7 +12,6 @@ using std::cout;
 using std::endl;
 using arl::am_internal::get_pi_fnptr;
 using arl::am_internal::resolve_pi_fnptr;
-using arl::am_internal::AmffReqMeta;
 
 int foo1(char a, int b, bool c) {
   cout << "Call foo1 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;

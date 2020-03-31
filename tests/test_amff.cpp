@@ -11,7 +11,7 @@ using std::cout;
 using std::endl;
 using arl::am_internal::get_pi_fnptr;
 using arl::am_internal::resolve_pi_fnptr;
-using arl::am_internal::AmffReqMeta;
+using arl::amff_internal::AmffReqMeta;
 
 void foo1(char a, int b, bool c) {
   cout << "Call foo1: " << "char " << a << ", int " << b << ", bool " << c << endl;
@@ -31,12 +31,12 @@ int main() {
   arl::init();
 
   //---
-  cout << "sizeof(AmffReqMeta) is " << sizeof(arl::am_internal::AmffReqMeta) << endl;
+  cout << "sizeof(AmffReqMeta) is " << sizeof(arl::amff_internal::AmffReqMeta) << endl;
 
   // ---
   Foo3 foo3;
 
-  intptr_t wrapper_p = get_pi_fnptr(arl::am_internal::AmffTypeWrapper<decltype(foo1), char, int, bool>::invoker);
+  intptr_t wrapper_p = get_pi_fnptr(arl::amff_internal::AmffTypeWrapper<decltype(foo1), char, int, bool>::invoker);
   auto invoker = resolve_pi_fnptr<intptr_t(const std::string&)>(wrapper_p);
   intptr_t req_invoker_p = invoker("req_invoker");
   auto req_invoker = resolve_pi_fnptr<void(intptr_t, int, char*, int)>(req_invoker_p);
@@ -49,7 +49,7 @@ int main() {
   using Payload = std::tuple<char, int ,bool>;
   cout << "sizeof(Payload) is " << sizeof(Payload) << endl;
   intptr_t foo1_p = get_pi_fnptr(foo1);
-  intptr_t wrapper2_p = get_pi_fnptr(arl::am_internal::AmffTypeWrapper<decltype(foo2), char, int, bool>::invoker);
+  intptr_t wrapper2_p = get_pi_fnptr(arl::amff_internal::AmffTypeWrapper<decltype(foo2), char, int, bool>::invoker);
   intptr_t foo2_p = get_pi_fnptr(&foo2);
   char buf[100];
   char* ptr = buf;
@@ -62,7 +62,7 @@ int main() {
   offset += sizeof(AmffReqMeta);
   *reinterpret_cast<Payload*>(ptr + offset) = Payload{'b', 134, false};
   if (arl::rank_me() == 0) {
-    gex_AM_RequestMedium0(arl::backend::tm, 0, arl::am_internal::hidx_generic_am_ff_reqhandler, buf,
+    gex_AM_RequestMedium0(arl::backend::tm, 0, arl::amff_internal::hidx_generic_am_ff_reqhandler, buf,
                           offset + sizeof(Payload), GEX_EVENT_NOW, 0);
   }
 
