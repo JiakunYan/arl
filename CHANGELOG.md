@@ -1,7 +1,6 @@
 # ARL Changelog
 
-## [0.2.0] - 2019-03-31
-
+## [Unreleased]
 ### New
 - Enable reduction on AMs with same function handler: register_{aggrd, ffrd}, rpc_{aggrd, ffrd}
 
