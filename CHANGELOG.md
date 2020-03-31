@@ -2,7 +2,7 @@
 
 ## [0.2.0] - 2019-03-31
 
-### New features
+### New
 - Enable reduction on AMs with same function handler: register_{aggrd, ffrd}, rpc_{aggrd, ffrd}
 
 ### Changed
