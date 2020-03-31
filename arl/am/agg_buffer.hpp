@@ -9,6 +9,13 @@ namespace arl{
 extern void progress();
 namespace am_internal {
 
+// The AggBuffer data structure is one of the most important component in the node-level aggregation
+// architecture of ARL.
+
+// A simple aggregation buffer, slow but should hardly have bugs.
+// All the worker threads share one memory chunk.
+// Use one mutex lock to ensure its thread-safety.
+// flush() will trivially flush the whole aggregation buffer, because the buffer only has one memory chunk.
 class AggBufferSimple {
  public:
   AggBufferSimple(): cap_(0), tail_(0), ptr_(nullptr) {
@@ -63,10 +70,11 @@ class AggBufferSimple {
   }
 
   std::vector<std::pair<char*, int>> flush() {
+    std::vector<std::pair<char*, int>> result;
+    if (tail_ == 0) return result;
     while (!lock.try_lock()) {
       progress();
     }
-    std::vector<std::pair<char*, int>> result;
     if (tail_ > 0) {
       result.emplace_back(ptr_, tail_);
       ptr_ = new char [cap_];
@@ -83,6 +91,9 @@ class AggBufferSimple {
   std::mutex lock;
 };
 
+// A thread-local aggregation buffer, no contention between threads.
+// Each thread has its own memory chunk.
+// flush() only flushes the caller's local memory chunk.
 class AggBufferLocal {
  public:
   AggBufferLocal(): cap_(0), thread_num_(0), thread_tail_(nullptr), thread_ptr_(nullptr) {
@@ -179,6 +190,10 @@ class AggBufferLocal {
   int thread_num_;
 };
 
+// A process-level aggregation buffer, light contention between threads
+// Each thread has its own memory chunk.
+// Each memory chunk has an associated mutex lock.
+// flush() will flush all the memory chunks, and thus cost more time.
 class AggBufferAdvanced {
  public:
   AggBufferAdvanced(): cap_(0), thread_num_(0), thread_tail_(nullptr), thread_ptr_(nullptr), lock_ptr_(nullptr) {
@@ -274,6 +289,7 @@ class AggBufferAdvanced {
     std::vector<std::pair<char*, int>> results;
     for (int ii = 0; ii < thread_num_; ++ii) {
       int i = (ii + my_rank) % thread_num_;
+      if (thread_tail_[i] == 0) continue;
       while (!lock_ptr_[i].try_lock()) {
         progress();
       }
@@ -295,9 +311,9 @@ class AggBufferAdvanced {
   std::mutex* lock_ptr_;
 };
 
-using AggBuffer = AggBufferSimple;
+//using AggBuffer = AggBufferSimple;
 //using AggBuffer = AggBufferLocal;
-//using AggBuffer = AggBufferAdvanced;
+using AggBuffer = AggBufferAdvanced;
 
 } // namespace am_internal
 } // namespace arl
