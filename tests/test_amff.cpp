@@ -69,6 +69,7 @@ int main() {
   // ---
   arl::rpc_ff(0, foo1, 'c', 34, true);
   arl::flush_agg_buffer();
+  arl::flush_am();
   cout << "ack counter is " << *arl::am_internal::am_ack_counter << endl;
 
   arl::finalize();
