@@ -19,6 +19,7 @@
 #define USE_COLORS
 #define USE_BYTELL
 #define USE_PROGBAR
+#define NDEBUG
 #define MHM_VERSION "unknown version ARL"
 #define ALL_DEFNS "all defns"
 

@@ -37,7 +37,7 @@ LDFLAGS = `upcxx-meta LIBFLAGS`
 
 ############################################################3
 
-TARGETS := kmer_hash_agg kmer_hash_upcxx_rpc kmer_hash_upcxx_rdma
+TARGETS := kmer_hash_agg kmer_hash_rd kmer_hash_upcxx_rpc kmer_hash_upcxx_rdma
 all: $(TARGETS)
 
 kmer_hash_naive: kmer_hash_naive.cpp kmer_t.hpp pkmer_t.hpp packing.hpp read_kmers.hpp

@@ -119,7 +119,8 @@ void worker(size_t n_kmers) {
     if (!is_active) {
       // flush buffer
       arl::flush_agg_buffer();
-//      arl::flush_am();
+//      arl::amaggrd_internal::flush_amaggrd();
+      arl::flush_am();
     }
   }
 
