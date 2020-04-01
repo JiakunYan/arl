@@ -15,6 +15,7 @@ namespace am_internal {
 // A simple aggregation buffer, slow but should hardly have bugs.
 // All the worker threads share one memory chunk.
 // Use one mutex lock to ensure its thread-safety.
+// push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() will trivially flush the whole aggregation buffer, because the buffer only has one memory chunk.
 class AggBufferSimple {
  public:
@@ -94,6 +95,7 @@ class AggBufferSimple {
 
 // A thread-local aggregation buffer, no contention between threads.
 // Each thread has its own memory chunk.
+// push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() only flushes the caller's local memory chunk.
 class AggBufferLocal {
  public:
@@ -200,6 +202,7 @@ class AggBufferLocal {
 // A process-level aggregation buffer, light contention between threads
 // Each thread has its own memory chunk.
 // Each memory chunk has an associated mutex lock.
+// push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() will flush all the memory chunks, and thus cost more time.
 class AggBufferAdvanced {
  public:
@@ -328,6 +331,12 @@ class AggBufferAdvanced {
   alignas(alignof_cacheline) AlignedMutex* lock_ptr_;
 }; // class AggBufferAdvanced
 
+// A process-level aggregation buffer, light contention between threads
+// All thread shares one memory chunk.
+// push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
+// flush() will flush the memory chunks, and thus cost more time.
+// The thread safety between push() and push()/flush() is achieved by atomic operations.
+// The thread safety between flush() and flush() is achieved by a mutex lock.
 class AggBufferAtomic {
  public:
   AggBufferAtomic() : cap_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
