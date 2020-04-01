@@ -74,6 +74,7 @@ class AggBufferSimple {
     if (tail_ == 0) return result;
     while (!lock.try_lock()) {
       progress();
+      if (tail_ == 0) return result;
     }
     if (tail_ > 0) {
       result.emplace_back(ptr_, tail_);
@@ -298,6 +299,7 @@ class AggBufferAdvanced {
       if (thread_tail_[i].val == 0) continue;
       while (!lock_ptr_[i].val.try_lock()) {
         progress();
+        if (thread_tail_[i].val == 0) continue;
       }
       if (thread_tail_[i].val > 0) {
         results.emplace_back(thread_ptr_[i].val, thread_tail_[i].val);
@@ -326,7 +328,6 @@ class AggBufferAdvanced {
   alignas(alignof_cacheline) AlignedMutex* lock_ptr_;
 }; // class AggBufferAdvanced
 
-template <typename T>
 class AggBufferAtomic {
  public:
   AggBufferAtomic() : cap_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
@@ -337,13 +338,15 @@ class AggBufferAtomic {
 
   void init(int cap) {
     ARL_Assert(cap > 0);
-    cap_ = cap / sizeof(T) * sizeof(T);
+//    cap_ = cap / sizeof(T) * sizeof(T);
+    cap_ = cap;
     delete [] ptr_;
     ptr_ = new char[cap_];
     reserved_tail_ = 0;
     tail_ = 0;
   }
 
+  template <typename T>
   std::pair<char*, int> push(const T &val) {
     static_assert(std::is_trivially_copyable<T>::value);
 
@@ -380,20 +383,21 @@ class AggBufferAtomic {
     if (tail_.load() == 0) {
       return result;
     }
-    while (!mutex_pop_.try_lock()) {
-      progress();
+    if (!mutex_pop_.try_lock()) {
+      return result;
     }
-    int real_tail = std::min(tail_.fetch_add(cap_), cap_); // prevent others from begining pushing
-    // wait until those who is pushing finish
-    while (reserved_tail_ != real_tail) {
-      progress();
-    }
+    int current_tail = tail_.fetch_add(cap_); // prevent others from begining pushing
+    if (current_tail <= cap_ && current_tail > 0) {
+      // wait until those who is pushing finish
+      while (reserved_tail_ != current_tail) {
+        progress();
+      }
 
-    result.emplace_back(ptr_, real_tail);
-    ptr_ = new char[cap_];
-    reserved_tail_ = 0;
-    tail_ = 0;
-
+      result.emplace_back(ptr_, current_tail);
+      ptr_ = new char[cap_];
+      reserved_tail_ = 0;
+      tail_ = 0;
+    } // else if (current_tail > cap_): some push will flush the buffer
     mutex_pop_.unlock();
     return result;
   }

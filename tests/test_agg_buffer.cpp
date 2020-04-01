@@ -6,12 +6,14 @@
 
 using namespace std;
 
-using AggBuffer = arl::am_internal::AggBufferAtomic<int>;
+//using AggBuffer = arl::am_internal::AggBufferAtomic;
+//using AggBuffer = arl::am_internal::AggBufferSimple;
+using AggBuffer = arl::am_internal::AggBufferAdvanced;
 AggBuffer* aggBuffer_p;
-const int buf_size = 100;
+const int buf_size = 103;
 
 const int MAX_VAL = 100;
-const size_t N_STEPS = 50;
+const size_t N_STEPS = 500;
 std::vector<std::atomic<int>> counts(MAX_VAL);
 
 const bool print_verbose = false;
