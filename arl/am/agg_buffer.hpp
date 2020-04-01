@@ -346,9 +346,43 @@ class AggBufferAtomic {
     tail_ = 0;
   }
 
+  template <typename T, typename U>
+  std::pair<char*, int> push(const T &val1, const U &val2) {
+//    static_assert(std::is_trivially_copyable<T>::value);
+    int val_size = sizeof(val1) + sizeof(val2);
+    std::pair<char*, int> result(nullptr, 0);
+    int current_tail = tail_.fetch_add(val_size);
+    while (current_tail > cap_) {
+      progress();
+      current_tail = tail_.fetch_add(val_size);
+      ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
+    }
+    if (current_tail <= cap_ && current_tail + val_size > cap_) {
+      while (!mutex_pop_.try_lock()) {
+        progress();
+      }
+
+      while (reserved_tail_ != current_tail) {
+        progress();
+      }
+      result = std::make_pair(ptr_, current_tail);
+      ptr_ = new char[cap_];
+      reserved_tail_ = 0;
+      tail_ = val_size;
+
+      mutex_pop_.unlock();
+      current_tail = 0;
+    }
+    std::memcpy(ptr_ + current_tail, &val1, sizeof(val1));
+    current_tail += sizeof(val1);
+    std::memcpy(ptr_ + current_tail, &val2, sizeof(val2));
+    reserved_tail_.fetch_add(val_size);
+    return result;
+  }
+
   template <typename T>
   std::pair<char*, int> push(const T &val) {
-    static_assert(std::is_trivially_copyable<T>::value);
+//    static_assert(std::is_trivially_copyable<T>::value);
 
     std::pair<char*, int> result(nullptr, 0);
     int current_tail = tail_.fetch_add(sizeof(val));
@@ -389,16 +423,16 @@ class AggBufferAtomic {
     int current_tail = tail_.fetch_add(cap_ + 1); // prevent others from begining pushing
     if (current_tail <= cap_ && current_tail > 0) {
       // wait until those who is pushing finish
-//      printf("wait for flush %d, %d\n", reserved_tail_.load(), current_tail);
       while (reserved_tail_ != current_tail) {
         progress();
+//        printf("rank %ld wait for flush %d, %d\n", rank_me(), reserved_tail_.load(), current_tail);
       }
 
       result.emplace_back(ptr_, current_tail);
       ptr_ = new char[cap_];
       reserved_tail_ = 0;
-      tail_ = 0;
     } // else if (current_tail > cap_): some push will flush the buffer
+    tail_ = 0;
     mutex_pop_.unlock();
     return result;
   }
@@ -413,7 +447,8 @@ class AggBufferAtomic {
 
 //using AggBuffer = AggBufferSimple;
 //using AggBuffer = AggBufferLocal;
-using AggBuffer = AggBufferAdvanced;
+//using AggBuffer = AggBufferAdvanced;
+using AggBuffer = AggBufferAtomic;
 
 } // namespace am_internal
 } // namespace arl
