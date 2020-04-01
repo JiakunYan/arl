@@ -69,6 +69,14 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
+  switch (pass_type) {
+    case BLOOM_SET_PASS:
+      kmer_dht.register_add_kmer_set();
+      break;
+    case BLOOM_COUNT_PASS:
+      kmer_dht.register_add_kmer_count();
+      break;
+  }
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -77,7 +85,6 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     case BLOOM_SET_PASS: progbar_prefix = "Pass 1: Parsing reads file to setup bloom filter"; break;
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
-  vector<Future<void>> futures;
   //char special = qual_offset + 2;
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
@@ -95,25 +102,20 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       // split into kmers
       auto kmers = Kmer::get_kmers(kmer_len, seq);
       for (int i = 1; i < kmers.size() - 1; i++) {
-        Future<void> future;
         switch (pass_type) {
           case BLOOM_SET_PASS:
-            future = kmer_dht.add_kmer_set(kmers[i]);
+            kmer_dht.add_kmer_set_ffrd(kmers[i]);
             break;
           case BLOOM_COUNT_PASS:
-            future = kmer_dht.add_kmer_count(kmers[i]);
+            kmer_dht.add_kmer_count_ffrd(kmers[i]);
             break;
         }
-        futures.push_back(move(future));
         num_kmers++;
       }
       progress();
     }
     progbar.done(true);
     barrier();
-    for (const auto& future: futures) {
-      future.get();
-    }
   }
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);

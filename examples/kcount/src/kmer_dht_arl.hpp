@@ -165,13 +165,7 @@ public:
 };
 
 class KmerDHT {
-private:
-  std::vector<KmerLHT *> map_ptrs;
-  // map the key to a target process
-  int get_target_rank(const Kmer &kmer) {
-    return std::hash<Kmer>{}(kmer) % map_ptrs.size();
-  }
-public:
+ public:
   // initialize the local map
   KmerDHT(uint64_t cardinality) {
     map_ptrs.resize(rank_n());
@@ -187,20 +181,46 @@ public:
   }
 
   void register_add_kmer_set() {
-    auto fn = [](KmerLHT* lmap, Kmer kmer){
-      lmap->add_kmer_set(kmer);
-    };
-    register_amffrd<decltype(fn), KmerLHT*, Kmer>(fn);
+    register_amffrd<decltype(kmer_set_fn), KmerLHT*, Kmer>(kmer_set_fn);
   }
 
   void register_add_kmer_count() {
-    auto fn = [](KmerLHT* lmap, Kmer kmer){
-      lmap->add_kmer_count(kmer);
-    };
-    register_amffrd<decltype(fn), KmerLHT*, Kmer>(fn);
+    register_amffrd<decltype(kmer_count_fn), KmerLHT*, Kmer>(kmer_count_fn);
   }
 
-  void add_kmer_set(Kmer kmer) {
+  Future<void> add_kmer_set(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    return rpc_agg(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+  }
+
+  Future<void> add_kmer_count(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    return rpc_agg(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+  }
+
+  void add_kmer_set_ff(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    rpc_ff(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+  }
+
+  void add_kmer_count_ff(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    rpc_ff(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+  }
+
+  void add_kmer_set_ffrd(Kmer kmer) {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
@@ -208,7 +228,7 @@ public:
     rpc_ffrd(target_rank, NULL, map_ptrs[target_rank], kmer);
   }
 
-  void add_kmer_count(Kmer kmer) {
+  void add_kmer_count_ffrd(Kmer kmer) {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
@@ -245,6 +265,21 @@ public:
     string dump_fname = fname + "-" + to_string(k) + ".kmers.gz";
     get_rank_path(dump_fname, rank_me());
     map_ptrs[rank_me()]->dump_kmers(dump_fname);
+  }
+
+ private:
+  static constexpr auto kmer_set_fn = [](KmerLHT* lmap, Kmer kmer){
+    lmap->add_kmer_set(kmer);
+  };
+
+  static constexpr auto kmer_count_fn = [](KmerLHT* lmap, Kmer kmer){
+    lmap->add_kmer_count(kmer);
+  };
+
+  std::vector<KmerLHT *> map_ptrs;
+  // map the key to a target process
+  int get_target_rank(const Kmer &kmer) {
+    return std::hash<Kmer>{}(kmer) % map_ptrs.size();
   }
 };
 

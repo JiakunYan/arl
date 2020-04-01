@@ -47,32 +47,32 @@ using std::min;
 extern ofstream _logstream;
 extern bool _verbose;
 
-#define SLOG_VERBOSE_ALL(...) verbose_all(__VA_ARGS__)
-#define SLOG_VERBOSE(...) verbose(__VA_ARGS__)
-#define SLOG(...) slog(__VA_ARGS__)
-#define SLOG_ALL(...) slog_all(__VA_ARGS__)
+#define SLOG_VERBOSE_ALL(...) print_verbose_all_(__VA_ARGS__)
+#define SLOG_VERBOSE(...) print_verbose_(__VA_ARGS__)
+#define SLOG(...) print_slog_(__VA_ARGS__)
+#define SLOG_ALL(...) print_slog_all_(__VA_ARGS__)
 
 template <typename... Args>
-void slog_all(Args... args) {
+void print_slog_all_(Args... args) {
   arl::cout(args...);
 }
 
 template <typename... Args>
-void slog(Args... args) {
+void print_slog_(Args... args) {
   arl::os_print(std::cout, args...);
 }
 
 template <typename... Args>
-void verbose_all(Args... args) {
+void print_verbose_all_(Args... args) {
   if (_verbose) {
-    slog_all(args...);
+    print_slog_all_(args...);
   }
 }
 
 template <typename... Args>
-void verbose(Args... args) {
+void print_verbose_(Args... args) {
   if (_verbose) {
-    slog(args...);
+    print_slog_(args...);
   }
 }
 
