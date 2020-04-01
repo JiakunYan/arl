@@ -386,9 +386,10 @@ class AggBufferAtomic {
     if (!mutex_pop_.try_lock()) {
       return result;
     }
-    int current_tail = tail_.fetch_add(cap_); // prevent others from begining pushing
+    int current_tail = tail_.fetch_add(cap_ + 1); // prevent others from begining pushing
     if (current_tail <= cap_ && current_tail > 0) {
       // wait until those who is pushing finish
+//      printf("wait for flush %d, %d\n", reserved_tail_.load(), current_tail);
       while (reserved_tail_ != current_tail) {
         progress();
       }

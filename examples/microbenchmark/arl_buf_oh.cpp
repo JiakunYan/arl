@@ -10,8 +10,8 @@ const size_t payload_size = 32;
 struct Payload {
   char data[payload_size];
 };
-//using AggBuffer = arl::am_internal::AggBufferAtomic; // 0.18/118
-using AggBuffer = arl::am_internal::AggBufferSimple; // (0.42/123) 0.32/95
+using AggBuffer = arl::am_internal::AggBufferAtomic; // 0.18/118, 0.18/70
+//using AggBuffer = arl::am_internal::AggBufferSimple; // (0.42/123) 0.32/95 0.26/87
 //using AggBuffer = arl::am_internal::AggBufferLocal; // (0.15/161) 0.11/162
 //using AggBuffer = arl::am_internal::AggBufferAdvanced; // (0.25/853) 0.16/700
 
