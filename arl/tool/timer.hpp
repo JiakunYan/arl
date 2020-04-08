@@ -126,6 +126,10 @@ namespace arl {
     void print_us(std::string &&name = "") const {
       printf("Duration %s: %.3lf us\n", name.c_str(), to_us());
     }
+
+    void print_s(std::string &&name = "") const {
+      printf("Duration %s: %.3lf s\n", name.c_str(), to_s());
+    }
   };
 }
 #endif //ARL_TIMER_HPP
