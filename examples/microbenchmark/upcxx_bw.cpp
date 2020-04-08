@@ -13,7 +13,7 @@
 #include <upcxx/upcxx.hpp>
 #include <random>
 
-const size_t payload_size = 64 * 1024; // 64 KB
+const size_t payload_size = 16 * 1024; // 64 KB
 struct Payload {
   char data[payload_size] = {0};
 };
@@ -22,7 +22,7 @@ void do_nothing(Payload data) {}
 
 int main(int argc, char **argv) {
   upcxx::init();
-  size_t num_ops = 10000;
+  size_t num_ops = 20000;
   Payload payload;
 
   upcxx::intrank_t rank_me = upcxx::rank_me();
