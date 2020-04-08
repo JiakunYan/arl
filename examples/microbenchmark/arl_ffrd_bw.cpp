@@ -7,7 +7,7 @@
 
 using namespace arl;
 
-const size_t payload_size = 64;
+const size_t payload_size = 512;
 struct Payload {
   char data[payload_size] = {0};
 };
@@ -39,8 +39,8 @@ void worker() {
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
-  print("rpc_ff overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth: %lu MB/s\n", (unsigned long) ((sizeof(Payload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("rpc_ffrd overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
+  print("Total single-direction node bandwidth (pure): %lu MB/s\n", (unsigned long) ((sizeof(Payload)) * num_ops * local::rank_n() * 2 / duration_total));
 }
 
 int main(int argc, char** argv) {
