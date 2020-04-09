@@ -1,6 +1,8 @@
 # ARL Changelog
 
 ## [Unreleased]
+
+## [0.2.0] - 2020-04-09
 ### New
 - Enable reduction on AMs with same function handler: register_{aggrd, ffrd}, rpc_{aggrd, ffrd}
 
@@ -8,7 +10,7 @@
 - Improve AM core: now rpc,rpc_{agg,aggrd,ff,ffrd} can accept arguments of arbitrary length (no more than gasnet_AMMaxMedium, 4KB-64KB on Cori)
 - Add more AggBuffer options
 
-## [0.1.0] - 2019-03-31
+## [0.1.0] - 2020-03-31
 ### New
 - Thread management module: init, run, finalize
 - AM module: rpc, rpc_agg, rpc_ff
