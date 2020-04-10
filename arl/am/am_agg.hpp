@@ -17,7 +17,10 @@ using am_internal::FutureData;
 alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amagg_reqhandler;
 alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amagg_ackhandler;
 void generic_amagg_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
-void generic_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);
+void generic_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);// AM synchronous counters
+// AM synchronous counters
+alignas(alignof_cacheline) std::atomic<int64_t> *amagg_ack_counter;
+alignas(alignof_cacheline) std::atomic<int64_t> *amagg_req_counter;
 
 AggBuffer* amagg_agg_buffer_p;
 
@@ -47,9 +50,15 @@ void init_amagg() {
   for (int i = 0; i < proc::rank_n(); ++i) {
     amagg_agg_buffer_p[i].init(max_buffer_size);
   }
+  amagg_ack_counter = new std::atomic<int64_t>;
+  *amagg_ack_counter = 0;
+  amagg_req_counter = new std::atomic<int64_t>;
+  *amagg_req_counter = 0;
 }
 
 void exit_amagg() {
+  delete amagg_req_counter;
+  delete amagg_ack_counter;
   delete [] amagg_agg_buffer_p;
 }
 
@@ -178,7 +187,7 @@ void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     consumed += ack_invoker(meta.future_p, buf + consumed, nbytes - consumed);
     ++n;
   }
-  *am_internal::am_ack_counter += n;
+  *amagg_internal::amagg_ack_counter += n;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
@@ -196,6 +205,12 @@ void flush_amagg() {
         delete [] std::get<0>(result);
       }
     }
+  }
+}
+
+void wait_amagg() {
+  while (*amagg_req_counter > *amagg_ack_counter) {
+    progress();
   }
 }
 } // namespace amagg_internal
@@ -225,7 +240,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
                         ptr, sizeof(AmaggReqMeta) + sizeof(Payload), GEX_EVENT_NOW, 0);
   delete [] ptr;
-  ++(*am_internal::am_req_counter);
+  ++(*amagg_internal::amagg_req_counter);
   return future;
 }
 
@@ -256,7 +271,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
     }
     delete [] std::get<0>(result);
   }
-  ++(*am_internal::am_req_counter);
+  ++(*amagg_internal::amagg_req_counter);
   return future;
 }
 

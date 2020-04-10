@@ -17,8 +17,12 @@ alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_am_ff_reqhandler;
 alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_am_ff_ackhandler;
 void generic_am_ff_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
 void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
+// AM synchronous counters
+alignas(alignof_cacheline) std::atomic<int64_t> *amff_ack_counter;
+alignas(alignof_cacheline) std::atomic<int64_t> *amff_req_counter;
 
 AggBuffer* amff_agg_buffer_p;
+
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
@@ -45,9 +49,15 @@ void init_am_ff() {
   for (int i = 0; i < proc::rank_n(); ++i) {
     amff_agg_buffer_p[i].init(max_buffer_size);
   }
+  amff_ack_counter = new std::atomic<int64_t>;
+  *amff_ack_counter = 0;
+  amff_req_counter = new std::atomic<int64_t>;
+  *amff_req_counter = 0;
 }
 
 void exit_am_ff() {
+  delete amff_req_counter;
+  delete amff_ack_counter;
   delete [] amff_agg_buffer_p;
 }
 
@@ -131,7 +141,7 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 
 void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
 //  printf("rank %ld amff ackhandler %d\n", rank_me(), static_cast<int>(n));
-  *am_internal::am_ack_counter += static_cast<int>(n);
+  *amff_ack_counter += static_cast<int>(n);
 }
 
 void flush_am_ff_buffer() {
@@ -150,6 +160,11 @@ void flush_am_ff_buffer() {
   }
 }
 
+void wait_amff() {
+  while (*amff_req_counter > *amff_ack_counter) {
+    progress();
+  }
+}
 } // namespace amff_internal
 
 template <typename Fn, typename... Args>
@@ -180,7 +195,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
     }
     delete [] std::get<0>(result);
   }
-  ++(*am_internal::am_req_counter);
+  ++(*amff_internal::amff_req_counter);
 }
 
 } // namespace arl

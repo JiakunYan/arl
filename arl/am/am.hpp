@@ -11,12 +11,14 @@ namespace amagg_internal {
 extern void init_amagg();
 extern void exit_amagg();
 extern void flush_amagg();
+extern void wait_amagg();
 } // namespace amagg_internal
 
 namespace amff_internal {
 extern void init_am_ff();
 extern void exit_am_ff();
 extern void flush_am_ff_buffer();
+extern void wait_amff();
 } // namespace amff_internal
 
 namespace amaggrd_internal {
@@ -48,16 +50,8 @@ T *resolve_pi_fnptr(std::uintptr_t fn) {
 }
 
 alignas(alignof_cacheline) int gex_am_handler_num;
-// AM synchronous counters
-alignas(alignof_cacheline) std::atomic<int64_t> *am_ack_counter;
-alignas(alignof_cacheline) std::atomic<int64_t> *am_req_counter;
 
 void init_am() {
-  am_ack_counter = new std::atomic<int64_t>;
-  *am_ack_counter = 0;
-  am_req_counter = new std::atomic<int64_t>;
-  *am_req_counter = 0;
-
   gex_am_handler_num = GEX_AM_INDEX_BASE;
   amagg_internal::init_amagg();
   amff_internal::init_am_ff();
@@ -70,8 +64,6 @@ void exit_am() {
   amaggrd_internal::exit_amaggrd();
   amff_internal::exit_am_ff();
   amagg_internal::exit_amagg();
-  delete am_ack_counter;
-  delete am_req_counter;
 }
 
 } // namespace am_internal
@@ -85,9 +77,8 @@ void flush_agg_buffer() {
 }
 
 void flush_am() {
-  while (*am_internal::am_req_counter > *am_internal::am_ack_counter) {
-    progress();
-  }
+  amagg_internal::wait_amagg();
+  amff_internal::wait_amff();
   amaggrd_internal::wait_amaggrd();
   amffrd_internal::wait_amffrd();
 }
