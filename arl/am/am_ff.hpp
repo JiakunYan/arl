@@ -168,7 +168,7 @@ int64_t get_expected_recv_num() {
 
 void wait_amff() {
   local::barrier();
-  int expected_recv_num = get_expected_recv_num();
+  int64_t expected_recv_num = get_expected_recv_num();
   while (expected_recv_num > amff_recv_counter->val) {
     progress();
   }
