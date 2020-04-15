@@ -210,7 +210,7 @@ void init_amaggrd() {
 }
 
 void exit_amaggrd() {
-  delete amaggrd_req_local_counters;
+  delete [] amaggrd_req_local_counters;
   delete global_meta_p;
   delete amaggrd_ack_counter;
   delete amaggrd_req_counter;

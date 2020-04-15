@@ -63,7 +63,7 @@ void init_amagg() {
 }
 
 void exit_amagg() {
-  delete amagg_req_local_counters;
+  delete [] amagg_req_local_counters;
   delete amagg_req_counter;
   delete amagg_ack_counter;
   delete [] amagg_agg_buffer_p;
