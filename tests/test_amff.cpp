@@ -103,7 +103,7 @@ int main() {
 //  arl::rpc_ff(0, foo1, 'c', 34, true);
 //  arl::flush_agg_buffer();
 //  cout << "recv counter is " << arl::amff_internal::amff_recv_counter->val << endl;
-//  arl::flush_am();
+//  arl::wait_am();
 //  cout << "recv counter is " << arl::amff_internal::amff_recv_counter->val << endl;
 
   arl::run(worker);

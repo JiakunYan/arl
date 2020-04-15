@@ -116,7 +116,7 @@ int main() {
 //  auto f2 = arl::rpc_aggrd(0, foo2, 'd', 35, true);
 //  auto f3 = arl::rpc_aggrd(0, foo2, 'e', 36, true);
 //  arl::flush_agg_buffer();
-//  arl::flush_am();
+//  arl::wait_am();
 //  cout << "ack counter is " << *arl::amaggrd_internal::amaggrd_ack_counter << endl;
 
   arl::run(worker);

@@ -120,7 +120,7 @@ void worker(size_t n_kmers) {
       // flush buffer
       arl::flush_agg_buffer();
 //      arl::amaggrd_internal::flush_amaggrd();
-      arl::flush_am();
+      arl::progress();
     }
   }
 
