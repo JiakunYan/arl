@@ -23,7 +23,7 @@ alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_ack_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_req_counter;
 alignas(alignof_cacheline) AlignedInt64 *amagg_req_local_counters;
 
-AggBuffer* amagg_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer* amagg_agg_buffer_p;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
