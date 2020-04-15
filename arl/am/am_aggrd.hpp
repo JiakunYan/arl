@@ -217,7 +217,7 @@ void exit_amaggrd() {
   delete [] amaggrd_agg_buffer_p;
 }
 
-void flush_amaggrd() {
+void flush_amaggrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
     std::vector<std::pair<char*, int>> results = amaggrd_agg_buffer_p[i].flush();
@@ -234,11 +234,12 @@ void flush_amaggrd() {
       }
     }
   }
-  amaggrd_req_counter->val += amaggrd_req_local_counters[local::rank_me()].val;
-  amaggrd_req_local_counters[local::rank_me()].val = 0;
 }
 
 void wait_amaggrd() {
+  amaggrd_req_counter->val += amaggrd_req_local_counters[local::rank_me()].val;
+  amaggrd_req_local_counters[local::rank_me()].val = 0;
+  local::barrier();
   while (amaggrd_req_counter->val > amaggrd_ack_counter->val) {
     progress();
   }

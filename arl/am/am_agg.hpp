@@ -198,7 +198,7 @@ void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
-void flush_amagg() {
+void flush_amagg_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
     std::vector<std::pair<char*, int>> results = amagg_agg_buffer_p[i].flush();
@@ -213,11 +213,12 @@ void flush_amagg() {
       }
     }
   }
-  amagg_req_counter->val += amagg_req_local_counters[local::rank_me()].val;
-  amagg_req_local_counters[local::rank_me()].val = 0;
 }
 
 void wait_amagg() {
+  amagg_req_counter->val += amagg_req_local_counters[local::rank_me()].val;
+  amagg_req_local_counters[local::rank_me()].val = 0;
+  local::barrier();
   while (amagg_req_counter->val > amagg_ack_counter->val) {
     progress();
   }

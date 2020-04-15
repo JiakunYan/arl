@@ -140,7 +140,7 @@ void exit_amffrd() {
   delete[] amffrd_internal::amffrd_agg_buffer_p;
 }
 
-void flush_amffrd() {
+void flush_amffrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
     std::vector<std::pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();

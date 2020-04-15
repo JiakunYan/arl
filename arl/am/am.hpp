@@ -10,7 +10,7 @@ namespace arl {
 namespace amagg_internal {
 extern void init_amagg();
 extern void exit_amagg();
-extern void flush_amagg();
+extern void flush_amagg_buffer();
 extern void wait_amagg();
 } // namespace amagg_internal
 
@@ -24,14 +24,14 @@ extern void wait_amff();
 namespace amaggrd_internal {
 extern void init_amaggrd();
 extern void exit_amaggrd();
-extern void flush_amaggrd();
+extern void flush_amaggrd_buffer();
 extern void wait_amaggrd();
 } // amffrd_internal
 
 namespace amffrd_internal {
 extern void init_amffrd();
 extern void exit_amffrd();
-extern void flush_amffrd();
+extern void flush_amffrd_buffer();
 extern void wait_amffrd();
 } // amffrd_internal
 
@@ -69,18 +69,22 @@ void exit_am() {
 } // namespace am_internal
 
 void flush_agg_buffer() {
-  amagg_internal::flush_amagg();
+  amagg_internal::flush_amagg_buffer();
   amff_internal::flush_am_ff_buffer();
-  amaggrd_internal::flush_amaggrd();
-  amffrd_internal::flush_amffrd();
-
+  amaggrd_internal::flush_amaggrd_buffer();
+  amffrd_internal::flush_amffrd_buffer();
 }
 
-void flush_am() {
+void wait_am() {
   amagg_internal::wait_amagg();
   amff_internal::wait_amff();
   amaggrd_internal::wait_amaggrd();
   amffrd_internal::wait_amffrd();
+}
+
+void flush_am() {
+  flush_agg_buffer();
+  wait_am();
 }
 
 void progress() {
