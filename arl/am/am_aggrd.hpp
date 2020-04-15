@@ -169,7 +169,7 @@ void generic_amaggrd_ackhandler(gex_Token_t token, void *void_buf, size_t unbyte
   amaggrd_ack_counter->val += ack_n;
 }
 
-AmaggrdReqMeta* global_meta_p = nullptr;
+alignas(alignof_cacheline) AmaggrdReqMeta* global_meta_p = nullptr;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
