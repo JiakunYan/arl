@@ -21,7 +21,7 @@ void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 alignas(alignof_cacheline) std::atomic<int64_t> *amff_ack_counter;
 alignas(alignof_cacheline) std::atomic<int64_t> *amff_req_counter;
 
-AggBuffer* amff_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
 
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.

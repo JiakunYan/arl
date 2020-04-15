@@ -22,7 +22,7 @@ void generic_amffrd_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 alignas(alignof_cacheline) std::atomic<int64_t> *amffrd_ack_counter;
 alignas(alignof_cacheline) std::atomic<int64_t> *amffrd_req_counter;
 // other variables whose names are clear
-AggBuffer* amffrd_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer* amffrd_agg_buffer_p;
 
 struct AmffrdReqMeta {
   intptr_t fn_p;
