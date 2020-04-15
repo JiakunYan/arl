@@ -74,7 +74,7 @@ int main() {
                         offset + sizeof(Payload), GEX_EVENT_NOW, 0);
   cout << "future1.get() is " << future1.get() << endl;
   cout << "future2.get() is " << future2.get() << endl;
-  cout << "ack counter is " << *arl::amagg_internal::amagg_ack_counter << endl;
+  cout << "ack counter is " << arl::amagg_internal::amagg_ack_counter->val << endl;
 
   // ---
   auto future3 = arl::rpc_agg(0, foo1, 'c', 34, true);
