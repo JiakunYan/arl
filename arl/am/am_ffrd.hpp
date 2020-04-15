@@ -14,13 +14,11 @@ using am_internal::AggBuffer;
 
 // GASNet AM handlers and their indexes
 alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amffrd_reqhandler;
-alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amffrd_ackhandler;
 void generic_amffrd_reqhandler(gex_Token_t token, void *buf, size_t nbytes,
                                gex_AM_Arg_t t0, gex_AM_Arg_t t1, gex_AM_Arg_t t2, gex_AM_Arg_t t3);
-void generic_amffrd_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 // AM synchronous counters
-alignas(alignof_cacheline) std::atomic<int64_t> *amffrd_ack_counter;
-alignas(alignof_cacheline) std::atomic<int64_t> *amffrd_req_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_recv_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_req_counters; // of length proc::rank_n()
 // other variables whose names are clear
 alignas(alignof_cacheline) AggBuffer* amffrd_agg_buffer_p;
 
@@ -91,13 +89,9 @@ void generic_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes
   intptr_t req_invoker_p = invoker("req_invoker");
   auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
   int ack_n = req_invoker(meta.fn_p, buf, nbytes);
-  gex_AM_ReplyShort1(token, hidx_generic_amffrd_ackhandler, 0, static_cast<gex_AM_Arg_t>(ack_n));
-//  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
-}
 
-void generic_amffrd_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
-  *amffrd_ack_counter += static_cast<int>(n);
-//  printf("rank %ld ackhandler %d, %ld\n", rank_me(), n, amffrd_ack_counter->load());
+  amffrd_recv_counter->val += ack_n;
+//  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
 void send_amffrd_to_gex(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_t nbytes) {
@@ -107,24 +101,20 @@ void send_amffrd_to_gex(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_
                         buf, nbytes, GEX_EVENT_NOW, 0, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
-AmffrdReqMeta* global_meta_p = nullptr;
+alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amffrd() {
   amffrd_internal::hidx_generic_amffrd_reqhandler = am_internal::gex_am_handler_num++;
-  amffrd_internal::hidx_generic_amffrd_ackhandler = am_internal::gex_am_handler_num++;
   ARL_Assert(am_internal::gex_am_handler_num < 256, "GASNet handler index overflow!");
 
-  gex_AM_Entry_t htable[2] = {
+  gex_AM_Entry_t htable[1] = {
       {amffrd_internal::hidx_generic_amffrd_reqhandler,
           (gex_AM_Fn_t) amffrd_internal::generic_amffrd_reqhandler,
           GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
           4},
-      {amffrd_internal::hidx_generic_amffrd_ackhandler,
-          (gex_AM_Fn_t) amffrd_internal::generic_amffrd_ackhandler,
-          GEX_FLAG_AM_SHORT | GEX_FLAG_AM_REPLY,
-          1}};
+  };
 
   gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable) / sizeof(gex_AM_Entry_t));
 
@@ -135,17 +125,19 @@ void init_amffrd() {
     amffrd_internal::amffrd_agg_buffer_p[i].init(max_buffer_size);
   }
 
-  amffrd_internal::amffrd_ack_counter = new std::atomic<int64_t>;
-  *amffrd_internal::amffrd_ack_counter = 0;
-  amffrd_internal::amffrd_req_counter = new std::atomic<int64_t>;
-  *amffrd_internal::amffrd_req_counter = 0;
+  amffrd_recv_counter = new AlignedAtomicInt64;
+  amffrd_recv_counter->val = 0;
+  amffrd_req_counters = new AlignedAtomicInt64[proc::rank_n()];
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    amffrd_req_counters[i].val = 0;
+  }
 }
 
 void exit_amffrd() {
+  delete [] amffrd_req_counters;
+  delete amffrd_recv_counter;
   delete amffrd_internal::global_meta_p;
   delete[] amffrd_internal::amffrd_agg_buffer_p;
-  delete amffrd_internal::amffrd_req_counter;
-  delete amffrd_internal::amffrd_ack_counter;
 }
 
 void flush_amffrd() {
@@ -164,8 +156,24 @@ void flush_amffrd() {
   }
 }
 
+int64_t get_expected_recv_num() {
+  int64_t expected_recv_num = 0;
+  if (local::rank_me() == 0) {
+    for (int i = 0; i < proc::rank_n(); ++i) {
+      if (i == proc::rank_me()) {
+        expected_recv_num = proc::reduce_one(amffrd_req_counters[i].val.load(), op_plus(), i);
+      } else {
+        proc::reduce_one(amffrd_req_counters[i].val.load(), op_plus(), i);
+      }
+    }
+  }
+  return local::broadcast(expected_recv_num, 0);
+}
+
 void wait_amffrd() {
-  while (*amffrd_internal::amffrd_req_counter > *amffrd_internal::amffrd_ack_counter) {
+  local::barrier();
+  int64_t expected_recv_num = get_expected_recv_num();
+  while (expected_recv_num > amffrd_internal::amffrd_recv_counter->val) {
     progress();
   }
 }
@@ -224,7 +232,7 @@ void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
     }
     delete [] std::get<0>(result);
   }
-  ++(*amffrd_internal::amffrd_req_counter);
+  ++(amffrd_internal::amffrd_req_counters[remote_proc].val);
 }
 
 } // namespace arl

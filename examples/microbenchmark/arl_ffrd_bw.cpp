@@ -7,7 +7,7 @@
 
 using namespace arl;
 
-const size_t payload_size = 512;
+const size_t payload_size = 64;
 struct Payload {
   char data[payload_size] = {0};
 };

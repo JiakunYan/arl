@@ -56,9 +56,9 @@ void worker() {
 
 int main() {
   using req_invoker_t = int(intptr_t, char*, int);
-  arl::init(2, 2);
+  arl::init();
 
-  //---
+/*  //---
   cout << "sizeof(AmffrdReqMeta) is " << sizeof(arl::amffrd_internal::AmffrdReqMeta) << endl;
   cout << "sizeof(AmffrdReqPayload) is " << sizeof(arl::amffrd_internal::AmffrdReqPayload<char, int, bool>) << endl;
 
@@ -101,7 +101,7 @@ int main() {
 //  arl::flush_amffrd_buffer();
 //  arl::wait_amffrd();
 //  cout << "ack counter is " << *arl::amffrd_internal::amffrd_ack_counter << endl;
-
+*/
   arl::run(worker);
   arl::finalize();
   return 0;
