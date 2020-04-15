@@ -19,8 +19,9 @@ alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amagg_ackhandler;
 void generic_amagg_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
 void generic_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);// AM synchronous counters
 // AM synchronous counters
-alignas(alignof_cacheline) std::atomic<int64_t> *amagg_ack_counter;
-alignas(alignof_cacheline) std::atomic<int64_t> *amagg_req_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_ack_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_req_counter;
+alignas(alignof_cacheline) AlignedInt64 *amagg_req_local_counters;
 
 AggBuffer* amagg_agg_buffer_p;
 
@@ -50,13 +51,19 @@ void init_amagg() {
   for (int i = 0; i < proc::rank_n(); ++i) {
     amagg_agg_buffer_p[i].init(max_buffer_size);
   }
-  amagg_ack_counter = new std::atomic<int64_t>;
-  *amagg_ack_counter = 0;
-  amagg_req_counter = new std::atomic<int64_t>;
-  *amagg_req_counter = 0;
+  amagg_ack_counter = new AlignedAtomicInt64;
+  amagg_ack_counter->val = 0;
+  amagg_req_counter = new AlignedAtomicInt64;
+  amagg_req_counter->val = 0;
+
+  amagg_req_local_counters = new AlignedInt64[local::rank_n()];
+  for (int i = 0; i < local::rank_n(); ++i) {
+    amagg_req_local_counters[i].val = 0;
+  }
 }
 
 void exit_amagg() {
+  delete amagg_req_local_counters;
   delete amagg_req_counter;
   delete amagg_ack_counter;
   delete [] amagg_agg_buffer_p;
@@ -187,7 +194,7 @@ void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     consumed += ack_invoker(meta.future_p, buf + consumed, nbytes - consumed);
     ++n;
   }
-  *amagg_internal::amagg_ack_counter += n;
+  amagg_internal::amagg_ack_counter->val += n;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
@@ -206,10 +213,12 @@ void flush_amagg() {
       }
     }
   }
+  amagg_internal::amagg_req_counter->val += amagg_internal::amagg_req_local_counters[local::rank_me()].val;
+  amagg_internal::amagg_req_local_counters[local::rank_me()].val = 0;
 }
 
 void wait_amagg() {
-  while (*amagg_req_counter > *amagg_ack_counter) {
+  while (amagg_req_counter->val > amagg_ack_counter->val) {
     progress();
   }
 }
@@ -240,7 +249,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
                         ptr, sizeof(AmaggReqMeta) + sizeof(Payload), GEX_EVENT_NOW, 0);
   delete [] ptr;
-  ++(*amagg_internal::amagg_req_counter);
+  ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
   return future;
 }
 
@@ -271,7 +280,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
     }
     delete [] std::get<0>(result);
   }
-  ++(*amagg_internal::amagg_req_counter);
+  ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
   return future;
 }
 
