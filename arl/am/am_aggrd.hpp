@@ -21,10 +21,11 @@ void generic_amaggrd_reqhandler(gex_Token_t token, void *buf, size_t nbytes,
 void generic_amaggrd_ackhandler(gex_Token_t token, void *buf, size_t nbytes,
                                 gex_AM_Arg_t t0, gex_AM_Arg_t t1);
 // AM synchronous counters
-alignas(alignof_cacheline) std::atomic<int64_t> *amaggrd_ack_counter;
-alignas(alignof_cacheline) std::atomic<int64_t> *amaggrd_req_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amaggrd_ack_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amaggrd_req_counter;
+alignas(alignof_cacheline) AlignedInt64 *amaggrd_req_local_counters;
 
-AggBuffer* amaggrd_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer* amaggrd_agg_buffer_p;
 
 struct AmaggrdReqMeta {
   intptr_t fn_p;
@@ -165,7 +166,7 @@ void generic_amaggrd_ackhandler(gex_Token_t token, void *void_buf, size_t unbyte
   auto ack_invoker = resolve_pi_fnptr<ack_invoker_t>(ack_invoker_p);
   int ack_n = ack_invoker(buf, nbytes);
 
-  *amaggrd_ack_counter += ack_n;
+  amaggrd_ack_counter->val += ack_n;
 }
 
 AmaggrdReqMeta* global_meta_p = nullptr;
@@ -197,13 +198,19 @@ void init_amaggrd() {
     amaggrd_agg_buffer_p[i].init(max_buffer_size);
   }
 
-  amaggrd_ack_counter = new std::atomic<int64_t>;
-  *amaggrd_ack_counter = 0;
-  amaggrd_req_counter = new std::atomic<int64_t>;
-  *amaggrd_req_counter = 0;
+  amaggrd_ack_counter = new AlignedAtomicInt64;
+  amaggrd_ack_counter->val = 0;
+  amaggrd_req_counter = new AlignedAtomicInt64;
+  amaggrd_req_counter->val = 0;
+
+  amaggrd_req_local_counters = new AlignedInt64[local::rank_n()];
+  for (int i = 0; i < local::rank_n(); ++i) {
+    amaggrd_req_local_counters[i].val = 0;
+  }
 }
 
 void exit_amaggrd() {
+  delete amaggrd_req_local_counters;
   delete global_meta_p;
   delete amaggrd_ack_counter;
   delete amaggrd_req_counter;
@@ -227,10 +234,12 @@ void flush_amaggrd() {
       }
     }
   }
+  amaggrd_req_counter->val += amaggrd_req_local_counters[local::rank_me()].val;
+  amaggrd_req_local_counters[local::rank_me()].val = 0;
 }
 
 void wait_amaggrd() {
-  while (*amaggrd_req_counter > *amaggrd_ack_counter) {
+  while (amaggrd_req_counter->val > amaggrd_ack_counter->val) {
     progress();
   }
 }
@@ -293,7 +302,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
     }
     delete [] std::get<0>(result);
   }
-  ++(*amaggrd_internal::amaggrd_req_counter);
+  ++(amaggrd_internal::amaggrd_req_local_counters[local::rank_me()].val);
   return future;
 }
 
