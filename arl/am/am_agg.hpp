@@ -213,8 +213,8 @@ void flush_amagg() {
       }
     }
   }
-  amagg_internal::amagg_req_counter->val += amagg_internal::amagg_req_local_counters[local::rank_me()].val;
-  amagg_internal::amagg_req_local_counters[local::rank_me()].val = 0;
+  amagg_req_counter->val += amagg_req_local_counters[local::rank_me()].val;
+  amagg_req_local_counters[local::rank_me()].val = 0;
 }
 
 void wait_amagg() {
