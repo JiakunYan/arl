@@ -14,12 +14,10 @@ using am_internal::AggBuffer;
 
 // GASNet AM handlers and their indexes
 alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_am_ff_reqhandler;
-alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_am_ff_ackhandler;
 void generic_am_ff_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
-void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n);
 // AM synchronous counters
-alignas(alignof_cacheline) std::atomic<int64_t> *amff_ack_counter;
-alignas(alignof_cacheline) std::atomic<int64_t> *amff_req_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amff_recv_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amff_req_counters; // of length proc::rank_n()
 
 alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
 
@@ -28,18 +26,14 @@ alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
 // Should be called after arl::backend::init
 void init_am_ff() {
   hidx_generic_am_ff_reqhandler = am_internal::gex_am_handler_num++;
-  hidx_generic_am_ff_ackhandler = am_internal::gex_am_handler_num++;
   ARL_Assert(am_internal::gex_am_handler_num < 256, "GASNet handler index overflow!");
 
-  gex_AM_Entry_t htable[2] = {
+  gex_AM_Entry_t htable[1] = {
       { hidx_generic_am_ff_reqhandler,
         (gex_AM_Fn_t) generic_am_ff_reqhandler,
         GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
-        0 },
-      { hidx_generic_am_ff_ackhandler,
-        (gex_AM_Fn_t) generic_am_ff_ackhandler,
-        GEX_FLAG_AM_SHORT | GEX_FLAG_AM_REPLY,
-        1 } };
+        0 }
+  };
 
   gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable)/sizeof(gex_AM_Entry_t));
 
@@ -49,15 +43,17 @@ void init_am_ff() {
   for (int i = 0; i < proc::rank_n(); ++i) {
     amff_agg_buffer_p[i].init(max_buffer_size);
   }
-  amff_ack_counter = new std::atomic<int64_t>;
-  *amff_ack_counter = 0;
-  amff_req_counter = new std::atomic<int64_t>;
-  *amff_req_counter = 0;
+  amff_recv_counter = new AlignedAtomicInt64;
+  amff_recv_counter->val = 0;
+  amff_req_counters = new AlignedAtomicInt64[proc::rank_n()];
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    amff_req_counters[i].val = 0;
+  }
 }
 
 void exit_am_ff() {
-  delete amff_req_counter;
-  delete amff_ack_counter;
+  delete [] amff_req_counters;
+  delete amff_recv_counter;
   delete [] amff_agg_buffer_p;
 }
 
@@ -134,14 +130,10 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     consumed += payload_nbytes;
     ++n;
   }
-//  printf("rank %ld send amff ack %d\n", rank_me(), n);
-  gex_AM_ReplyShort1(token, hidx_generic_am_ff_ackhandler, 0, static_cast<gex_AM_Arg_t>(n));
-//  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
-}
 
-void generic_am_ff_ackhandler(gex_Token_t token, gex_AM_Arg_t n) {
-//  printf("rank %ld amff ackhandler %d\n", rank_me(), static_cast<int>(n));
-  *amff_ack_counter += static_cast<int>(n);
+//  printf("rank %ld increase amff recv counter %ld by %d\n", rank_me(), amff_recv_counter->val.load(), n);
+  amff_recv_counter->val += n;
+//  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
 void flush_am_ff_buffer() {
@@ -160,8 +152,24 @@ void flush_am_ff_buffer() {
   }
 }
 
+int64_t get_expected_recv_num() {
+  int64_t expected_recv_num = 0;
+  if (local::rank_me() == 0) {
+    for (int i = 0; i < proc::rank_n(); ++i) {
+      if (i == proc::rank_me()) {
+        expected_recv_num = proc::reduce_one(amff_req_counters[i].val.load(), op_plus(), i);
+      } else {
+        proc::reduce_one(amff_req_counters[i].val.load(), op_plus(), i);
+      }
+    }
+  }
+  return local::broadcast(expected_recv_num, 0);
+}
+
 void wait_amff() {
-  while (*amff_req_counter > *amff_ack_counter) {
+  local::barrier();
+  int expected_recv_num = get_expected_recv_num();
+  while (expected_recv_num > amff_recv_counter->val) {
     progress();
   }
 }
@@ -195,7 +203,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
     }
     delete [] std::get<0>(result);
   }
-  ++(*amff_internal::amff_req_counter);
+  ++(amff_internal::amff_req_counters[remote_proc].val);
 }
 
 } // namespace arl
