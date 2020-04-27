@@ -39,7 +39,7 @@ void worker() {
 #endif
     size_t target_rank = lrand48() % nworkers;
 #ifdef ARL_PROFILE
-    timer_rand.end_and_update();
+    timer_rand.end();
     timer_rpc.start();
 #endif
     rv f;
@@ -49,12 +49,12 @@ void worker() {
       f = rpc(target_rank, empty_handler);
     }
 #ifdef ARL_PROFILE
-    timer_rpc.end_and_update();
+    timer_rpc.end();
     timer_push.start();
 #endif
     futures.push_back(std::move(f));
 #ifdef ARL_PROFILE
-    timer_push.end_and_update();
+    timer_push.end();
 #endif
   }
 
@@ -71,7 +71,7 @@ void worker() {
   threadBarrier.wait();
   // end barrier()
 #ifdef ARL_PROFILE
-  timer_barrier.end_and_update();
+  timer_barrier.end();
 #endif
 
   for (int i = 0; i < num_ops; i++) {
@@ -80,7 +80,7 @@ void worker() {
 #endif
     futures[i].get();
 #ifdef ARL_PROFILE
-    timer_get.end_and_update();
+    timer_get.end();
 #endif
   }
 

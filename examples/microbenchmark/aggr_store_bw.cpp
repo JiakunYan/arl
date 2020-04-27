@@ -53,14 +53,14 @@ int main() {
 
     timer_update.start();
     aggrStore.update(target_rank, payload, empty_fn);
-    timer_update.end_and_update();
+    timer_update.end();
   }
   timer_update.start();
   aggrStore.flush_updates(empty_fn);
-  timer_update.end_and_update();
+  timer_update.end();
   barrier();
   auto end = std::chrono::high_resolution_clock::now();
-  timer_total.end_and_update();
+  timer_total.end();
 
   double duration_s = std::chrono::duration<double>(end - begin).count();
   double bandwidth_node_s = (double) payload_size * num_ops * 32 / duration_s;

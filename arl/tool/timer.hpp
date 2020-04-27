@@ -58,7 +58,7 @@ namespace arl {
       }
     }
 
-    void end_and_update() {
+    void end() {
       tick_t _end = ticks_now();
       if (local::rank_me() == 0) {
         update_average(_ticks, _end - _start, ++step);

@@ -54,7 +54,7 @@ using tick_t = int64_t;
       _start = ticks_now();
     }
 
-    void end_and_update() {
+    void end() {
       tick_t _end = ticks_now();
       update_average(_ticks, _end - _start, ++step);
     }

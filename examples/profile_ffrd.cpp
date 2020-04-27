@@ -51,11 +51,11 @@ void worker() {
       rank_t remote_proc = remote_worker / local::rank_n();
       int remote_worker_local = remote_worker % local::rank_n();
       Payload payload{remote_worker_local, std::make_tuple(my_payload)};
-      timer_prepare.end_and_update();
+      timer_prepare.end();
 
       timer_push.start();
       std::pair<char*, int> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(payload);
-      timer_push.end_and_update();
+      timer_push.end();
 
       timer_gex.start();
       if (std::get<0>(result) != nullptr) {
@@ -65,18 +65,18 @@ void worker() {
         }
         delete [] std::get<0>(result);
       }
-      timer_gex.end_and_update();
+      timer_gex.end();
 
       timer_counter.start();
       ++local_req_counter;
-      timer_counter.end_and_update();
+      timer_counter.end();
     }
   }
 
   (*amffrd_internal::amffrd_req_counter) += local_req_counter;
   timer_barrier.start();
   barrier();
-  timer_barrier.end_and_update();
+  timer_barrier.end();
 
   tick_t end_wait = ticks_now();
 

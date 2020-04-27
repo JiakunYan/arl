@@ -58,11 +58,11 @@ void worker() {
       intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmaggTypeWrapper<decltype(empty_handler), ReqPayload>::invoker);
       AmaggReqMeta meta{fn_p, wrapper_p, my_future.get_p(), remote_worker_local};
       Payload payload(req_payload);
-      timer_prepare.end_and_update();
+      timer_prepare.end();
 
       timer_push.start();
       std::pair<char*, int> result = amagg_internal::amagg_agg_buffer_p[remote_proc].push(meta, payload);
-      timer_push.end_and_update();
+      timer_push.end();
 
       timer_gex.start();
       if (std::get<0>(result) != nullptr) {
@@ -72,15 +72,15 @@ void worker() {
         }
         delete [] std::get<0>(result);
       }
-      timer_gex.end_and_update();
+      timer_gex.end();
 
       timer_counter.start();
       ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
-      timer_counter.end_and_update();
+      timer_counter.end();
 
       timer_vec.start();
       futures.push_back(move(my_future));
-      timer_vec.end_and_update();
+      timer_vec.end();
     }
   }
 
@@ -89,7 +89,7 @@ void worker() {
   for (int i = 0; i < num_ops; ++i) {
     futures[i].get();
   }
-  timer_barrier.end_and_update();
+  timer_barrier.end();
 
   barrier();
   tick_t end_wait = ticks_now();
