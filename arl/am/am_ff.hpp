@@ -155,13 +155,12 @@ void flush_am_ff_buffer() {
 int64_t get_expected_recv_num() {
   int64_t expected_recv_num = 0;
   if (local::rank_me() == 0) {
+    std::vector<int64_t> src_v(proc::rank_n());
     for (int i = 0; i < proc::rank_n(); ++i) {
-      if (i == proc::rank_me()) {
-        expected_recv_num = proc::reduce_one(amff_req_counters[i].val.load(), op_plus(), i);
-      } else {
-        proc::reduce_one(amff_req_counters[i].val.load(), op_plus(), i);
-      }
+      src_v[i] = amff_req_counters[i].val.load();
     }
+    auto dst_v = proc::reduce_all(src_v, op_plus());
+    expected_recv_num = dst_v[proc::rank_me()];
   }
   return local::broadcast(expected_recv_num, 0);
 }
