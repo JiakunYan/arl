@@ -65,14 +65,14 @@ void print_slog_(Args... args) {
 template <typename... Args>
 void print_verbose_all_(Args... args) {
   if (_verbose) {
-    print_slog_all_(args...);
+    print_slog_all_(KBLUE, args..., KNORM);
   }
 }
 
 template <typename... Args>
 void print_verbose_(Args... args) {
   if (_verbose) {
-    print_slog_(args...);
+    print_slog_(KBLUE, args..., KNORM);
   }
 }
 

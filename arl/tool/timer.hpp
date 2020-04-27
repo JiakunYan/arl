@@ -92,23 +92,19 @@ namespace arl {
   };
 
   struct SimpleTimer {
-  private:
-    unsigned long step = 0;
-    tick_t _start = 0;
-    double _ticks = 0;
   public:
     void start() {
       _start = ticks_now();
     }
 
-    void end_and_update() {
+    void end() {
       tick_t _end = ticks_now();
-      update_average(_ticks, _end - _start, ++step);
+      update_average(_ticks, _end - _start, ++_step);
     }
 
     void tick_and_update(tick_t _start_) {
       tick_t _end = ticks_now();
-      update_average(_ticks, _end - _start_, ++step);
+      update_average(_ticks, _end - _start_, ++_step);
     }
 
     [[nodiscard]] double to_ns() const {
@@ -124,12 +120,21 @@ namespace arl {
     }
 
     void print_us(std::string &&name = "") const {
-      printf("Duration %s: %.3lf us\n", name.c_str(), to_us());
+      printf("Duration %s: %.3lf us (step %ld, total %.3lf s)\n", name.c_str(), to_us(), step(), to_s() * step());
     }
 
     void print_s(std::string &&name = "") const {
-      printf("Duration %s: %.3lf s\n", name.c_str(), to_s());
+      printf("Duration %s: %.3lf s (step %ld, total %.3lf s)\n", name.c_str(), to_s(), step(), to_s() * step());
     }
+
+    long step() const {
+      return _step;
+    }
+
+   private:
+    long _step = 0;
+    tick_t _start = 0;
+    double _ticks = 0;
   };
 }
 #endif //ARL_TIMER_HPP
