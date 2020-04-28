@@ -115,12 +115,20 @@ namespace arl {
       return ticks_to_ns(_ticks) / 1e3;
     }
 
+    [[nodiscard]] double to_ms() const {
+      return ticks_to_ns(_ticks) / 1e6;
+    }
+
     [[nodiscard]] double to_s() const {
       return ticks_to_ns(_ticks) / 1e9;
     }
 
     void print_us(std::string &&name = "") const {
       printf("Duration %s: %.3lf us (step %ld, total %.3lf s)\n", name.c_str(), to_us(), step(), to_s() * step());
+    }
+
+    void print_ms(std::string &&name = "") const {
+      printf("Duration %s: %.3lf ms (step %ld, total %.3lf s)\n", name.c_str(), to_ms(), step(), to_s() * step());
     }
 
     void print_s(std::string &&name = "") const {
