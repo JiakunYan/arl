@@ -1,6 +1,13 @@
 # ARL Changelog
 
 ## [Unreleased]
+### New
+- add vector-version reduce_{one,all}.
+
+### Changed
+- improve performance of rpc_{agg, aggrd}: use thread-local counter.
+- improve performance of rpc_{ff, ffrd}: remove GASNet reply message but use a collective reduce to flush all rpcs.
+- reduce overhead of the rank system (rank_me, {set,get}_context): replace the hashmap with TLS variables.
 
 ## [0.2.0] - 2020-04-09
 ### New
