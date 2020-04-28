@@ -6,55 +6,52 @@
 #define ARL_RANK_HPP
 
 namespace arl {
-  // data structures
-  alignas(alignof_cacheline) std::unordered_map<std::thread::id, rank_t> thread_ids;
-  struct ThreadContext {
-    alignas(alignof_cacheline) rank_t val;
-  };
-  alignas(alignof_cacheline) std::vector<ThreadContext> thread_contexts;
-  alignas(alignof_cacheline) rank_t num_threads_per_proc = 16;
-  alignas(alignof_cacheline) rank_t num_workers_per_proc = 15;
+namespace rank_internal {
+__thread rank_t my_rank = -1;
+__thread rank_t my_context = -1;
+alignas(alignof_cacheline) rank_t num_threads_per_proc = 16;
+alignas(alignof_cacheline) rank_t num_workers_per_proc = 15;
 
-  // methods
-  inline rank_t get_thread_id() {
-    return thread_ids[std::this_thread::get_id()];
-  }
+inline void set_context(rank_t mContext) {
+  my_context = mContext;
+}
 
-  inline void set_context(rank_t mContext) {
-    thread_contexts[get_thread_id()].val = mContext;
-  }
+inline rank_t get_context() {
+  return my_context;
+}
+} // namespace rank_internal
 
-  inline rank_t get_context() {
-    return thread_contexts[get_thread_id()].val;
-  }
+namespace local {
+inline rank_t rank_me() {
+  return rank_internal::get_context();
+}
 
-  namespace local {
+inline rank_t rank_n() {
+  return rank_internal::num_workers_per_proc;
+}
+
+inline rank_t thread_n() {
+  return rank_internal::num_threads_per_proc;
+}
+}
+
+namespace proc {
     inline rank_t rank_me() {
-      return get_context();
+      return backend::rank_me();
     }
 
     inline rank_t rank_n() {
-      return num_workers_per_proc;
+      return backend::rank_n();
     }
-  }
-
-  namespace proc {
-      inline rank_t rank_me() {
-        return backend::rank_me();
-      }
-
-      inline rank_t rank_n() {
-        return backend::rank_n();
-      }
-  }
-
-  inline rank_t rank_me() {
-    return local::rank_me() + proc::rank_me() * num_workers_per_proc;
-  }
-
-  inline rank_t rank_n() {
-    return proc::rank_n() * num_workers_per_proc;
-  }
 }
+
+inline rank_t rank_me() {
+  return local::rank_me() + proc::rank_me() * rank_internal::num_workers_per_proc;
+}
+
+inline rank_t rank_n() {
+  return proc::rank_n() * rank_internal::num_workers_per_proc;
+}
+} // namespace arl
 
 #endif //ARL_RANK_HPP

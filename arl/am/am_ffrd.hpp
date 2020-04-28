@@ -54,10 +54,10 @@ class AmffrdTypeWrapper {
 
     for (int i = 0; i < nbytes; i += sizeof(Payload)) {
       Payload& payload = *reinterpret_cast<Payload*>(buf + i);
-      rank_t mContext = get_context();
-      set_context(payload.target_local_rank);
+      rank_t mContext = rank_internal::get_context();
+      rank_internal::set_context(payload.target_local_rank);
       run_fn(fn, payload.data, std::index_sequence_for<Args...>());
-      set_context(mContext);
+      rank_internal::set_context(mContext);
     }
     return nbytes / (int) sizeof(Payload);
   }

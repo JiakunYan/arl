@@ -102,13 +102,13 @@ class AmaggTypeWrapper {
     Fn* fn = resolve_pi_fnptr<Fn>(fn_p);
     auto* ptr = reinterpret_cast<Payload*>(buf);
 
-    rank_t mContext = get_context();
-    set_context(context);
+    rank_t mContext = rank_internal::get_context();
+    rank_internal::set_context(context);
     if constexpr (! std::is_void_v<Result>)
       *reinterpret_cast<Result*>(output) = run_fn(fn, *ptr, std::index_sequence_for<Args...>());
     else
       run_fn(fn, *ptr, std::index_sequence_for<Args...>());
-    set_context(mContext);
+    rank_internal::set_context(mContext);
     return std::make_pair(sizeof(Payload), my_sizeof<Result>());
   }
 

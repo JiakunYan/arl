@@ -86,10 +86,10 @@ class AmffTypeWrapper {
     Fn* fn = resolve_pi_fnptr<Fn>(fn_p);
     Payload *ptr = reinterpret_cast<Payload*>(buf);
 
-    rank_t mContext = get_context();
-    set_context(context);
+    rank_t mContext = rank_internal::get_context();
+    rank_internal::set_context(context);
     run_fn(fn, *ptr, std::index_sequence_for<Args...>());
-    set_context(mContext);
+    rank_internal::set_context(mContext);
   }
 
  private:

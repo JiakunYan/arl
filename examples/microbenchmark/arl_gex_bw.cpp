@@ -25,10 +25,10 @@ void empty_req_handler(gex_Token_t token, gex_AM_Arg_t src_thread) {
 }
 
 void reply_handler(gex_Token_t token, gex_AM_Arg_t src_thread) {
-  size_t mContext = ARH::get_context();
-  ARH::set_context(src_thread);
+  size_t mContext = ARH::rank_internal::get_context();
+  ARH::rank_internal::set_context(src_thread);
   threadObjects.get().received++;
-  ARH::set_context(mContext);
+  ARH::rank_internal::set_context(mContext);
 }
 
 void worker() {
@@ -54,7 +54,7 @@ void worker() {
       }
 
       threadObjects.get().issued++;
-      gex_AM_RequestShort(BCL::tm, remote_proc, hidx_empty_req, 0, ARH::get_context());
+      gex_AM_RequestShort(BCL::tm, remote_proc, hidx_empty_req, 0, ARH::rank_internal::get_context());
     }
 
   }

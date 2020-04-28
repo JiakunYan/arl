@@ -79,14 +79,14 @@ class AmaggrdTypeWrapper {
       AckPayload& result = *reinterpret_cast<AckPayload*>(output + i * sizeof(AckPayload));
       result.future_p = payload.future_p;
 
-      rank_t mContext = get_context();
-      set_context(payload.target_local_rank);
+      rank_t mContext = rank_internal::get_context();
+      rank_internal::set_context(payload.target_local_rank);
       if constexpr (!std::is_void_v<Result>) {
         result.data = run_fn(fn, payload.data, std::index_sequence_for<Args...>());
       } else {
         run_fn(fn, payload.data, std::index_sequence_for<Args...>());
       }
-      set_context(mContext);
+      rank_internal::set_context(mContext);
     }
     return nbytes / (int) sizeof(ReqPayload) * (int) sizeof(AckPayload);
   }
