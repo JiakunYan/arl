@@ -49,6 +49,8 @@ void worker() {
 
   double duration_total = ticks_to_us(end_wait - start);
   print("AggBuffer average overhead is %.2lf us\n", duration_total / num_ops);
+  print("AggBuffer total throughput is %.2lf M/s\n", (double) local::rank_n() * num_ops / duration_total);
+
 }
 
 int main(int argc, char** argv) {
