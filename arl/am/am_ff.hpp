@@ -136,6 +136,14 @@ void generic_am_ff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
+template <typename Fn, typename... Args>
+void run_lpc(rank_t context, Fn&& fn, Args&&... args) {
+  rank_t mContext = rank_internal::get_context();
+  rank_internal::set_context(context);
+  std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...);
+  rank_internal::set_context(mContext);
+}
+
 void flush_am_ff_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
@@ -184,6 +192,11 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
+  if (remote_proc == proc::rank_me()) {
+    // local precedure call
+    amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+    return;
+  }
 
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
   intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmffTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
