@@ -8,7 +8,9 @@
 namespace arl{
 extern void progress();
 namespace am_internal {
-
+inline void do_something() {
+//  progress();
+}
 // The AggBuffer data structure is one of the most important component in the node-level aggregation
 // architecture of ARL.
 
@@ -37,7 +39,7 @@ class AggBufferSimple {
   template <typename T, typename U>
   std::pair<char*, int> push(const T& val1, const U& val2) {
     while (!lock.try_lock()) {
-      progress();
+      do_something();
     }
     std::pair<char*, int> result(nullptr, 0);
     if (tail_ + sizeof(val1) + sizeof(val2) > cap_) {
@@ -56,7 +58,7 @@ class AggBufferSimple {
   template <typename T>
   std::pair<char*, int> push(const T& value) {
     while (!lock.try_lock()) {
-      progress();
+      do_something();
     }
     std::pair<char*, int> result(nullptr, 0);
     if (tail_ + sizeof(value) > cap_) {
@@ -74,7 +76,7 @@ class AggBufferSimple {
     std::vector<std::pair<char*, int>> result;
     if (tail_ == 0) return result;
     while (!lock.try_lock()) {
-      progress();
+      do_something();
       if (tail_ == 0) return result;
     }
     if (tail_ > 0) {
@@ -250,7 +252,7 @@ class AggBufferAdvanced {
   std::pair<char*, int> push(const T& val1, const U& val2) {
     int my_rank = local::rank_me();
     while (!lock_ptr_[my_rank].val.try_lock()) {
-      progress();
+      do_something();
     }
     std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank].val + sizeof(val1) + sizeof(val2) > cap_) {
@@ -271,7 +273,7 @@ class AggBufferAdvanced {
   std::pair<char*, int> push(const T& value) {
     int my_rank = local::rank_me();
     while (!lock_ptr_[my_rank].val.try_lock()) {
-      progress();
+      do_something();
     }
     std::pair<char*, int> result(nullptr, 0);
     if (thread_tail_[my_rank].val + sizeof(value) > cap_) {
@@ -301,7 +303,7 @@ class AggBufferAdvanced {
       int i = (ii + my_rank) % thread_num_;
       if (thread_tail_[i].val == 0) continue;
       while (!lock_ptr_[i].val.try_lock()) {
-        progress();
+        do_something();
         if (thread_tail_[i].val == 0) continue;
       }
       if (thread_tail_[i].val > 0) {
@@ -362,17 +364,17 @@ class AggBufferAtomic {
     std::pair<char*, int> result(nullptr, 0);
     int current_tail = tail_.fetch_add(val_size);
     while (current_tail > cap_) {
-      progress();
+      do_something();
       current_tail = tail_.fetch_add(val_size);
       ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
     }
     if (current_tail <= cap_ && current_tail + val_size > cap_) {
       while (!mutex_pop_.try_lock()) {
-        progress();
+        do_something();
       }
 
       while (reserved_tail_ != current_tail) {
-        progress();
+        do_something();
       }
       result = std::make_pair(ptr_, current_tail);
       ptr_ = new char[cap_];
@@ -396,17 +398,17 @@ class AggBufferAtomic {
     std::pair<char*, int> result(nullptr, 0);
     int current_tail = tail_.fetch_add(sizeof(val));
     while (current_tail > cap_) {
-      progress();
+      do_something();
       current_tail = tail_.fetch_add(sizeof(val));
       ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
     }
     if (current_tail <= cap_ && current_tail + sizeof(val) > cap_) {
       while (!mutex_pop_.try_lock()) {
-        progress();
+        do_something();
       }
 
       while (reserved_tail_ != current_tail) {
-        progress();
+        do_something();
       }
       result = std::make_pair(ptr_, current_tail);
       ptr_ = new char[cap_];
@@ -433,7 +435,7 @@ class AggBufferAtomic {
     if (current_tail <= cap_ && current_tail > 0) {
       // wait until those who is pushing finish
       while (reserved_tail_ != current_tail) {
-        progress();
+        do_something();
 //        printf("rank %ld wait for flush %d, %d\n", rank_me(), reserved_tail_.load(), current_tail);
       }
 

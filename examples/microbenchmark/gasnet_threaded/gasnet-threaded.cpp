@@ -33,7 +33,7 @@ void barrier() {
 
 void empty_handler(gex_Token_t token, gex_AM_Arg_t id) {
   {
-
+    usleep(300);
   }
   gex_AM_ReplyShort(token, rep_num, 0, id);
 }
@@ -43,7 +43,7 @@ void reply_handler(gex_Token_t token, gex_AM_Arg_t id) {
 }
 
 void worker(int id) {
-  size_t num_ams = 10000;
+  size_t num_ams = 1000;
   size_t issued = 0;
 
   std::default_random_engine generator(rank*num_threads + id);
@@ -61,9 +61,10 @@ void worker(int id) {
 
     issued++;
     int rv = gex_AM_RequestShort(tm, remote_proc, req_num, 0, id);
-    while (receiveds[id].val < issued) {
-      gasnet_AMPoll();
-    }
+  }
+
+  while (receiveds[id].val < issued) {
+    gasnet_AMPoll();
   }
 
   threadBarrier.wait();

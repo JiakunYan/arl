@@ -25,7 +25,9 @@ void progress_handler() {
 }
 
 template <typename Fn, typename... Args>
-void worker_handler(Fn &&fn, Args &&... args) {
+void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
+  rank_internal::my_rank = id;
+  rank_internal::my_context = id;
   while (!thread_run) {
     usleep(1);
   }
@@ -45,10 +47,9 @@ inline void init(size_t custom_num_workers_per_proc = 15,
 #ifndef ARL_THREAD_PIN
   backend::print("%s", "WARNING: Haven't pinned threads to cores.\n");
 #endif
-  num_workers_per_proc = custom_num_workers_per_proc;
-  num_threads_per_proc = custom_num_threads_per_proc;
-  thread_contexts.resize(num_threads_per_proc);
-  threadBarrier.init(num_workers_per_proc, progress);
+  rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
+  rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
+  threadBarrier.init(local::rank_n(), progress);
 
   am_internal::init_am();
 }
@@ -85,36 +86,32 @@ void run(Fn &&fn, Args &&... args) {
   }
 #endif
 
-  for (size_t i = 0; i < num_workers_per_proc; ++i) {
+  for (size_t i = 0; i < local::rank_n(); ++i) {
     std::thread t(worker_handler<fn_t, std::remove_reference_t<Args>...>,
-                  std::forward<fn_t>(+fn),
+                  std::forward<fn_t>(+fn), i,
                   std::forward<Args>(args)...);
 #ifdef ARL_THREAD_PIN
     set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
 #endif
-    thread_ids[t.get_id()] = i;
-    thread_contexts[i].val = i;
     worker_pool.push_back(std::move(t));
   }
 
-  for (size_t i = num_workers_per_proc; i < num_threads_per_proc; ++i) {
+  for (size_t i = local::rank_n(); i < local::thread_n(); ++i) {
     std::thread t(progress_handler);
 #ifdef ARL_THREAD_PIN
     set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
 #endif
-    thread_ids[t.get_id()] = i;
-    thread_contexts[i].val = i;
     progress_pool.push_back(std::move(t));
   }
   thread_run = true;
 
-  for (size_t i = 0; i < num_workers_per_proc; ++i) {
+  for (size_t i = 0; i < local::rank_n(); ++i) {
     worker_pool[i].join();
   }
 
   worker_exit = true;
 
-  for (size_t i = 0; i < num_threads_per_proc - num_workers_per_proc; ++i) {
+  for (size_t i = 0; i < local::thread_n() - local::rank_n(); ++i) {
     progress_pool[i].join();
   }
 }

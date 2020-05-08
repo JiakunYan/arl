@@ -102,13 +102,13 @@ class AmaggTypeWrapper {
     Fn* fn = resolve_pi_fnptr<Fn>(fn_p);
     auto* ptr = reinterpret_cast<Payload*>(buf);
 
-    rank_t mContext = get_context();
-    set_context(context);
+    rank_t mContext = rank_internal::get_context();
+    rank_internal::set_context(context);
     if constexpr (! std::is_void_v<Result>)
       *reinterpret_cast<Result*>(output) = run_fn(fn, *ptr, std::index_sequence_for<Args...>());
     else
       run_fn(fn, *ptr, std::index_sequence_for<Args...>());
-    set_context(mContext);
+    rank_internal::set_context(mContext);
     return std::make_pair(sizeof(Payload), my_sizeof<Result>());
   }
 
@@ -198,6 +198,28 @@ void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes)
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
+template <typename Fn, typename... Args>
+Future<std::invoke_result_t<Fn, Args...>> run_lpc(rank_t context, Fn&& fn, Args&&... args) {
+  using Result = std::invoke_result_t<Fn, Args...>;
+
+  Future<Result> future;
+  auto* future_p = reinterpret_cast<FutureData<Result>*>(future.get_p());
+
+  rank_t mContext = rank_internal::get_context();
+  rank_internal::set_context(context);
+  if constexpr (!std::is_void_v<Result>) {
+    auto result = std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...);
+    rank_internal::set_context(mContext);
+    future_p->load(result);
+  } else {
+    std::invoke(fn, args...);
+    rank_internal::set_context(mContext);
+    future_p->load();
+  }
+
+  return future;
+}
+
 void flush_amagg_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
@@ -264,6 +286,10 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
+  if (remote_proc == proc::rank_me()) {
+    // local precedure call
+    return amagg_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+  }
 
   Future<std::invoke_result_t<Fn, Args...>> future;
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);

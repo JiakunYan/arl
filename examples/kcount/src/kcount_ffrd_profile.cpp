@@ -70,7 +70,6 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
   SimpleTimer timer;
-  SimpleTimer timer_read;
   SimpleTimer timer_rpc;
   SimpleTimer timer_barrier;
   timer.start();
@@ -97,9 +96,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     ProgressBar progbar(fqr.my_file_size(), progbar_prefix);
     size_t tot_bytes_read = 0;
     while (true) {
-      timer_read.start();
       size_t bytes_read = fqr.get_next_fq_record(id, seq, quals);
-      timer_read.end();
       if (!bytes_read) break;
       num_lines += 4;
       num_reads++;
@@ -137,11 +134,18 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_kmers, " kmers (", timer.to_s(), " s)\n");
   SLOG_VERBOSE_ALL("Estimated overhead is ", timer.to_us() / num_kmers, " us\n");
   SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer.to_s() / 1e6 / proc::rank_n() * 2, " MB/s\n");
-  if (rank_me() == 0) {
-    timer_read.print_us("read");
-    timer_rpc.print_us("rpc");
-    timer_barrier.print_us("barrier");
+//  printf("proc %ld worker %ld: call gex_handler %ld\n", arl::proc::rank_me(), arl::rank_me(), arl::timer_req_handler.step());
+  if (pass_type == BLOOM_SET_PASS) {
+    timer_set.col_print_us("set");
+  } else {
+    timer_count.col_print_us("count");
   }
+  timer_rpc.col_print_us("rpc");
+  timer_barrier.col_print_s("barrier");
+  arl::timer_req_handler.col_print_us("req handler").clear();
+  arl::timer_push.col_print_us("push").clear();
+  arl::timer_gex_send.col_print_us("gex send").clear();
+  arl::timer_counter.col_print_us("counter").clear();
   if (pass_type != BLOOM_SET_PASS) SLOG_ALL("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 //
@@ -179,7 +183,7 @@ void worker(const options_t& options) {
 }
 
 int main(int argc, char **argv) {
-  init(10, 16);
+  init(15, 16);
 
   auto options = make_shared<Options>();
   if (!options->load(argc, argv)) return 0;

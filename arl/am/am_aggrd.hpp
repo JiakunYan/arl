@@ -79,14 +79,14 @@ class AmaggrdTypeWrapper {
       AckPayload& result = *reinterpret_cast<AckPayload*>(output + i * sizeof(AckPayload));
       result.future_p = payload.future_p;
 
-      rank_t mContext = get_context();
-      set_context(payload.target_local_rank);
+      rank_t mContext = rank_internal::get_context();
+      rank_internal::set_context(payload.target_local_rank);
       if constexpr (!std::is_void_v<Result>) {
         result.data = run_fn(fn, payload.data, std::index_sequence_for<Args...>());
       } else {
         run_fn(fn, payload.data, std::index_sequence_for<Args...>());
       }
-      set_context(mContext);
+      rank_internal::set_context(mContext);
     }
     return nbytes / (int) sizeof(ReqPayload) * (int) sizeof(AckPayload);
   }
@@ -287,6 +287,10 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
+//  if (remote_proc == proc::rank_me()) {
+//    // local precedure call
+//    return amagg_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+//  }
 
   Future<std::invoke_result_t<Fn, Args...>> future;
   Payload payload{future.get_p(), remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};

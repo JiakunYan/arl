@@ -1,5 +1,13 @@
 # ARL Changelog
 
+## [0.3.1]
+### Changed
+- reduce overhead of the rank system (rank_me, {set,get}_context): replace the hashmap with TLS variables.
+- stop using the progress() function as the backoff function in AggBuffer. This should be able to make the overhead of AggBuffer independent of the handler size.
+
+### Removed
+- remove SharedTimer. It can be perfectly substituted by a TLS SimpleTimer.
+
 ## [0.3.0]
 ### New
 - add vector-version reduce_{one,all}.
