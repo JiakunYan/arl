@@ -138,7 +138,6 @@ public:
   }
 
   double load_factor() const {
-    SLOG(KGREEN, "rank ", rank_me(), ";load factor: ", kmers.load_factor(), KNORM);
     return kmers.load_factor();
   }
 

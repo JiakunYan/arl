@@ -69,6 +69,7 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
+  SimpleTimer timer_total;
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -78,6 +79,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
   //char special = qual_offset + 2;
+  timer_total.start();
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
     string id, seq, quals;
@@ -109,12 +111,16 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     progbar.done(true);
     barrier();
   }
+  timer_total.end();
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
   auto all_num_reads = reduce_one(num_reads, op_plus(), 0);
   auto all_num_kmers = reduce_one(num_kmers, op_plus(), 0);
   auto all_distinct_kmers = kmer_dht.size();
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
+  SLOG_VERBOSE_ALL("Processed a total of ", all_num_kmers, " kmers (", timer_total.to_s(), " s)\n");
+  SLOG_VERBOSE_ALL("Estimated overhead is ", timer_total.to_us() / num_kmers, " us\n");
+  SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer_total.to_s() / 1e6 / proc::rank_n() * 2, " MB/s\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_ALL("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 //
