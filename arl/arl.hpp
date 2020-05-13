@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <queue>
 #include <unordered_map>
 #include <atomic>
 #include <sched.h>
@@ -41,9 +42,9 @@
 #include "base/base.hpp"
 #include "base/worker_object.hpp"
 // am
-//#include "am/rpc_t.hpp"
 #include "am/future.hpp"
 #include "am/agg_buffer.hpp"
+#include "am/am_queue.hpp"
 #include "am/am.hpp"
 #include "am/am_agg.hpp"
 #include "am/am_aggrd.hpp"

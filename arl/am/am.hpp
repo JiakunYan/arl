@@ -51,7 +51,7 @@ T *resolve_pi_fnptr(std::uintptr_t fn) {
 
 alignas(alignof_cacheline) int gex_am_handler_num;
 
-void init_am() {
+inline void init_am() {
   gex_am_handler_num = GEX_AM_INDEX_BASE;
   amagg_internal::init_amagg();
   amff_internal::init_am_ff();
@@ -59,11 +59,19 @@ void init_am() {
   amffrd_internal::init_amffrd();
 }
 
-void exit_am() {
+inline void exit_am() {
   amffrd_internal::exit_amffrd();
   amaggrd_internal::exit_amaggrd();
   amff_internal::exit_am_ff();
   amagg_internal::exit_amagg();
+}
+
+inline void init_am_thread() {
+  am_event_queue_p = new std::queue<UniformGexAMEventData>;
+}
+
+inline void exit_am_thread() {
+  delete am_event_queue_p;
 }
 
 } // namespace am_internal
@@ -87,8 +95,17 @@ void flush_am() {
   wait_am();
 }
 
-void progress() {
+inline void progress_internal() {
   gasnet_AMPoll();
+}
+
+inline void progress_external() {
+  am_internal::poll_am_event_queue();
+}
+
+void progress() {
+  progress_internal();
+  progress_external();
 }
 
 int get_agg_size() {

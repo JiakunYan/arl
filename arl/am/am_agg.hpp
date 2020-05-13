@@ -14,10 +14,10 @@ using am_internal::AggBuffer;
 using am_internal::FutureData;
 
 // GASNet AM handlers and their indexes
-alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amagg_reqhandler;
-alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amagg_ackhandler;
-void generic_amagg_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
-void generic_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);// AM synchronous counters
+alignas(alignof_cacheline) gex_AM_Index_t hidx_gex_amagg_reqhandler;
+alignas(alignof_cacheline) gex_AM_Index_t hidx_gex_amagg_ackhandler;
+void gex_amagg_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
+void gex_amagg_ackhandler(gex_Token_t token, void *buf, size_t nbytes);// AM synchronous counters
 // AM synchronous counters
 alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_ack_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_req_counter;
@@ -28,18 +28,18 @@ alignas(alignof_cacheline) AggBuffer* amagg_agg_buffer_p;
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amagg() {
-  hidx_generic_amagg_reqhandler = am_internal::gex_am_handler_num++;
-  hidx_generic_amagg_ackhandler = am_internal::gex_am_handler_num++;
+  hidx_gex_amagg_reqhandler = am_internal::gex_am_handler_num++;
+  hidx_gex_amagg_ackhandler = am_internal::gex_am_handler_num++;
   ARL_Assert(am_internal::gex_am_handler_num < 256, "GASNet handler index overflow!");
 
   gex_AM_Entry_t htable[2] = {
-      { hidx_generic_amagg_reqhandler,
-        (gex_AM_Fn_t) generic_amagg_reqhandler,
+      { hidx_gex_amagg_reqhandler,
+        (gex_AM_Fn_t) gex_amagg_reqhandler,
         GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
         0 },
-      { hidx_generic_amagg_ackhandler,
-        (gex_AM_Fn_t) generic_amagg_ackhandler,
-        GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REPLY,
+      { hidx_gex_amagg_ackhandler,
+        (gex_AM_Fn_t) gex_amagg_ackhandler,
+        GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
         0 } };
 
   gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable)/sizeof(gex_AM_Entry_t));
@@ -137,12 +137,27 @@ class AmaggTypeWrapper {
   }
 };
 
-void generic_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
+void gex_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
+  gex_Token_Info_t info;
+  gex_TI_t rc = gex_Token_Info(token, &info, GEX_TI_SRCRANK);
+  gex_Rank_t srcRank = info.gex_srcrank;
+  char* buf_p = new char[unbytes];
+  memcpy(buf_p, void_buf, unbytes);
+  am_internal::UniformGexAMEventData event {
+    am_internal::HandlerType::AM_REQ, srcRank,
+    0, nullptr,
+    static_cast<int>(unbytes), buf_p
+  };
+  am_internal::am_event_queue_p->push(event);
+}
+
+void generic_amagg_reqhandler(const am_internal::UniformGexAMEventData& event) {
   using req_invoker_t = std::pair<int, int>(intptr_t, int, char*, int, char*, int);
 //  printf("rank %ld amagg reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+  ARL_Assert(event.handler_type == am_internal::HandlerType::AM_REQ);
 
-  char* buf = static_cast<char*>(void_buf);
-  int nbytes = static_cast<int>(unbytes);
+  char* buf = static_cast<char*>(event.buf_p);
+  int nbytes = static_cast<int>(event.buf_n);
   int o_cap = gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
   char* o_buf = new char[o_cap];
   int o_consumed = 0;
@@ -169,17 +184,32 @@ void generic_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes)
     o_consumed += std::get<1>(consumed_data);
     ++n;
   }
-  gex_AM_ReplyMedium0(token, hidx_generic_amagg_ackhandler, o_buf, o_consumed, GEX_EVENT_NOW, 0);
+  gex_AM_RequestMedium0(backend::tm, event.srcRank, hidx_gex_amagg_ackhandler, o_buf, o_consumed, GEX_EVENT_NOW, 0);
   delete [] o_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
-void generic_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
+void gex_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
+  gex_Token_Info_t info;
+  gex_TI_t rc = gex_Token_Info(token, &info, GEX_TI_SRCRANK);
+  gex_Rank_t srcRank = info.gex_srcrank;
+  char* buf_p = new char[unbytes];
+  memcpy(buf_p, void_buf, unbytes);
+  am_internal::UniformGexAMEventData event {
+      am_internal::HandlerType::AM_ACK, srcRank,
+      0, nullptr,
+      static_cast<int>(unbytes), buf_p
+  };
+  am_internal::am_event_queue_p->push(event);
+}
+
+void generic_amagg_ackhandler(const am_internal::UniformGexAMEventData& event) {
   using ack_invoker_t = int(intptr_t, char*, int);
 //  printf("rank %ld amagg ackhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+  ARL_Assert(event.handler_type == am_internal::HandlerType::AM_ACK);
 
-  char* buf = static_cast<char*>(void_buf);
-  int nbytes = static_cast<int>(unbytes);
+  char* buf = static_cast<char*>(event.buf_p);
+  int nbytes = static_cast<int>(event.buf_n);
   int consumed = 0;
   int n = 0;
   while (nbytes > consumed) {
@@ -228,7 +258,7 @@ void flush_amagg_buffer() {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
 //          printf("rank %ld send %p, %d\n", rank_me(), std::get<0>(result), std::get<1>(result));
-          gex_AM_RequestMedium0(backend::tm, i, amagg_internal::hidx_generic_amagg_reqhandler,
+          gex_AM_RequestMedium0(backend::tm, i, amagg_internal::hidx_gex_amagg_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
         }
         delete [] std::get<0>(result);
@@ -269,8 +299,9 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   char* ptr = new char[sizeof(AmaggReqMeta) + sizeof(Payload)];
   *reinterpret_cast<AmaggReqMeta*>(ptr) = meta;
   *reinterpret_cast<Payload*>(ptr+sizeof(AmaggReqMeta)) = payload;
-  gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
+  gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_gex_amagg_reqhandler,
                         ptr, sizeof(AmaggReqMeta) + sizeof(Payload), GEX_EVENT_NOW, 0);
+  progress_external();
   delete [] ptr;
   ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
   return future;
@@ -302,8 +333,9 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
   std::pair<char*, int> result = amagg_internal::amagg_agg_buffer_p[remote_proc].push(meta, std::move(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
-      gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
+      gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_gex_amagg_reqhandler,
                             std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+      progress_external();
     }
     delete [] std::get<0>(result);
   }

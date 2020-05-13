@@ -1,6 +1,10 @@
 # ARL Changelog
 
-## [0.3.1]
+## [Unreleased]
+### Changed
+- rpc, rpc_{agg}: move the execution of ARL handlers out of GASNet-EX handlers.
+
+## [0.3.1] - 2020-05-08
 ### Changed
 - reduce overhead of the rank system (rank_me, {set,get}_context): replace the hashmap with TLS variables.
 - stop using the progress() function as the backoff function in AggBuffer. This should be able to make the overhead of AggBuffer independent of the handler size.
@@ -8,7 +12,7 @@
 ### Removed
 - remove SharedTimer. It can be perfectly substituted by a TLS SimpleTimer.
 
-## [0.3.0]
+## [0.3.0] - 2020-05-08
 ### New
 - add vector-version reduce_{one,all}.
 

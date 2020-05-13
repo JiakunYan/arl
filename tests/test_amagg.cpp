@@ -4,6 +4,7 @@
 #define ARL_DEBUG
 #include "arl/arl.hpp"
 #include <iostream>
+#include <random>
 
 #include "external/typename.hpp"
 
@@ -16,21 +17,52 @@ using arl::amagg_internal::AmaggReqMeta;
 using namespace std;
 
 int foo1(char a, int b, bool c) {
-  cout << "Call foo1: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo1: " << "char " << a << ", int " << b << ", bool " << c << endl;
   return a + b + c;
 }
 
 auto foo2 = [](char a, int b, bool c) -> int {
-  cout << "Call foo2: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo2: " << "char " << a << ", int " << b << ", bool " << c << endl;
   return a + b + c;
 };
 
 struct Foo3 {
   int operator()(char a, int b, bool c) const {
-    cout << "Call foo3: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//    cout << "Call foo3: " << "char " << a << ", int " << b << ", bool " << c << endl;
     return a + b + c;
   }
 };
+
+void worker() {
+  using namespace arl;
+
+  int num_ops = 10;
+  size_t my_rank = arl::rank_me();
+  size_t nworkers = arl::rank_n();
+  std::default_random_engine generator(my_rank);
+  std::uniform_int_distribution<int> distribution(0, nworkers-1);
+  distribution(generator);
+  std::vector<Future<int>> futures;
+
+  barrier();
+
+  for (int i = 0; i < num_ops; i++) {
+    int target_rank = distribution(generator);
+    auto f = arl::rpc_agg(target_rank, foo1, 'a', (int)my_rank, true);
+    futures.push_back(std::move(f));
+  }
+
+  barrier();
+
+  for (int i = 0; i < num_ops; ++i) {
+    int result = futures[i].get();
+    if (result != 'a' + my_rank + 1) {
+      printf("error!\n");
+      exit(1);
+    }
+  }
+  print("Pass!\n");
+}
 
 int main() {
   arl::init();
@@ -52,38 +84,39 @@ int main() {
   cout << "Result is " << *reinterpret_cast<int*>(result) << endl;
 
   // ---
-  cout << "\n-----------------------\n";
-  using Payload = tuple<char, int ,bool>;
-  cout << "sizeof(Payload) is " << sizeof(Payload) << endl;
-  intptr_t foo1_p = get_pi_fnptr(foo1);
-  intptr_t wrapper2_p = get_pi_fnptr(arl::amagg_internal::AmaggTypeWrapper<decltype(foo2), char, int, bool>::invoker);
-  intptr_t foo2_p = get_pi_fnptr(&foo2);
-  char buf[100];
-  char* ptr = buf;
-  int offset = 0;
-  arl::Future<int> future1;
-  arl::Future<int> future2;
-  *reinterpret_cast<AmaggReqMeta*>(ptr) = AmaggReqMeta{foo1_p, wrapper_p, future1.get_p(), 0};
-  offset += sizeof(AmaggReqMeta);
-  *reinterpret_cast<Payload*>(ptr + offset) = data;
-  offset += sizeof(Payload);
-  *reinterpret_cast<AmaggReqMeta*>(ptr + offset) = AmaggReqMeta{foo2_p, wrapper2_p, future2.get_p(), 0};
-  offset += sizeof(AmaggReqMeta);
-  *reinterpret_cast<Payload*>(ptr + offset) = Payload{'b', 134, false};
-  gex_AM_RequestMedium0(arl::backend::tm, 0, arl::amagg_internal::hidx_generic_amagg_reqhandler, buf,
-                        offset + sizeof(Payload), GEX_EVENT_NOW, 0);
-  cout << "future1.get() is " << future1.get() << endl;
-  cout << "future2.get() is " << future2.get() << endl;
-  cout << "ack counter is " << arl::amagg_internal::amagg_ack_counter->val << endl;
+//  cout << "\n-----------------------\n";
+//  using Payload = tuple<char, int ,bool>;
+//  cout << "sizeof(Payload) is " << sizeof(Payload) << endl;
+//  intptr_t foo1_p = get_pi_fnptr(foo1);
+//  intptr_t wrapper2_p = get_pi_fnptr(arl::amagg_internal::AmaggTypeWrapper<decltype(foo2), char, int, bool>::invoker);
+//  intptr_t foo2_p = get_pi_fnptr(&foo2);
+//  char buf[100];
+//  char* ptr = buf;
+//  int offset = 0;
+//  arl::Future<int> future1;
+//  arl::Future<int> future2;
+//  *reinterpret_cast<AmaggReqMeta*>(ptr) = AmaggReqMeta{foo1_p, wrapper_p, future1.get_p(), 0};
+//  offset += sizeof(AmaggReqMeta);
+//  *reinterpret_cast<Payload*>(ptr + offset) = data;
+//  offset += sizeof(Payload);
+//  *reinterpret_cast<AmaggReqMeta*>(ptr + offset) = AmaggReqMeta{foo2_p, wrapper2_p, future2.get_p(), 0};
+//  offset += sizeof(AmaggReqMeta);
+//  *reinterpret_cast<Payload*>(ptr + offset) = Payload{'b', 134, false};
+//  gex_AM_RequestMedium0(arl::backend::tm, 0, arl::amagg_internal::hidx_gex_amagg_reqhandler, buf,
+//                        offset + sizeof(Payload), GEX_EVENT_NOW, 0);
+//  cout << "future1.get() is " << future1.get() << endl;
+//  cout << "future2.get() is " << future2.get() << endl;
+//  cout << "ack counter is " << arl::amagg_internal::amagg_ack_counter->val << endl;
+//
+//  // ---
+//  auto future3 = arl::rpc_agg(0, foo1, 'c', 34, true);
+//  auto future4 = arl::rpc_agg(0, foo2, 'd', 344, true);
+//  arl::flush_agg_buffer();
+//  arl::proc::barrier();
+//  cout << "future3.get() is " << future3.get() << endl;
+//  cout << "future4.get() is " << future4.get() << endl;
 
-  // ---
-  auto future3 = arl::rpc_agg(0, foo1, 'c', 34, true);
-  auto future4 = arl::rpc_agg(0, foo2, 'd', 344, true);
-  arl::flush_agg_buffer();
-  arl::proc::barrier();
-  cout << "future3.get() is " << future3.get() << endl;
-  cout << "future4.get() is " << future4.get() << endl;
-
+  arl::run(worker);
   arl::finalize();
   return 0;
 }

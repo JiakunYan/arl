@@ -9,6 +9,8 @@ namespace arl {
 namespace am_internal {
 extern void init_am();
 extern void exit_am();
+extern void init_am_thread();
+extern void exit_am_thread();
 }
 
 alignas(alignof_cacheline) std::atomic<bool> thread_run = false;
@@ -16,18 +18,21 @@ alignas(alignof_cacheline) std::atomic<bool> worker_exit = false;
 
 // progress thread
 void progress_handler() {
+  am_internal::init_am_thread();
   while (!thread_run) {
     usleep(1);
   }
   while (!worker_exit) {
     progress();
   }
+  am_internal::exit_am_thread();
 }
 
 template <typename Fn, typename... Args>
 void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
   rank_internal::my_rank = id;
   rank_internal::my_context = id;
+  am_internal::init_am_thread();
   while (!thread_run) {
     usleep(1);
   }
@@ -35,6 +40,7 @@ void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
   std::invoke(std::forward<Fn>(fn),
               std::forward<Args>(args)...);
   barrier();
+  am_internal::exit_am_thread();
 }
 
 inline void init(size_t custom_num_workers_per_proc = 15,
