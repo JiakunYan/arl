@@ -14,18 +14,18 @@ using arl::am_internal::get_pi_fnptr;
 using arl::am_internal::resolve_pi_fnptr;
 
 int foo1(char a, int b, bool c) {
-  cout << "Call foo1 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo1 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
   return a + b + c;
 }
 
 auto foo2 = [](char a, int b, bool c) -> int {
-  cout << "Call foo2 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo2 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
   return a + b + c;
 };
 
 struct Foo3 {
   int operator()(char a, int b, bool c) const {
-    cout << "Call foo3 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//    cout << "Call foo3 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
     return a + b + c;
   }
 };
@@ -33,7 +33,7 @@ struct Foo3 {
 void worker() {
   using namespace arl;
 
-  int num_ops = 10;
+  int num_ops = 1000;
   size_t my_rank = arl::rank_me();
   size_t nworkers = arl::rank_n();
   std::default_random_engine generator(my_rank);
@@ -42,7 +42,6 @@ void worker() {
   std::vector<Future<int>> futures;
 
   barrier();
-  tick_t start = ticks_now();
   register_amaggrd(foo1, 'a', 123, true);
 
   for (int i = 0; i < num_ops; i++) {
@@ -59,10 +58,7 @@ void worker() {
       printf("error!\n");
     }
   }
-
-  tick_t end_wait = ticks_now();
-
-  double duration_total = ticks_to_us(end_wait - start);
+  print("Pass!\n");
 }
 
 int main() {

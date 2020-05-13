@@ -36,7 +36,7 @@ struct Foo3 {
 void worker() {
   using namespace arl;
 
-  int num_ops = 10;
+  int num_ops = 1000;
   size_t my_rank = arl::rank_me();
   size_t nworkers = arl::rank_n();
   std::default_random_engine generator(my_rank);

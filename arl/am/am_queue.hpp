@@ -29,6 +29,11 @@ extern void generic_amagg_reqhandler(const am_internal::UniformGexAMEventData& e
 extern void generic_amagg_ackhandler(const am_internal::UniformGexAMEventData& event);
 } // namespace amagg_internal
 
+namespace amaggrd_internal {
+extern void generic_amaggrd_reqhandler(const am_internal::UniformGexAMEventData& event);
+extern void generic_amaggrd_ackhandler(const am_internal::UniformGexAMEventData& event);
+} // namespace amaggrd_internal
+
 namespace am_internal {
 __thread std::queue<UniformGexAMEventData>* am_event_queue_p;
 
@@ -43,6 +48,12 @@ inline void poll_am_event_queue() {
         break;
       case AM_ACK :
         amagg_internal::generic_amagg_ackhandler(event);
+        break;
+      case AM_RD_REQ :
+        amaggrd_internal::generic_amaggrd_reqhandler(event);
+        break;
+      case AM_RD_ACK :
+        amaggrd_internal::generic_amaggrd_ackhandler(event);
         break;
     }
     delete [] event.arg_p;
