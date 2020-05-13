@@ -163,6 +163,7 @@ void flush_amffrd_buffer() {
         if (std::get<1>(result) != 0) {
           amffrd_internal::send_amffrd_to_gex(i, *amffrd_internal::global_meta_p,
                                               std::get<0>(result), std::get<1>(result));
+          progress_external();
         }
         delete [] std::get<0>(result);
       }
@@ -249,6 +250,7 @@ void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
     if (std::get<1>(result) != 0) {
       amffrd_internal::send_amffrd_to_gex(remote_proc, *amffrd_internal::global_meta_p,
                                           std::get<0>(result), std::get<1>(result));
+      progress_external();
     }
     delete [] std::get<0>(result);
   }

@@ -260,6 +260,7 @@ void flush_amagg_buffer() {
 //          printf("rank %ld send %p, %d\n", rank_me(), std::get<0>(result), std::get<1>(result));
           gex_AM_RequestMedium0(backend::tm, i, amagg_internal::hidx_gex_amagg_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+          progress_external();
         }
         delete [] std::get<0>(result);
       }

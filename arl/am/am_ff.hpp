@@ -167,6 +167,7 @@ void flush_amff_buffer() {
         if (std::get<1>(result) != 0) {
           gex_AM_RequestMedium0(backend::tm, i, hidx_gex_amff_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+          progress_external();
         }
         delete [] std::get<0>(result);
       }
