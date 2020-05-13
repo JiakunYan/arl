@@ -15,16 +15,16 @@ using arl::am_internal::resolve_pi_fnptr;
 using arl::amff_internal::AmffReqMeta;
 
 void foo1(char a, int b, bool c) {
-  cout << "Call foo1: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo1: " << "char " << a << ", int " << b << ", bool " << c << endl;
 }
 
 auto foo2 = [](char a, int b, bool c) {
-  cout << "Call foo2: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo2: " << "char " << a << ", int " << b << ", bool " << c << endl;
 };
 
 struct Foo3 {
   void operator()(char a, int b, bool c) const {
-    cout << "Call foo3: " << "char " << a << ", int " << b << ", bool " << c << endl;
+//    cout << "Call foo3: " << "char " << a << ", int " << b << ", bool " << c << endl;
   }
 };
 
@@ -39,7 +39,6 @@ void worker() {
   distribution(generator);
 
   barrier();
-  tick_t start = ticks_now();
 
   for (int i = 0; i < num_ops; i++) {
     int target_rank = distribution(generator);
@@ -48,16 +47,13 @@ void worker() {
 
   local::barrier();
   int expected_recv_num = arl::amff_internal::get_expected_recv_num();
-  if (rank_me() == 0) {
-    std::cout << "recv counter is " << arl::amff_internal::amff_recv_counter->val << endl;
-    std::cout << "expected num is " << expected_recv_num << endl;
-  }
+//  if (rank_me() == 0) {
+//    std::cout << "recv counter is " << arl::amff_internal::amff_recv_counter->val << endl;
+//    std::cout << "expected num is " << expected_recv_num << endl;
+//  }
   barrier();
-  tick_t end_wait = ticks_now();
 
-  double duration_total = ticks_to_us(end_wait - start);
-  print("rpc_ff overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth: %lu M/s\n", (unsigned long) (num_ops * local::rank_n() * 2 / duration_total));
+  print("Pass!\n");
 }
 
 int main() {

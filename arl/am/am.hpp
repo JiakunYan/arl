@@ -15,9 +15,9 @@ extern void wait_amagg();
 } // namespace amagg_internal
 
 namespace amff_internal {
-extern void init_am_ff();
-extern void exit_am_ff();
-extern void flush_am_ff_buffer();
+extern void init_amff();
+extern void exit_amff();
+extern void flush_amff_buffer();
 extern void wait_amff();
 } // namespace amff_internal
 
@@ -54,7 +54,7 @@ alignas(alignof_cacheline) int gex_am_handler_num;
 inline void init_am() {
   gex_am_handler_num = GEX_AM_INDEX_BASE;
   amagg_internal::init_amagg();
-  amff_internal::init_am_ff();
+  amff_internal::init_amff();
   amaggrd_internal::init_amaggrd();
   amffrd_internal::init_amffrd();
 }
@@ -62,7 +62,7 @@ inline void init_am() {
 inline void exit_am() {
   amffrd_internal::exit_amffrd();
   amaggrd_internal::exit_amaggrd();
-  amff_internal::exit_am_ff();
+  amff_internal::exit_amff();
   amagg_internal::exit_amagg();
 }
 
@@ -78,7 +78,7 @@ inline void exit_am_thread() {
 
 void flush_agg_buffer() {
   amagg_internal::flush_amagg_buffer();
-  amff_internal::flush_am_ff_buffer();
+  amff_internal::flush_amff_buffer();
   amaggrd_internal::flush_amaggrd_buffer();
   amffrd_internal::flush_amffrd_buffer();
 }
