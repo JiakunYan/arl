@@ -14,23 +14,23 @@ using arl::am_internal::get_pi_fnptr;
 using arl::am_internal::resolve_pi_fnptr;
 
 void foo1(char a, int b, bool c) {
-  cout << "Call foo1 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo1 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
 }
 
 auto foo2 = [](char a, int b, bool c) {
-  cout << "Call foo2 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//  cout << "Call foo2 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
 };
 
 struct Foo3 {
   void operator()(char a, int b, bool c) const {
-    cout << "Call foo3 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
+//    cout << "Call foo3 on rank " << arl::rank_me() << ": char " << a << ", int " << b << ", bool " << c << endl;
   }
 };
 
 void worker() {
   using namespace arl;
 
-  int num_ops = 10;
+  int num_ops = 1000;
   size_t my_rank = arl::rank_me();
   size_t nworkers = arl::rank_n();
   std::default_random_engine generator(my_rank);
@@ -38,7 +38,6 @@ void worker() {
   distribution(generator);
 
   barrier();
-  tick_t start = ticks_now();
   register_amffrd(foo1, 'a', 123, true);
 
   for (int i = 0; i < num_ops; i++) {
@@ -47,11 +46,7 @@ void worker() {
   }
 
   barrier();
-  tick_t end_wait = ticks_now();
-
-  double duration_total = ticks_to_us(end_wait - start);
-  print("rpc_ff overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth: %lu M/s\n", (unsigned long) (num_ops * local::rank_n() * 2 / duration_total));
+  print("Pass!\n");
 }
 
 int main() {

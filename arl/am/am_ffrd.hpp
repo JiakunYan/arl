@@ -13,8 +13,8 @@ using am_internal::resolve_pi_fnptr;
 using am_internal::AggBuffer;
 
 // GASNet AM handlers and their indexes
-alignas(alignof_cacheline) gex_AM_Index_t hidx_generic_amffrd_reqhandler;
-void generic_amffrd_reqhandler(gex_Token_t token, void *buf, size_t nbytes,
+alignas(alignof_cacheline) gex_AM_Index_t hidx_gex_amffrd_reqhandler;
+void gex_amffrd_reqhandler(gex_Token_t token, void *buf, size_t nbytes,
                                gex_AM_Arg_t t0, gex_AM_Arg_t t1, gex_AM_Arg_t t2, gex_AM_Arg_t t3);
 // AM synchronous counters
 alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_recv_counter;
@@ -72,17 +72,31 @@ class AmffrdTypeWrapper {
   }
 };
 
-void generic_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes,
+void gex_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes,
                                gex_AM_Arg_t t0, gex_AM_Arg_t t1, gex_AM_Arg_t t2, gex_AM_Arg_t t3) {
+  gex_Token_Info_t info;
+  gex_TI_t rc = gex_Token_Info(token, &info, GEX_TI_SRCRANK);
+  gex_Rank_t srcRank = info.gex_srcrank;
+  gex_AM_Arg_t* arg_p = new gex_AM_Arg_t[4];
+  arg_p[0] = t0; arg_p[1] = t1; arg_p[2] = t2; arg_p[3] = t3;
+  char* buf_p = new char[unbytes];
+  memcpy(buf_p, void_buf, unbytes);
+  am_internal::UniformGexAMEventData event {
+      am_internal::HandlerType::AM_FFRD_REQ, srcRank,
+      4, arg_p,
+      static_cast<int>(unbytes), buf_p
+  };
+  am_internal::am_event_queue_p->push(event);
+}
+
+void generic_amffrd_reqhandler(const am_internal::UniformGexAMEventData& event) {
   using req_invoker_t = int(intptr_t, char*, int);
 //  printf("rank %ld reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
-  char* buf = static_cast<char*>(void_buf);
-  int nbytes = static_cast<int>(unbytes);
+  char* buf = event.buf_p;
+  int nbytes = event.buf_n;
   ARL_Assert(nbytes >= (int) sizeof(AmffrdReqMeta), "(", nbytes, " >= ", sizeof(AmffrdReqMeta), ")");
-  AmffrdReqMeta meta;
-  gex_AM_Arg_t* t = reinterpret_cast<gex_AM_Arg_t*>(&meta);
-  t[0] = t0; t[1] = t1; t[2] = t2; t[3] = t3;
+  AmffrdReqMeta& meta = *reinterpret_cast<AmffrdReqMeta*>(event.arg_p);
 //  printf("recv meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
 
   auto invoker = resolve_pi_fnptr<intptr_t(const std::string&)>(meta.type_wrapper_p);
@@ -97,7 +111,7 @@ void generic_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes
 void send_amffrd_to_gex(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_t nbytes) {
   gex_AM_Arg_t* ptr = reinterpret_cast<gex_AM_Arg_t*>(&meta);
 //  printf("send meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
-  gex_AM_RequestMedium4(backend::tm, remote_proc, amffrd_internal::hidx_generic_amffrd_reqhandler,
+  gex_AM_RequestMedium4(backend::tm, remote_proc, amffrd_internal::hidx_gex_amffrd_reqhandler,
                         buf, nbytes, GEX_EVENT_NOW, 0, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
@@ -106,12 +120,12 @@ alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amffrd() {
-  amffrd_internal::hidx_generic_amffrd_reqhandler = am_internal::gex_am_handler_num++;
+  amffrd_internal::hidx_gex_amffrd_reqhandler = am_internal::gex_am_handler_num++;
   ARL_Assert(am_internal::gex_am_handler_num < 256, "GASNet handler index overflow!");
 
   gex_AM_Entry_t htable[1] = {
-      {amffrd_internal::hidx_generic_amffrd_reqhandler,
-          (gex_AM_Fn_t) amffrd_internal::generic_amffrd_reqhandler,
+      {amffrd_internal::hidx_gex_amffrd_reqhandler,
+          (gex_AM_Fn_t) amffrd_internal::gex_amffrd_reqhandler,
           GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
           4},
   };

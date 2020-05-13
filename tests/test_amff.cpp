@@ -46,7 +46,7 @@ void worker() {
   }
 
   local::barrier();
-  int expected_recv_num = arl::amff_internal::get_expected_recv_num();
+//  int expected_recv_num = arl::amff_internal::get_expected_recv_num();
 //  if (rank_me() == 0) {
 //    std::cout << "recv counter is " << arl::amff_internal::amff_recv_counter->val << endl;
 //    std::cout << "expected num is " << expected_recv_num << endl;

@@ -10,7 +10,7 @@ namespace am_internal {
 enum HandlerType {
   AM_REQ, AM_ACK,
   AM_RD_REQ, AM_RD_ACK,
-  AM_FF_REQ, AM_FF_RD_REQ
+  AM_FF_REQ, AM_FFRD_REQ
 };
 
 struct UniformGexAMEventData {
@@ -38,6 +38,10 @@ namespace amff_internal {
 extern void generic_amff_reqhandler(const am_internal::UniformGexAMEventData& event);
 } // namespace amff_internal
 
+namespace amffrd_internal {
+extern void generic_amffrd_reqhandler(const am_internal::UniformGexAMEventData& event);
+} // namespace amffrd_internal
+
 
 namespace am_internal {
 __thread std::queue<UniformGexAMEventData>* am_event_queue_p;
@@ -62,6 +66,10 @@ inline void poll_am_event_queue() {
         break;
       case AM_FF_REQ:
         amff_internal::generic_amff_reqhandler(event);
+        break;
+      case AM_FFRD_REQ:
+        amffrd_internal::generic_amffrd_reqhandler(event);
+        break;
     }
     delete [] event.arg_p;
     delete [] event.buf_p;
