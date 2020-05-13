@@ -333,6 +333,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
       gex_AM_RequestMedium4(backend::tm, remote_proc, amaggrd_internal::hidx_gex_amaggrd_reqhandler,
                             std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0,
                             t[0], t[1], t[2], t[3]);
+      progress_external();
     }
     delete [] std::get<0>(result);
   }
