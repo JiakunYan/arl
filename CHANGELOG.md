@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 ### Changed
-- rpc, rpc_{agg}: move the execution of ARL handlers out of GASNet-EX handlers.
+- rpc, rpc_{agg,ff,aggrd,ffrd}: move the execution of ARL handlers out of GASNet-EX handlers.
+- split progress into progress_internal and progress_external
 
 ## [0.3.1] - 2020-05-08
 ### Changed
@@ -17,8 +18,8 @@
 - add vector-version reduce_{one,all}.
 
 ### Changed
-- improve performance of rpc_{agg, aggrd}: use thread-local counter.
-- improve performance of rpc_{ff, ffrd}: remove GASNet reply message but use a collective reduce to flush all rpcs.
+- improve performance of rpc_{agg,aggrd}: use thread-local counter.
+- improve performance of rpc_{ff,ffrd}: remove GASNet reply message but use a collective reduce to flush all rpcs.
 
 ## [0.2.0] - 2020-04-09
 ### New
