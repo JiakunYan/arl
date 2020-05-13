@@ -156,8 +156,8 @@ void generic_amagg_reqhandler(const am_internal::UniformGexAMEventData& event) {
 //  printf("rank %ld amagg reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
   ARL_Assert(event.handler_type == am_internal::HandlerType::AM_REQ);
 
-  char* buf = static_cast<char*>(event.buf_p);
-  int nbytes = static_cast<int>(event.buf_n);
+  char* buf = event.buf_p;
+  int nbytes = event.buf_n;
   int o_cap = gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
   char* o_buf = new char[o_cap];
   int o_consumed = 0;
@@ -208,8 +208,8 @@ void generic_amagg_ackhandler(const am_internal::UniformGexAMEventData& event) {
 //  printf("rank %ld amagg ackhandler %p, %lu\n", rank_me(), void_buf, unbytes);
   ARL_Assert(event.handler_type == am_internal::HandlerType::AM_ACK);
 
-  char* buf = static_cast<char*>(event.buf_p);
-  int nbytes = static_cast<int>(event.buf_n);
+  char* buf = event.buf_p;
+  int nbytes = event.buf_n;
   int consumed = 0;
   int n = 0;
   while (nbytes > consumed) {
