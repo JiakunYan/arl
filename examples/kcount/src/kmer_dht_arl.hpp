@@ -180,11 +180,19 @@ class KmerDHT {
     delete map_ptrs[rank_me()];
   }
 
-  void register_add_kmer_set() {
+  void register_add_kmer_set_aggrd() {
+    register_amaggrd<decltype(kmer_set_fn), KmerLHT*, Kmer>(kmer_set_fn);
+  }
+
+  void register_add_kmer_count_aggrd() {
+    register_amaggrd<decltype(kmer_count_fn), KmerLHT*, Kmer>(kmer_count_fn);
+  }
+
+  void register_add_kmer_set_ffrd() {
     register_amffrd<decltype(kmer_set_fn), KmerLHT*, Kmer>(kmer_set_fn);
   }
 
-  void register_add_kmer_count() {
+  void register_add_kmer_count_ffrd() {
     register_amffrd<decltype(kmer_count_fn), KmerLHT*, Kmer>(kmer_count_fn);
   }
 
@@ -202,6 +210,22 @@ class KmerDHT {
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer);
     return rpc_agg(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+  }
+
+  Future<void> add_kmer_set_aggrd(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    return rpc_aggrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+  }
+
+  Future<void> add_kmer_count_aggrd(Kmer kmer) {
+    // get the lexicographically smallest
+    Kmer kmer_rc = kmer.revcomp();
+    if (kmer_rc < kmer) kmer = kmer_rc;
+    size_t target_rank = get_target_rank(kmer);
+    return rpc_aggrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
   void add_kmer_set_ff(Kmer kmer) {

@@ -69,6 +69,14 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
+  switch (pass_type) {
+    case BLOOM_SET_PASS:
+      kmer_dht.register_add_kmer_set_aggrd();
+      break;
+    case BLOOM_COUNT_PASS:
+      kmer_dht.register_add_kmer_count_aggrd();
+      break;
+  }
   SimpleTimer timer_total;
   int64_t num_reads = 0;
   int64_t num_lines = 0;
@@ -100,10 +108,10 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
         Future<void> future;
         switch (pass_type) {
           case BLOOM_SET_PASS:
-            future = kmer_dht.add_kmer_set(kmers[i]);
+            future = kmer_dht.add_kmer_set_aggrd(kmers[i]);
             break;
           case BLOOM_COUNT_PASS:
-            future = kmer_dht.add_kmer_count(kmers[i]);
+            future = kmer_dht.add_kmer_count_aggrd(kmers[i]);
             break;
         }
         futures.push_back(move(future));
