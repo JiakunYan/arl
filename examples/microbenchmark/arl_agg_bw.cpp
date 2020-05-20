@@ -6,23 +6,25 @@
 using namespace arl;
 using namespace std;
 
-const size_t payload_size = 64;
-struct Payload {
-  char data[payload_size] = {0};
+template<int N>
+struct ReqPayload {
+  char data[N] = {0};
 };
 
-const size_t ack_payload_size = 8;
+template<int N>
 struct AckPayload {
-  char data[ack_payload_size] = {0};
+  char data[N] = {0};
 };
-Payload payload = {0};
 
-AckPayload empty_handler(Payload payload) {
+template<int REQ_N, int ACK_N>
+AckPayload<ACK_N> empty_handler(ReqPayload<REQ_N> payload) {
   // do nothing
-  return AckPayload();
+  return AckPayload<ACK_N>();
 }
 
+template<int REQ_N, int ACK_N>
 void worker() {
+  ReqPayload<REQ_N> req_payload;
 
   int num_ops = 1000000;
   size_t my_rank = rank_me();
@@ -30,13 +32,13 @@ void worker() {
   std::default_random_engine generator(my_rank);
   std::uniform_int_distribution<int> distribution(0, nworkers-1);
   distribution(generator);
-  vector<Future<AckPayload>> futures;
+  vector<Future<AckPayload<ACK_N>>> futures;
   barrier();
   tick_t start = ticks_now();
 
   for (int i = 0; i < num_ops; ++i) {
     int target_rank = distribution(generator);
-    auto future = rpc_agg(target_rank, empty_handler, payload);
+    auto future = rpc_agg(target_rank, empty_handler<REQ_N, ACK_N>, req_payload);
     futures.push_back(move(future));
   }
 
@@ -52,18 +54,25 @@ void worker() {
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
-  print("rpc_ff overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth (req/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggReqMeta) + sizeof(Payload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (req/pure): %lu MB/s\n", (unsigned long) ((sizeof(Payload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (ack/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggAckMeta) + sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (ack/pure): %lu MB/s\n", (unsigned long) ((sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("req payload size is %d Byte\n", REQ_N);
+  print("ack payload size is %d Byte\n", ACK_N);
+  print("rpc_agg overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
+  print("Total single-direction node bandwidth (req/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggReqMeta) + sizeof(ReqPayload<REQ_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/pure): %lu MB/s\n", (unsigned long) ((sizeof(ReqPayload<REQ_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggAckMeta) + sizeof(AckPayload<ACK_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/pure): %lu MB/s\n", (unsigned long) ((sizeof(AckPayload<ACK_N>)) * num_ops * local::rank_n() * 2 / duration_total));
 }
 
 int main(int argc, char** argv) {
   // one process per node
   init(15, 16);
 
-  run(worker);
+  run(worker<8, 8>);
+  run(worker<16, 8>);
+  run(worker<32, 8>);
+  run(worker<48, 8>);
+  run(worker<64, 8>);
+  run(worker<128, 8>);
 
   finalize();
 }

@@ -20,30 +20,32 @@
 
 using namespace upcxx;
 
-const int payload_size = 128;
 const int aggr_size = 50 * 1024 * 1024; // 50MB
+
+template<int N>
 struct Payload {
-  char data[payload_size];
+  char data[N];
 };
 
+template<int N>
 struct EmptyFn {
-  void operator()(Payload &payload) {
+  void operator()(Payload<N> &payload) {
   }
 };
 
-int main() {
-  upcxx::init();
-  AggrStore<Payload> aggrStore;
+template<int N>
+int worker() {
+  AggrStore<Payload<N>> aggrStore;
   aggrStore.set_size("bw", aggr_size);
 
-  dist_object<EmptyFn> empty_fn(world());
+  dist_object<EmptyFn<N>> empty_fn(world());
 
   int num_ops = 1000000;
   std::default_random_engine generator(rank_me());
   std::uniform_int_distribution<int> distribution(0, rank_n()-1);
   arl::SimpleTimer timer_total;
   arl::SimpleTimer timer_update;
-  Payload payload{};
+  Payload<N> payload{};
   barrier();
   auto begin = std::chrono::high_resolution_clock::now();
   timer_total.start();
@@ -63,16 +65,26 @@ int main() {
   timer_total.end();
 
   double duration_s = std::chrono::duration<double>(end - begin).count();
-  double bandwidth_node_s = (double) payload_size * num_ops * 32 / duration_s;
+  double bandwidth_node_s = (double) N * num_ops * 32 / duration_s;
   if (!rank_me()) {
-    printf("payload size = %lu Byte\n", sizeof(Payload));
+    printf("req payload size = %lu Byte\n", sizeof(Payload<N>));
     printf("aggr_store overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
-    printf("Total single-direction node bandwidth (pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
+    printf("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
   }
 //  if (!rank_me()) {
 //    printf("total time is %.2lf us\n", timer.to_us() / num_ops);
 //  }
   aggrStore.clear();
-  upcxx::finalize();
   return 0;
+}
+
+int main() {
+  upcxx::init();
+  worker<8>();
+  worker<16>();
+  worker<32>();
+  worker<48>();
+  worker<64>();
+  worker<128>();
+  upcxx::finalize();
 }
