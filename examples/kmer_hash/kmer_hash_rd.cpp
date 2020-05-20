@@ -164,7 +164,7 @@ void worker(size_t n_kmers) {
 }
 
 int main(int argc, char **argv) {
-  arl::init(12, 16);
+  arl::init(15, 16);
   if (argc < 2) {
     arl::proc::print("usage: srun -N nodes -n ranks ./kmer_hash kmer_file [verbose|test|verbose_test]\n");
     arl::finalize();
