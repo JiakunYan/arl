@@ -2,11 +2,11 @@
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <random>
 
 bool thread_run = true;
 
-std::vector<std::atomic<size_t>> issueds(16);
-std::vector<std::atomic<size_t>> receiveds(16);
+std::vector<std::atomic<int>> receiveds(16);
 size_t req_num;
 size_t rep_num;
 arl::ThreadBarrier threadBarrier;
@@ -18,7 +18,7 @@ void empty_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id)
   {
 
   }
-  gex_AM_ReplyMedium(token, rep_num, buf, nbytes, GEX_EVENT_NOW, 0, id);
+  gex_AM_ReplyMedium(token, rep_num, nullptr, 0, GEX_EVENT_NOW, 0, id);
 }
 
 void reply_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id) {
@@ -26,8 +26,11 @@ void reply_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id)
 }
 
 void worker(int id) {
+  int issued = 0;
   size_t num_ams = 10000;
-  arl::SimpleTimer timer;
+  std::default_random_engine generator(arl::backend::rank_me());
+  std::uniform_int_distribution<int> distribution(0, arl::backend::rank_n()-1);
+  distribution(generator);
 
   srand48(arl::backend::rank_me());
   threadBarrier.wait();
@@ -38,17 +41,16 @@ void worker(int id) {
   auto begin = std::chrono::high_resolution_clock::now();
 
   for (size_t i = 0; i < num_ams; i++) {
-    size_t remote_proc = lrand48() % arl::backend::rank_n();
+    size_t remote_proc = distribution(generator);
 //    size_t remote_proc = lrand48() % (BCL::nprocs() - 1);
 //    if (remote_proc >= BCL::rank()) {
 //      remote_proc++;
 //    }
-
-    issueds[id]++;
     int rv = gex_AM_RequestMedium(arl::backend::tm, remote_proc, req_num, payload, payload_size, GEX_EVENT_NOW, 0, id);
+    issued++;
   }
 
-  while (receiveds[id] < issueds[id]) {
+  while (receiveds[id] < issued) {
     gasnet_AMPoll();
   }
   threadBarrier.wait();

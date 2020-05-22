@@ -90,9 +90,11 @@ inline void logger(ostream &stream, bool fail, bool serial, bool flush, T first,
   if (flush) stream.flush();
 }
 
-#define SLOG_VERBOSE(...) do {                                       \
-    logger(cout, false, true, true, ##__VA_ARGS__);    \
-  } while (0)
+#define SLOG_VERBOSE(...)
+
+//#define SLOG_VERBOSE(...) do {                                       \
+//    logger(cout, false, true, true, ##__VA_ARGS__);    \
+//  } while (0)
 
 // this class aggregates updates into local buffers and then periodically does an rpc to dispatch them
 
