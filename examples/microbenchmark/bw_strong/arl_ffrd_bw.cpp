@@ -45,7 +45,7 @@ void worker(int64_t total_MB_to_send) {
   double duration_total = ticks_to_us(end_wait - start);
   using amffrd_internal::AmffrdReqPayload;
   print("Total MB to send is %d MB\n", total_MB_to_send);
-  print("Total single-direction node bandwidth (req/pure): %lu MB/s\n", (unsigned long) ((sizeof(Payload<N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(Payload<N>)) * num_ops * local::rank_n() * 2 / duration_total));
 }
 
 int main(int argc, char** argv) {

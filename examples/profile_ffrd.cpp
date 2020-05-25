@@ -87,7 +87,7 @@ void worker() {
 
   double duration_total = ticks_to_us(end_wait - start);
   print("rpc_ffrd overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth (pure): %lu MB/s\n", (unsigned long) ((sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (pure): %.2lf MB/s\n", ((sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
   if (rank_me() == 5) {
     timer_lpc.print_us("lpc");
     timer_push.print_us("push");

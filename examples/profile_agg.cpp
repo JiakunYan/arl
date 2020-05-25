@@ -96,10 +96,10 @@ void worker() {
 
   double duration_total = ticks_to_us(end_wait - start);
   print("rpc_ff overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth (req/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggReqMeta) + sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (req/pure): %lu MB/s\n", (unsigned long) ((sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (ack/gross): %lu MB/s\n", (unsigned long) ((sizeof(amagg_internal::AmaggAckMeta) + sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (ack/pure): %lu MB/s\n", (unsigned long) ((sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/gross): %.2lf MB/s\n", ((sizeof(amagg_internal::AmaggReqMeta) + sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/gross): %.2lf MB/s\n", ((sizeof(amagg_internal::AmaggAckMeta) + sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/pure): %.2lf MB/s\n", ((sizeof(AckPayload)) * num_ops * local::rank_n() * 2 / duration_total));
   if (rank_me() == 0) {
     timer_prepare.print_us("prepare");
     timer_push.print_us("push");

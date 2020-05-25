@@ -44,8 +44,8 @@ void worker() {
   using amffrd_internal::AmffrdReqPayload;
   print("req payload size is %d Byte\n", N);
   print("rpc_ffrd overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
-  print("Total single-direction node bandwidth (req/gross): %lu MB/s\n", (unsigned long) ((sizeof(AmffrdReqPayload<Payload<N>>)) * num_ops * local::rank_n() * 2 / duration_total));
-  print("Total single-direction node bandwidth (req/pure): %lu MB/s\n", (unsigned long) ((sizeof(Payload<N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/gross): %.2lf MB/s\n", ((sizeof(AmffrdReqPayload<Payload<N>>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(Payload<N>)) * num_ops * local::rank_n() * 2 / duration_total));
 }
 
 int main(int argc, char** argv) {

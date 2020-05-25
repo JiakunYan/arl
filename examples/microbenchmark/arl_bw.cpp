@@ -89,7 +89,7 @@ void worker() {
 
   double duration_total = ticks_to_ns(end_wait - start) / 1e3;
   print("Setting: aggr_size = %lu (%lu B); duration = %.2lf s; num_ops = %lu\n", aggr_size, aggr_size * sizeof(rpc_t), duration_total / 1e6, num_ops);
-  print("Total single-direction node bandwidth: %lu MB/s\n", (unsigned long) (sizeof(rpc_t) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth: %.2lf MB/s\n", (sizeof(rpc_t) * num_ops * local::rank_n() * 2 / duration_total));
 #ifdef ARL_PROFILE
   // fine-grained
   print("rand: %.3lf us\n", timer_rand.to_us());
