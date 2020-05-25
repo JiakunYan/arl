@@ -2,7 +2,7 @@ SHELL='bash'
 
 # Modify ARLROOT if you want to move this Makefile
 # out of current directory.
-ARLROOT=$(PWD)/../../
+ARLROOT=$(PWD)/../../../
 
 PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 
@@ -39,8 +39,8 @@ TARGETS := $(patsubst %.cpp, %, $(SOURCES))
 
 all: $(TARGETS)
 
-upcxx_bw: upcxx_bw.cpp
-	upcxx -O $(CFLAGS) $^ -o $@
+upcxx_agg_bw: upcxx_agg_bw.cpp
+	upcxx -O $(CFLAGS) $^ -o $@ -I$(ARLROOT)
 
 %: %.cpp
 	@echo "C $@ $(BACKEND)"

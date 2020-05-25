@@ -121,7 +121,7 @@ class AggrStore {
   // operate on a vector of elements in the store
   template<typename FuncDistObj, typename ...Args>
   void update_remote(intrank_t target_rank, FuncDistObj &func, Args &...args) {
-//    wait_max_rpcs();
+    wait_max_rpcs();
     auto fut = rpc(target_rank,
                    [](FuncDistObj &func, view<T> rank_store, Args &...args) {
                      for (auto elem : rank_store) (*func)(elem, args...);
