@@ -1,6 +1,6 @@
 # ARL Changelog
 
-## [Unreleased]
+## [0.4.0]
 ### Changed
 - rpc, rpc_{agg,ff,aggrd,ffrd}: move the execution of ARL handlers out of GASNet-EX handlers.
 - split progress into progress_internal and progress_external
