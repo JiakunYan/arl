@@ -34,13 +34,13 @@ void rpc_ffrd_profile(rank_t remote_worker, Fn&& fn, Args&&... args) {
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
-  if (remote_proc == proc::rank_me()) {
-    // local precedure call
-    timer_lpc.start();
-    amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
-    timer_lpc.end();
-    return;
-  }
+//  if (remote_proc == proc::rank_me()) {
+//     local precedure call
+//    timer_lpc.start();
+//    amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+//    timer_lpc.end();
+//    return;
+//  }
 
   Payload payload{remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
 
@@ -53,6 +53,7 @@ void rpc_ffrd_profile(rank_t remote_worker, Fn&& fn, Args&&... args) {
     if (std::get<1>(result) != 0) {
       amffrd_internal::send_amffrd_to_gex(remote_proc, *amffrd_internal::global_meta_p,
                                           std::get<0>(result), std::get<1>(result));
+      arl::progress_external();
     }
     delete [] std::get<0>(result);
   }
@@ -83,18 +84,23 @@ void worker() {
   timer_barrier.start();
   barrier();
   timer_barrier.end();
+
+  barrier();
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
   print("rpc_ffrd overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
   print("Total single-direction node bandwidth (pure): %.2lf MB/s\n", ((sizeof(ReqPayload)) * num_ops * local::rank_n() * 2 / duration_total));
-  if (rank_me() == 5) {
-    timer_lpc.print_us("lpc");
-    timer_push.print_us("push");
-    timer_gex.print_us("gex send");
-    timer_counter.print_us("counter");
-    timer_barrier.print_s("barrier");
+//  if (rank_me() == 5) {
+  timer_lpc.col_print_us("lpc");
+  timer_push.col_print_us("push");
+  timer_gex.col_print_us("gex send");
+  timer_counter.col_print_us("counter");
+  timer_barrier.col_print_s("barrier");
+  if (local::rank_me() == 0) {
+    printf("process %ld recv %ld rpc\n", proc::rank_me(), amffrd_internal::amffrd_recv_counter->val.load());
   }
+//  }
 }
 
 int main(int argc, char** argv) {

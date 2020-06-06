@@ -43,27 +43,20 @@ int worker(int64_t total_MB_to_send) {
   std::default_random_engine generator(rank_me());
   std::uniform_int_distribution<int> distribution(0, rank_n()-1);
   arl::SimpleTimer timer_total;
-  arl::SimpleTimer timer_update;
   Payload<N> payload{};
   barrier();
-  auto begin = std::chrono::high_resolution_clock::now();
   timer_total.start();
 
   for (int i = 0; i < num_ops; ++i) {
     int target_rank = distribution(generator);
 
-    timer_update.start();
     aggrStore.update(target_rank, payload, empty_fn);
-    timer_update.end();
   }
-  timer_update.start();
   aggrStore.flush_updates(empty_fn);
-  timer_update.end();
   barrier();
-  auto end = std::chrono::high_resolution_clock::now();
   timer_total.end();
 
-  double duration_s = std::chrono::duration<double>(end - begin).count();
+  double duration_s = timer_total.to_s();
   double bandwidth_node_s = (double) N * num_ops * 32 / duration_s;
   if (!rank_me()) {
     printf("Total MB to send is %d MB\n", total_MB_to_send);

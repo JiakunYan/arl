@@ -27,43 +27,49 @@ struct Payload {
   char data[N];
 };
 
-template<int N>
-struct EmptyFn {
-  void operator()(Payload<N> &payload) {
+struct SleepPayload {
+  int64_t sleep_time;
+  Payload<56> useless;
+};
+
+struct SleepFn {
+  void operator()(SleepPayload payload) {
+    // do nothing
+    arl::usleep(payload.sleep_time);
   }
 };
 
-template<int N>
-int worker() {
-  AggrStore<Payload<N>> aggrStore;
+int worker(int64_t sleep_us) {
+  AggrStore<SleepPayload> aggrStore;
   aggrStore.set_size("bw", aggr_size);
 
-  dist_object<EmptyFn<N>> empty_fn(world());
+  dist_object<SleepFn> sleep_fn(world());
 
-  int num_ops = 1000000;
+  int num_ops;
+  if (sleep_us > 0)
+    num_ops = 1000000 / sleep_us;
+  else
+    num_ops = 1000000;
   std::default_random_engine generator(rank_me());
   std::uniform_int_distribution<int> distribution(0, rank_n()-1);
   arl::SimpleTimer timer_total;
-  Payload<N> payload{};
+  SleepPayload sleep_payload{sleep_us, Payload<56>{}};
   barrier();
   timer_total.start();
 
   for (int i = 0; i < num_ops; ++i) {
     int target_rank = distribution(generator);
 
-    aggrStore.update(target_rank, payload, empty_fn);
+    aggrStore.update(target_rank, sleep_payload, sleep_fn);
   }
-  aggrStore.flush_updates(empty_fn);
+  aggrStore.flush_updates(sleep_fn);
   barrier();
-  auto end = std::chrono::high_resolution_clock::now();
   timer_total.end();
 
   double duration_s = timer_total.to_s();
-  double bandwidth_node_s = (double) N * num_ops * 32 / duration_s;
   if (!rank_me()) {
-    printf("req payload size = %lu Byte\n", sizeof(Payload<N>));
+    printf("sleep time is %ld us\n", sleep_us);
     printf("aggr_store overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
-    printf("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
   }
 //  if (!rank_me()) {
 //    printf("total time is %.2lf us\n", timer.to_us() / num_ops);
@@ -74,11 +80,12 @@ int worker() {
 
 int main() {
   upcxx::init();
-  worker<8>();
-  worker<16>();
-  worker<32>();
-  worker<48>();
-  worker<64>();
-  worker<128>();
+  worker(0);
+  worker(1);
+  worker(10);
+  worker(30);
+  worker(100);
+  worker(300);
+  worker(1000);
   upcxx::finalize();
 }

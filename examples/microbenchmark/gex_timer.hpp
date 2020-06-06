@@ -44,6 +44,11 @@ using tick_t = int64_t;
 //      }
   }
 
+void usleep(int64_t utime) {
+  tick_t start_tick = ticks_now();
+  while (ticks_to_us(ticks_now()-start_tick) < utime) continue;
+}
+
   struct SimpleTimer {
   private:
     unsigned long step = 0;
