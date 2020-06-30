@@ -28,7 +28,7 @@ inline void os_format(std::ostringstream &os) {}
 
 template<typename T, typename... Params>
 inline void os_format(std::ostringstream &os, T first, Params... params) {
-  os << first << " ";
+  os << first;
   os_format(os, params ...);
 }
 
