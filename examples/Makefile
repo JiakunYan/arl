@@ -9,6 +9,7 @@ PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
 TIMER_CMD=time
 
 BACKEND=GASNET_EX
+ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
 # make on Cori
 ifeq (CORI,$(findstring CORI,$(PLATFORM)))
     include $(gasnet_prefix)/include/aries-conduit/aries-par.mak
@@ -17,9 +18,8 @@ ifeq (CORI,$(findstring CORI,$(PLATFORM)))
 else
 include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
 CXX = mpic++
+ARLFLAGS += -DARL_DEBUG
 endif
-
-ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
 
 CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
 
