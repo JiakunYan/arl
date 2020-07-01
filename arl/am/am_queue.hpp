@@ -46,9 +46,12 @@ extern void generic_amffrd_reqhandler(const am_internal::UniformGexAMEventData& 
 namespace am_internal {
 __thread std::queue<UniformGexAMEventData>* am_event_queue_p;
 
-inline void poll_am_event_queue() {
-  if (am_event_queue_p == nullptr) return;
+// return value indicates whether this function actually executes some works.
+inline bool pool_am_event_queue() {
+  if (am_event_queue_p == nullptr) return false;
+  bool flag = false;
   while (!am_event_queue_p->empty()) {
+    flag = true;
     UniformGexAMEventData event = am_event_queue_p->front();
     am_event_queue_p->pop();
     switch (event.handler_type) {
@@ -74,6 +77,7 @@ inline void poll_am_event_queue() {
     delete [] event.arg_p;
     delete [] event.buf_p;
   }
+  return flag;
 }
 
 } // namespace am_internal

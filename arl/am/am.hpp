@@ -99,13 +99,15 @@ inline void progress_internal() {
   gasnet_AMPoll();
 }
 
-inline void progress_external() {
-  am_internal::poll_am_event_queue();
+// return value indicates whether this function actually executes some works.
+inline bool progress_external() {
+  return am_internal::pool_am_event_queue();
 }
 
-void progress() {
+// return value indicates whether this function actually executes some works.
+bool progress() {
   progress_internal();
-  progress_external();
+  return progress_external();
 }
 
 int get_agg_size() {

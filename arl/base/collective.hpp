@@ -10,7 +10,7 @@ namespace arl {
 alignas(alignof_cacheline) ThreadBarrier threadBarrier;
 extern void flush_am(void);
 extern void flush_agg_buffer(void);
-extern void progress(void);
+extern bool progress(void);
 
 inline void pure_barrier() {
   threadBarrier.wait();
