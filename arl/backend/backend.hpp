@@ -11,8 +11,6 @@
 #define ARL_BACKEND_HPP
 
 namespace arl {
-extern bool progress();
-
 namespace backend {
 rank_t my_proc;
 rank_t nprocs;

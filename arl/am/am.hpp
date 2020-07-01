@@ -76,23 +76,31 @@ inline void exit_am_thread() {
 
 } // namespace am_internal
 
-void flush_agg_buffer() {
-  amagg_internal::flush_amagg_buffer();
-  amff_internal::flush_amff_buffer();
-  amaggrd_internal::flush_amaggrd_buffer();
-  amffrd_internal::flush_amffrd_buffer();
+void flush_agg_buffer(char rpc_type) {
+  if (rpc_type & RPC_AGG)
+    amagg_internal::flush_amagg_buffer();
+  if (rpc_type & RPC_FF)
+    amff_internal::flush_amff_buffer();
+  if (rpc_type & RPC_AGGRD)
+    amaggrd_internal::flush_amaggrd_buffer();
+  if (rpc_type & RPC_FFRD)
+    amffrd_internal::flush_amffrd_buffer();
 }
 
-void wait_am() {
-  amagg_internal::wait_amagg();
-  amff_internal::wait_amff();
-  amaggrd_internal::wait_amaggrd();
-  amffrd_internal::wait_amffrd();
+void wait_am(char rpc_type) {
+  if (rpc_type & RPC_AGG)
+    amagg_internal::wait_amagg();
+  if (rpc_type & RPC_FF)
+    amff_internal::wait_amff();
+  if (rpc_type & RPC_AGGRD)
+    amaggrd_internal::wait_amaggrd();
+  if (rpc_type & RPC_FFRD)
+    amffrd_internal::wait_amffrd();
 }
 
-void flush_am() {
-  flush_agg_buffer();
-  wait_am();
+void flush_am(char rpc_type) {
+  flush_agg_buffer(rpc_type);
+  wait_am(rpc_type);
 }
 
 inline void progress_internal() {

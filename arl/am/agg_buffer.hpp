@@ -6,7 +6,6 @@
 #define ARL_AGG_BUFFER_HPP
 
 namespace arl{
-extern bool progress();
 namespace am_internal {
 inline void do_something() {
 //  progress();
