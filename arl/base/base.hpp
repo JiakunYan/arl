@@ -17,7 +17,9 @@ alignas(alignof_cacheline) std::atomic<bool> thread_run = false;
 alignas(alignof_cacheline) std::atomic<bool> worker_exit = false;
 
 // progress thread
-void progress_handler() {
+void progress_handler(rank_t id) {
+  rank_internal::my_rank = id;
+  rank_internal::my_context = id;
   am_internal::init_am_thread();
   while (!thread_run) {
     usleep(1);
@@ -103,7 +105,7 @@ void run(Fn &&fn, Args &&... args) {
   }
 
   for (size_t i = local::rank_n(); i < local::thread_n(); ++i) {
-    std::thread t(progress_handler);
+    std::thread t(progress_handler, i - local::rank_n());
 #ifdef ARL_THREAD_PIN
     set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
 #endif
