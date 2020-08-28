@@ -118,9 +118,8 @@ void worker(size_t n_kmers) {
 
     if (!is_active) {
       // flush buffer
-      arl::flush_agg_buffer();
-//      arl::amaggrd_internal::flush_amaggrd();
-      arl::progress();
+      arl::flush_agg_buffer(arl::RPC_AGGRD);
+      while(arl::progress()) continue;
     }
   }
 

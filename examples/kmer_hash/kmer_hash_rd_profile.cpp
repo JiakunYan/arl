@@ -62,7 +62,8 @@ void worker(size_t n_kmers) {
   arl::barrier();
 
 //------- Read Start -------
-
+  SimpleTimer timer_flush;
+  int flush_count = 0;
   auto start_read = ticks_now();
   hashmap.register_find_aggrd();
 
@@ -112,14 +113,23 @@ void worker(size_t n_kmers) {
       } else {
         // current task is not ready
         ++it;
-        arl::progress();
+//        arl::progress();
       }
     }
 
     if (!is_active) {
-      // flush buffer
-      arl::flush_agg_buffer(arl::RPC_AGGRD);
+      if (flush_count == 2) {
+        // flush buffer
+        timer_flush.start();
+        arl::flush_agg_buffer(arl::RPC_AGGRD);
+        timer_flush.end();
+        flush_count = 0;
+      } else {
+        ++flush_count;
+      }
       while(arl::progress()) continue;
+    } else {
+      flush_count = 0;
     }
   }
 
@@ -132,6 +142,7 @@ void worker(size_t n_kmers) {
 #endif
 
   auto end = ticks_now();
+  timer_flush.col_print_us("flush");
 
   double read = ticks_to_s(end - start_read);
   double insert = ticks_to_s(end_insert - start);
