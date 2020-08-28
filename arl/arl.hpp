@@ -50,6 +50,7 @@
 #include "am/am_ff.hpp"
 #include "am/am_ffrd.hpp"
 // data structure
+#include "data_structure/dist_wrapper.hpp"
 #include "data_structure/hash_map.hpp"
 #include "data_structure/bloom_filter.hpp"
 
