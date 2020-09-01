@@ -80,7 +80,11 @@ void worker(std::string fname) {
   print("%d SPMV steps finished in %.2lf seconds, %.2lf us per SPMV\n", total_steps, timer.to_s(), timer.to_us() / total_steps);
 
   if (is_test) {
-    std::ofstream fout(string_format("spmv_", rank_me(), ".log"));
+    auto foutname = string_format("spmv_", rank_me(), ".log");
+    std::ofstream fout(foutname);
+    if (!fout.is_open()) {
+      throw std::runtime_error("benchmark_spmv cannot open " + foutname);
+    }
     for (size_t i = 0; i < local_v.size(); ++i) {
       fout << rank_me() * local_row_n + i << "\t" << local_v[i] << "\n";
     }
@@ -90,7 +94,7 @@ void worker(std::string fname) {
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    fprintf(stderr, "usage: ./benchmark_spmv [matrix market file]\n");
+    fprintf(stderr, "usage: ./benchmark_spmv [filename]\n");
     exit(1);
   }
 

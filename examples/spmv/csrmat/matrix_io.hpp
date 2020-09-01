@@ -6,6 +6,7 @@ enum FileFormat {
   MatrixMarket,
   MatrixMarketZeroIndexed,
   Binary,
+  Petsc,
   Unknown
 };
 
@@ -26,6 +27,8 @@ auto detect_file_type(const std::string& fname) {
     return BCL::FileFormat::MatrixMarket;
   } else if (suffix == ".binary") {
     return BCL::FileFormat::Binary;
+  } else if (suffix == ".pm") {
+    return BCL::FileFormat::Petsc;
   } else {
     assert(false);
     return BCL::FileFormat::Unknown;

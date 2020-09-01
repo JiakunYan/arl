@@ -22,6 +22,8 @@
 
 #include "matrix_io.hpp"
 
+#define PETSC_MAT_CODE 1211216
+
 namespace BCL {
 
 template <
@@ -96,6 +98,7 @@ struct CSRMatrix {
 
   void read_MatrixMarket(const std::string& fname, bool one_indexed = true);
   void read_Binary(const std::string& fname);
+  void read_Petsc(const std::string& fname);
   void write_Binary(const std::string& fname);
   void write_MatrixMarket(const std::string& fname);
 
@@ -126,6 +129,8 @@ struct CSRMatrix {
       read_MatrixMarket(fname, false);
     } else if (format == FileFormat::Binary) {
       read_Binary(fname);
+    } else if (format == FileFormat::Petsc) {
+      read_Petsc(fname);
     } else {
       throw std::runtime_error("CSRMatrix: Could not detect file format for \""
                                + fname + "\"");
@@ -347,6 +352,105 @@ void CSRMatrix<T, index_type, Allocator>::read_MatrixMarket(const std::string& f
   }
 
   f.close();
+}
+
+bool little_endian()
+{
+  int num = 1;
+  return (*(char *)&num == 1);
+}
+
+template <class T>
+void endian_swap(T *objp)
+{
+  unsigned char *memp = reinterpret_cast<unsigned char*>(objp);
+  std::reverse(memp, memp + sizeof(T));
+}
+
+template <typename T, typename index_type, typename Allocator>
+void CSRMatrix<T, index_type, Allocator>::read_Petsc(const std::string& filename)
+{
+  int32_t code;
+  int32_t n_rows;
+  int32_t n_cols;
+  int32_t nnz;
+  int32_t idx;
+  double val;
+
+  int sizeof_dbl = sizeof(val);
+  int sizeof_int32 = sizeof(code);
+  bool is_little_endian = false;
+
+  std::ifstream ifs (filename, std::ifstream::binary);
+  ifs.read(reinterpret_cast<char *>(&code), sizeof_int32);
+  ifs.read(reinterpret_cast<char *>(&n_rows), sizeof_int32);
+  ifs.read(reinterpret_cast<char *>(&n_cols), sizeof_int32);
+  ifs.read(reinterpret_cast<char *>(&nnz), sizeof_int32);
+
+  if (code != PETSC_MAT_CODE)
+  {
+    is_little_endian = true;
+    endian_swap(&code);
+    endian_swap(&n_rows);
+    endian_swap(&n_cols);
+    endian_swap(&nnz);
+  }
+
+  assert(code == PETSC_MAT_CODE);
+
+  m_ = n_rows;
+  n_ = n_cols;
+  nnz_ = nnz;
+
+  rowptr_.resize(m_+1);
+
+  int displ = 0;
+  rowptr_[0] = 0;
+  if (is_little_endian)
+  {
+    for (int32_t i = 0; i < n_rows; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&idx), sizeof_int32);
+      endian_swap(&idx);
+      displ += idx;
+      rowptr_[i+1] = displ;
+    }
+    for (int32_t i = 0; i < nnz; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&idx), sizeof_int32);
+      endian_swap(&idx);
+      colind_.emplace_back(idx);
+    }
+    for (int32_t i = 0; i < nnz; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&val), sizeof_dbl);
+      endian_swap(&val);
+      vals_.emplace_back(val);
+    }
+  }
+  else
+  {
+    for (int32_t i = 0; i < n_rows; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&idx), sizeof_int32);
+      displ += idx;
+      rowptr_[i+1] = displ;
+    }
+    for (int32_t i = 0; i < nnz; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&idx), sizeof_int32);
+      colind_.emplace_back(idx);
+    }
+    for (int32_t i = 0; i < nnz; i++)
+    {
+      ifs.read(reinterpret_cast<char *>(&val), sizeof_dbl);
+      endian_swap(&val);
+      vals_.emplace_back(val);
+    }
+  }
+  assert(nnz == colind_.size());
+
+  ifs.close();
 }
 
 template <typename T, typename index_type, typename Allocator>
