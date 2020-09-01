@@ -7,11 +7,11 @@
 
 using namespace arl;
 
-using T = float;
+using T = double;
 using index_type = int;
 
 bool is_test = true;
-const int total_steps = 2;
+int total_steps = 10;
 T get_value(std::vector<T>* local_v, index_type global_index) {
   size_t local_v_n = local_v->size();
   ARL_Assert(global_index >= local_v_n * rank_me());
@@ -80,13 +80,15 @@ void worker(std::string fname) {
   print("%d SPMV steps finished in %.2lf seconds, %.2lf us per SPMV\n", total_steps, timer.to_s(), timer.to_us() / total_steps);
 
   if (is_test) {
-    auto foutname = string_format("spmv_", rank_me(), ".log");
+    auto foutname = string_format("spmv_", rank_me(), ".tmp");
     std::ofstream fout(foutname);
     if (!fout.is_open()) {
       throw std::runtime_error("benchmark_spmv cannot open " + foutname);
     }
     for (size_t i = 0; i < local_v.size(); ++i) {
-      fout << rank_me() * local_row_n + i << "\t" << local_v[i] << "\n";
+      size_t global_index = rank_me() * local_row_n + i;
+      if (global_index < global_row_n)
+        fout << rank_me() * local_row_n + i << "\t" << local_v[i] << "\n";
     }
     fout.close();
   }
@@ -99,6 +101,14 @@ int main(int argc, char **argv) {
   }
 
   std::string fname = std::string(argv[1]);
+
+  if (argc > 2) {
+    total_steps = atoi(argv[2]);
+  }
+
+  if (argc > 3) {
+    is_test = (std::string(argv[3]) == "test");
+  }
 
   arl::init(15, 16);
   arl::run(worker, fname);
