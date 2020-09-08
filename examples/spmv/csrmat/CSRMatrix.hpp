@@ -382,6 +382,9 @@ void CSRMatrix<T, index_type, Allocator>::read_Petsc(const std::string& filename
   bool is_little_endian = false;
 
   std::ifstream ifs (filename, std::ifstream::binary);
+  if (!ifs.is_open()) {
+    throw std::runtime_error("benchmark_spmv cannot open " + filename);
+  }
   ifs.read(reinterpret_cast<char *>(&code), sizeof_int32);
   ifs.read(reinterpret_cast<char *>(&n_rows), sizeof_int32);
   ifs.read(reinterpret_cast<char *>(&n_cols), sizeof_int32);
