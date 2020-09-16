@@ -87,6 +87,7 @@ void gex_amffrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes,
       static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amffrd_reqhandler(const am_internal::UniformGexAMEventData& event) {
@@ -113,6 +114,7 @@ void send_amffrd_to_gex(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_
 //  printf("send meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
   gex_AM_RequestMedium4(backend::tm, remote_proc, amffrd_internal::hidx_gex_amffrd_reqhandler,
                         buf, nbytes, GEX_EVENT_NOW, 0, ptr[0], ptr[1], ptr[2], ptr[3]);
+  info::networkInfo.byte_send.add(nbytes);
 }
 
 alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;

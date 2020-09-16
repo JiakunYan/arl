@@ -1,7 +1,7 @@
 //
 // Created by jiakun on 2020/8/28.
 //
-#define ARL_DEBUG
+#define ARL_INFO
 #include "arl/arl.hpp"
 #include "csrmat/CSRMatrix.hpp"
 
@@ -10,7 +10,7 @@ using namespace arl;
 using T = double;
 using index_type = int;
 
-bool is_test = true;
+bool is_test = false;
 int total_steps = 10;
 T get_value(std::vector<T>* local_v, index_type global_index) {
   size_t local_v_n = local_v->size();
@@ -35,12 +35,13 @@ void worker(std::string fname) {
 
   std::vector<T> local_v(local_row_n, 1);
   DistWrapper<std::vector<T>> dist_v(&local_v);
+  std::vector<T> new_v(local_row_n, 0);
 
   register_amaggrd(get_value, dist_v.local(), index_type());
 
   SimpleTimer timer;
   barrier();
-  print("SPMV start\n");
+//  print("SPMV start\n");
   timer.start();
   for (int k = 0; k < total_steps; ++k) {
     std::unordered_map<index_type, Future<T>> requests_pool;
@@ -58,8 +59,8 @@ void worker(std::string fname) {
       }
     }
 
+//    flush_agg_buffer(RPC_AGGRD); // lead to deadlock, which is weird
     barrier();
-    std::vector<T> new_v(local_row_n, 0);
     for (size_t i = 0; i < local_mat.shape()[0]; i++) {
       for (index_type j_ptr = local_mat.rowptr_[i]; j_ptr < local_mat.rowptr_[i + 1]; j_ptr++) {
         index_type j = local_mat.colind_[j_ptr];
@@ -73,11 +74,15 @@ void worker(std::string fname) {
       }
     }
     barrier();
-    local_v = std::move(new_v);
+    print("%d\n", k);
   }
   barrier();
   timer.end();
   print("%d SPMV steps finished in %.2lf seconds, %.2lf us per SPMV\n", total_steps, timer.to_s(), timer.to_us() / total_steps);
+  // profile
+  double bw_out = info::networkInfo.byte_send.get() / 1e6 / timer.to_s();
+  double bw_in = info::networkInfo.byte_recv.get() / 1e6 / timer.to_s();
+  print("Bandwidth utilization (rank 0): %.2lf out, %.2f in (MB/s)\n", bw_out, bw_in);
 
   if (is_test) {
     auto foutname = string_format("spmv_", rank_me(), ".tmp");

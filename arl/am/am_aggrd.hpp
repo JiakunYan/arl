@@ -135,6 +135,7 @@ void gex_amaggrd_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes,
       static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amaggrd_reqhandler(const am_internal::UniformGexAMEventData& event) {
@@ -158,7 +159,7 @@ void generic_amaggrd_reqhandler(const am_internal::UniformGexAMEventData& event)
   gex_AM_Arg_t* out_t = reinterpret_cast<gex_AM_Arg_t*>(&out_meta);
   gex_AM_RequestMedium2(backend::tm, event.srcRank, hidx_gex_amaggrd_ackhandler, out_buf, out_consumed, GEX_EVENT_NOW, 0,
                       out_t[0], out_t[1]);
-
+  info::networkInfo.byte_send.add(out_consumed);
   delete [] out_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
@@ -178,6 +179,7 @@ void gex_amaggrd_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes,
       static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amaggrd_ackhandler(const am_internal::UniformGexAMEventData& event) {
@@ -258,6 +260,7 @@ void flush_amaggrd_buffer() {
           gex_AM_RequestMedium4(backend::tm, i, amaggrd_internal::hidx_gex_amaggrd_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0,
                                 t[0], t[1], t[2], t[3]);
+          info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
         delete [] std::get<0>(result);
@@ -334,6 +337,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
       gex_AM_RequestMedium4(backend::tm, remote_proc, amaggrd_internal::hidx_gex_amaggrd_reqhandler,
                             std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0,
                             t[0], t[1], t[2], t[3]);
+      info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }
     delete [] std::get<0>(result);

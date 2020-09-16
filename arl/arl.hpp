@@ -24,12 +24,14 @@
 
 #include "external/typename.hpp"
 
+#include "config.hpp"
 #include "global_decl.hpp"
 #include "base/op.hpp"
 // tools
 #include "tool/colors.hpp"
 #include "tool/utils.hpp"
 #include "tool/timer.hpp"
+#include "tool/info.hpp"
 // backend
 #include "backend/backend.hpp"
 #include "backend/collective.hpp"

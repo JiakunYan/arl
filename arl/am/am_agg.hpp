@@ -149,6 +149,7 @@ void gex_amagg_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
     static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amagg_reqhandler(const am_internal::UniformGexAMEventData& event) {
@@ -185,6 +186,7 @@ void generic_amagg_reqhandler(const am_internal::UniformGexAMEventData& event) {
     ++n;
   }
   gex_AM_RequestMedium0(backend::tm, event.srcRank, hidx_gex_amagg_ackhandler, o_buf, o_consumed, GEX_EVENT_NOW, 0);
+  info::networkInfo.byte_send.add(o_consumed);
   delete [] o_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
@@ -201,6 +203,7 @@ void gex_amagg_ackhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
       static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amagg_ackhandler(const am_internal::UniformGexAMEventData& event) {
@@ -260,6 +263,7 @@ void flush_amagg_buffer() {
 //          printf("rank %ld send %p, %d\n", rank_me(), std::get<0>(result), std::get<1>(result));
           gex_AM_RequestMedium0(backend::tm, i, amagg_internal::hidx_gex_amagg_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+          info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
         delete [] std::get<0>(result);
@@ -302,6 +306,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   *reinterpret_cast<Payload*>(ptr+sizeof(AmaggReqMeta)) = payload;
   gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_gex_amagg_reqhandler,
                         ptr, sizeof(AmaggReqMeta) + sizeof(Payload), GEX_EVENT_NOW, 0);
+  info::networkInfo.byte_send.add(sizeof(AmaggReqMeta) + sizeof(Payload));
   progress_external();
   delete [] ptr;
   ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
@@ -336,6 +341,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
     if (std::get<1>(result) != 0) {
       gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_gex_amagg_reqhandler,
                             std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+      info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }
     delete [] std::get<0>(result);

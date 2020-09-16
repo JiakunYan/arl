@@ -114,6 +114,7 @@ void gex_amff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
       static_cast<int>(unbytes), buf_p
   };
   am_internal::am_event_queue_p->push(event);
+  info::networkInfo.byte_recv.add(unbytes);
 }
 
 void generic_amff_reqhandler(const am_internal::UniformGexAMEventData& event) {
@@ -167,6 +168,7 @@ void flush_amff_buffer() {
         if (std::get<1>(result) != 0) {
           gex_AM_RequestMedium0(backend::tm, i, hidx_gex_amff_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+          info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
         delete [] std::get<0>(result);
@@ -227,6 +229,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
     if (std::get<1>(result) != 0) {
       gex_AM_RequestMedium0(backend::tm, remote_proc, amff_internal::hidx_gex_amff_reqhandler,
                             std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+      info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }
     delete [] std::get<0>(result);
