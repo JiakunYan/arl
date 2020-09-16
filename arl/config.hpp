@@ -5,8 +5,7 @@
 #ifndef ARL_CONFIG_HPP
 #define ARL_CONFIG_HPP
 
-#ifdef ARL_DEBUG
 #define ARL_INFO
-#endif
+#define ARL_SPIN_TIMEOUT 30
 
 #endif //ARL_CONFIG_HPP

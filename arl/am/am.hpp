@@ -118,6 +118,28 @@ bool progress() {
   return progress_external();
 }
 
+void progress_until(const std::function<bool()>& criterion) {
+  tick_t start = ticks_now();
+  while (!criterion()) {
+    bool active = progress();
+    if (active)
+      start = ticks_now();
+    else if (ticks_to_s(ticks_now() - start) > ARL_SPIN_TIMEOUT) {
+      void *array[20];
+      size_t size;
+      size = backtrace(array, 20);
+
+      // print out all the frames to stderr
+      if (size != 0) {
+        FILE *fp = fopen(string_format("debug_", rank_me(), ".log").c_str(), "w");
+        int fd = fileno(fp);
+        backtrace_symbols_fd(array, size, fd);
+      }
+      throw std::runtime_error("progress_until: timeout\n");
+    }
+  }
+}
+
 int get_agg_size() {
   return gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
 }

@@ -59,8 +59,8 @@ void worker(std::string fname) {
       }
     }
 
+    threadBarrier.wait();
 //    flush_agg_buffer(RPC_AGGRD); // lead to deadlock, which is weird
-    barrier();
     for (size_t i = 0; i < local_mat.shape()[0]; i++) {
       for (index_type j_ptr = local_mat.rowptr_[i]; j_ptr < local_mat.rowptr_[i + 1]; j_ptr++) {
         index_type j = local_mat.colind_[j_ptr];

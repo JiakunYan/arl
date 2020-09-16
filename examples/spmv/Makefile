@@ -20,7 +20,9 @@ CXX = mpic++
 endif
 
 ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
-
+ifeq ($(ARL_DEBUG), 1)
+ARLFLAGS += -g -rdynamic
+endif
 CXXFLAGS = -std=gnu++17 $(ARLFLAGS)
 
 ##################### UPCXX part

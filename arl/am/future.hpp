@@ -88,9 +88,7 @@ class Future {
   }
 
   T get() const {
-    while (!data_p_->ready()) {
-      progress();
-    }
+    progress_until([&](){return data_p_->ready();});
     return data_p_->get();
   }
 
