@@ -62,9 +62,7 @@ inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
       reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
       reduce_gex_op_id<BinaryOp>::op_id,
       NULL, NULL, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-  }
+  progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
 
@@ -76,9 +74,7 @@ inline std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op
       reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
       reduce_gex_op_id<BinaryOp>::op_id,
       NULL, NULL, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-  }
+  progress_until([&](){return !gex_Event_Test(event);});
   if (backend::rank_me() == root) {
     return result;
   } else {
@@ -94,9 +90,7 @@ inline T reduce_all(const T& value, const BinaryOp& op) {
       reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
       reduce_gex_op_id<BinaryOp>::op_id,
       NULL, NULL, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-  }
+  progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
 
@@ -108,9 +102,7 @@ inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op
       reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
       reduce_gex_op_id<BinaryOp>::op_id,
       NULL, NULL, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-  }
+  progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
 }

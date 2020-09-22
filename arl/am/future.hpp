@@ -77,9 +77,7 @@ class Future {
 
   ~Future() {
     if (data_p_ != nullptr) {
-      while (!data_p_->ready()) {
-        progress();
-      }
+      progress_until([&](){return data_p_->ready();});
     }
   }
 

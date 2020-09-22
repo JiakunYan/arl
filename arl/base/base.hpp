@@ -57,7 +57,7 @@ inline void init(size_t custom_num_workers_per_proc = 15,
 #endif
   rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
   rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
-  threadBarrier.init(local::rank_n(), progress);
+  threadBarrier.init(local::rank_n());
 
   am_internal::init_am();
 }

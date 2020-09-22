@@ -6,6 +6,9 @@
 #define ARL_CONFIG_HPP
 
 #define ARL_INFO
-#define ARL_SPIN_TIMEOUT 30
+
+#ifndef ARL_TIMEOUT_HANDLER
+#define ARL_TIMEOUT_HANDLER arl::debug::default_timeout_handler
+#endif
 
 #endif //ARL_CONFIG_HPP

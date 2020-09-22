@@ -83,7 +83,7 @@ inline T reduce_all(const T& value, const BinaryOp& op) {
     result = value;
     order = 1;
   } else {
-    while (order != local::rank_me()) progress();
+    progress_until([&](){return order == local::rank_me();});
     result = op(result, value);
     ++order;
   }
@@ -101,7 +101,7 @@ inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op
     result = value;
     order = 1;
   } else {
-    while (order != local::rank_me()) progress();
+    progress_until([&](){return order == local::rank_me();});
     ARL_Assert(result.size() == value.size());
     for (int i = 0; i < value.size(); ++i) {
       result[i] = op(result[i], value[i]);

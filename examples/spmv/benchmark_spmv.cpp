@@ -11,7 +11,7 @@ using T = double;
 using index_type = int;
 
 bool is_test = false;
-int total_steps = 10;
+int total_steps = 100;
 T get_value(std::vector<T>* local_v, index_type global_index) {
   size_t local_v_n = local_v->size();
   ARL_Assert(global_index >= local_v_n * rank_me());
@@ -43,6 +43,7 @@ void worker(std::string fname) {
   barrier();
 //  print("SPMV start\n");
   timer.start();
+  debug::set_timeout(5);
   for (int k = 0; k < total_steps; ++k) {
     std::unordered_map<index_type, Future<T>> requests_pool;
     for (size_t i = 0; i < local_mat.shape()[0]; i++) {
@@ -59,8 +60,8 @@ void worker(std::string fname) {
       }
     }
 
-    threadBarrier.wait();
-//    flush_agg_buffer(RPC_AGGRD); // lead to deadlock, which is weird
+//    threadBarrier.wait();
+    flush_agg_buffer(RPC_AGGRD); // lead to deadlock, which is weird
     for (size_t i = 0; i < local_mat.shape()[0]; i++) {
       for (index_type j_ptr = local_mat.rowptr_[i]; j_ptr < local_mat.rowptr_[i + 1]; j_ptr++) {
         index_type j = local_mat.colind_[j_ptr];
@@ -77,6 +78,7 @@ void worker(std::string fname) {
     print("%d\n", k);
   }
   barrier();
+  debug::set_timeout(NO_TIMEOUT);
   timer.end();
   print("%d SPMV steps finished in %.2lf seconds, %.2lf us per SPMV\n", total_steps, timer.to_s(), timer.to_us() / total_steps);
   // profile

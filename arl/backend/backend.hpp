@@ -37,9 +37,7 @@ inline rank_t rank_n() {
 
 inline void barrier() {
   gex_Event_t event = gex_Coll_BarrierNB(tm, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-  }
+  progress_until([&](){return !gex_Event_Test(event);});
 }
 
 inline void init(uint64_t shared_segment_size, bool thread_safe) {

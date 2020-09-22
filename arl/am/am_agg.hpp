@@ -276,9 +276,7 @@ void wait_amagg() {
   amagg_req_counter->val += amagg_req_local_counters[local::rank_me()].val;
   amagg_req_local_counters[local::rank_me()].val = 0;
   local::barrier();
-  while (amagg_req_counter->val > amagg_ack_counter->val) {
-    progress();
-  }
+  progress_until([&](){return amagg_req_counter->val <= amagg_ack_counter->val;});
 }
 } // namespace amagg_internal
 

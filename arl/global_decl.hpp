@@ -11,6 +11,7 @@ using rank_t = int64_t;
 using tick_t = int64_t;
 
 inline const int alignof_cacheline = 64;
+inline const double NO_TIMEOUT = 0;
 
 struct AlignedAtomicInt64 {
   alignas(alignof_cacheline) std::atomic<int64_t> val;
@@ -32,6 +33,8 @@ void wait_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 void flush_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 bool progress(void);
 void progress_until(const std::function<bool()>&);
+
+__thread double timeout = NO_TIMEOUT;
 } // namespace arl
 
 #endif //ARL_GLOBAL_HPP

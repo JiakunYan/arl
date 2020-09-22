@@ -34,6 +34,7 @@
 #include "tool/utils.hpp"
 #include "tool/timer.hpp"
 #include "tool/info.hpp"
+#include "tool/debug.hpp"
 // backend
 #include "backend/backend.hpp"
 #include "backend/collective.hpp"
