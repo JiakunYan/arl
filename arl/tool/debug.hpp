@@ -13,13 +13,15 @@ void arl_traceback() {
 
   // print out all the frames to stderr
   if (size != 0) {
-    FILE *fp = fopen(string_format("debug_", rank_me(), ".arl_dlog").c_str(), "w");
+    FILE *fp = fopen(string_format("traceback.arl_dlog.", rank_me()).c_str(), "w");
     int fd;
     if (fp == nullptr) {
       fd = STDERR_FILENO;
     } else {
       fd = fileno(fp);
     }
+    fprintf(fp, "Rank %ld\n", rank_me());
+    fflush(fp);
     backtrace_symbols_fd(array, size, fd);
   }
 }
