@@ -33,6 +33,18 @@ void wait_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 void flush_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 bool progress(void);
 void progress_until(const std::function<bool()>&); // with deadlock detector
+extern rank_t rank_me();
+extern rank_t rank_n();
+
+namespace proc {
+extern rank_t rank_me();
+extern rank_t rank_n();
+} // namespace proc
+
+namespace local {
+extern rank_t rank_me();
+extern rank_t rank_n();
+} // namespace local
 
 namespace debug {
 __thread double timeout = NO_TIMEOUT;

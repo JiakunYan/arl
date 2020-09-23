@@ -7,7 +7,6 @@
 namespace arl {
 template <typename T, typename BinaryOp>
 extern T reduce_all(const T& value, const BinaryOp& op);
-extern rank_t rank_me();
 
 // microseconds, 12ns
 tick_t ticks_now() {
@@ -44,10 +43,6 @@ inline void update_average(double &average, uint64_t val, uint64_t num) {
 void usleep(int64_t utime) {
   tick_t start_tick = ticks_now();
   while (ticks_to_us(ticks_now()-start_tick) < utime) continue;
-}
-
-namespace local {
-  extern rank_t rank_me();
 }
 
 struct SimpleTimer {
