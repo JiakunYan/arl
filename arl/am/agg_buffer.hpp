@@ -447,6 +447,10 @@ class AggBufferAtomic {
     return result;
   }
 
+  [[nodiscard]] int get_size() const {
+    return tail_.load();
+  }
+
  private:
   alignas(alignof_cacheline) char* ptr_;
   alignas(alignof_cacheline) std::atomic<int> tail_;

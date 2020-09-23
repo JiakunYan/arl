@@ -269,6 +269,14 @@ void flush_amaggrd_buffer() {
   }
 }
 
+int get_amaggrd_buffer_size() {
+  int value = 0;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    value += amaggrd_agg_buffer_p[i].get_size();
+  }
+  return value;
+}
+
 void wait_amaggrd() {
   amaggrd_req_counter->val += amaggrd_req_local_counters[local::rank_me()].val;
   amaggrd_req_local_counters[local::rank_me()].val = 0;
