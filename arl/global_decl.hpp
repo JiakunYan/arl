@@ -47,7 +47,7 @@ extern rank_t rank_n();
 } // namespace local
 
 namespace amaggrd_internal {
-extern int get_amaggrd_buffer_size();
+extern int64_t get_amaggrd_buffer_size();
 }
 
 namespace debug {

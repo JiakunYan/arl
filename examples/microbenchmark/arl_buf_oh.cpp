@@ -43,14 +43,14 @@ void worker() {
   for (int i = 0; i < num_ops; i++) {
     size_t target_rank = distribution(generator);
     Payload payload{0};
-    std::pair<char*, int> result = buffer_p[target_rank].push(payload);
+    std::pair<char*, int64_t> result = buffer_p[target_rank].push(payload);
     delete []  std::get<0>(result);
   }
 
   barrier();
   tick_t start_flush = ticks_now();
   for (int i = 0; i < buf_n; ++i) {
-    std::vector<std::pair<char*, int>> results = buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = buffer_p[i].flush();
     for (auto result: results) {
       delete []  std::get<0>(result);
     }

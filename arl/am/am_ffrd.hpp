@@ -159,7 +159,7 @@ void exit_amffrd() {
 void flush_amffrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
     for (auto result: results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -245,7 +245,7 @@ void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
 //  printf("Rank %ld send rpc to rank %ld\n", rank_me(), remote_worker);
 //  std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
 
-  std::pair<char*, int> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  std::pair<char*, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       amffrd_internal::send_amffrd_to_gex(remote_proc, *amffrd_internal::global_meta_p,

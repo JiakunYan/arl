@@ -19,7 +19,7 @@ std::vector<std::atomic<int>> counts(MAX_VAL);
 const bool print_verbose = false;
 
 void worker() {
-  using BufPair = std::pair<char*, int>;
+  using BufPair = std::pair<char*, int64_t>;
   std::default_random_engine generator(arl::rank_me());
   std::uniform_int_distribution<int> distribution(1, MAX_VAL);
 

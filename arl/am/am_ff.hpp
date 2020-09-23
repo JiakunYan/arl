@@ -162,7 +162,7 @@ void run_lpc(rank_t context, Fn&& fn, Args&&... args) {
 void flush_amff_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int>> results = amff_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amff_agg_buffer_p[i].flush();
     for (auto result: results) {
       if ( std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -222,7 +222,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  std::pair<char*, int> result = amff_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
+  std::pair<char*, int64_t> result = amff_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       gex_AM_RequestMedium0(backend::tm, remote_proc, amff_internal::hidx_gex_amff_reqhandler,

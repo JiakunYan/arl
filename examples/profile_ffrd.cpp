@@ -45,7 +45,7 @@ void rpc_ffrd_profile(rank_t remote_worker, Fn&& fn, Args&&... args) {
   Payload payload{remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
 
   timer_push.start();
-  std::pair<char*, int> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  std::pair<char*, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
   timer_push.end();
 
   timer_gex.start();

@@ -340,13 +340,14 @@ class AggBufferAdvanced {
 // The thread safety between flush() and flush() is achieved by a mutex lock.
 class AggBufferAtomic {
  public:
+  using size_type = int64_t;
   AggBufferAtomic() : cap_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
 
   ~AggBufferAtomic() {
     delete [] ptr_;
   }
 
-  void init(int cap) {
+  void init(size_type cap) {
     ARL_Assert(cap > 0);
 //    cap_ = cap / sizeof(T) * sizeof(T);
     cap_ = cap;
@@ -357,11 +358,11 @@ class AggBufferAtomic {
   }
 
   template <typename T, typename U>
-  std::pair<char*, int> push(const T &val1, const U &val2) {
+  std::pair<char*, size_type> push(const T &val1, const U &val2) {
 //    static_assert(std::is_trivially_copyable<T>::value);
-    int val_size = sizeof(val1) + sizeof(val2);
-    std::pair<char*, int> result(nullptr, 0);
-    int current_tail = tail_.fetch_add(val_size);
+    size_type val_size = sizeof(val1) + sizeof(val2);
+    std::pair<char*, size_type> result(nullptr, 0);
+    size_type current_tail = tail_.fetch_add(val_size);
     while (current_tail > cap_) {
       do_something();
       current_tail = tail_.fetch_add(val_size);
@@ -391,11 +392,11 @@ class AggBufferAtomic {
   }
 
   template <typename T>
-  std::pair<char*, int> push(const T &val) {
+  std::pair<char*, size_type> push(const T &val) {
 //    static_assert(std::is_trivially_copyable<T>::value);
 
-    std::pair<char*, int> result(nullptr, 0);
-    int current_tail = tail_.fetch_add(sizeof(val));
+    std::pair<char*, size_type> result(nullptr, 0);
+    size_type current_tail = tail_.fetch_add(sizeof(val));
     while (current_tail > cap_) {
       do_something();
       current_tail = tail_.fetch_add(sizeof(val));
@@ -422,15 +423,15 @@ class AggBufferAtomic {
     return result;
   }
 
-  std::vector<std::pair<char*, int>> flush() {
-    std::vector<std::pair<char*, int>> result;
+  std::vector<std::pair<char*, size_type>> flush() {
+    std::vector<std::pair<char*, size_type>> result;
     if (tail_.load() == 0) {
       return result;
     }
     if (!mutex_pop_.try_lock()) {
       return result;
     }
-    int current_tail = tail_.fetch_add(cap_ + 1); // prevent others from begining pushing
+    size_type current_tail = tail_.fetch_add(cap_ + 1); // prevent others from begining pushing
     if (current_tail <= cap_ && current_tail > 0) {
       // wait until those who is pushing finish
       while (reserved_tail_ != current_tail) {
@@ -447,15 +448,15 @@ class AggBufferAtomic {
     return result;
   }
 
-  [[nodiscard]] int get_size() const {
+  [[nodiscard]] size_type get_size() const {
     return tail_.load();
   }
 
  private:
   alignas(alignof_cacheline) char* ptr_;
-  alignas(alignof_cacheline) std::atomic<int> tail_;
-  alignas(alignof_cacheline) std::atomic<int> reserved_tail_;
-  alignas(alignof_cacheline) int cap_;
+  alignas(alignof_cacheline) std::atomic<size_type> tail_;
+  alignas(alignof_cacheline) std::atomic<size_type> reserved_tail_;
+  alignas(alignof_cacheline) size_type cap_;
   alignas(alignof_cacheline) std::mutex mutex_pop_;
 }; // class AggBufferAtomic
 

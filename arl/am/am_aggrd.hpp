@@ -251,7 +251,7 @@ void exit_amaggrd() {
 void flush_amaggrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int>> results = amaggrd_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amaggrd_agg_buffer_p[i].flush();
     for (auto result: results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -269,8 +269,8 @@ void flush_amaggrd_buffer() {
   }
 }
 
-int get_amaggrd_buffer_size() {
-  int value = 0;
+int64_t get_amaggrd_buffer_size() {
+  int64_t value = 0;
   for (int i = 0; i < proc::rank_n(); ++i) {
     value += amaggrd_agg_buffer_p[i].get_size();
   }
@@ -336,7 +336,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  std::pair<char*, int> result = amaggrd_internal::amaggrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  std::pair<char*, int64_t> result = amaggrd_internal::amaggrd_agg_buffer_p[remote_proc].push(std::move(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       gex_AM_Arg_t* t = reinterpret_cast<gex_AM_Arg_t*>(amaggrd_internal::global_meta_p);

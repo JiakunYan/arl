@@ -61,7 +61,7 @@ void worker() {
       timer_prepare.end();
 
       timer_push.start();
-      std::pair<char*, int> result = amagg_internal::amagg_agg_buffer_p[remote_proc].push(meta, payload);
+      std::pair<char*, int64_t> result = amagg_internal::amagg_agg_buffer_p[remote_proc].push(meta, payload);
       timer_push.end();
 
       timer_gex.start();
