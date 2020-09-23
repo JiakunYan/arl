@@ -442,8 +442,8 @@ class AggBufferAtomic {
       result.emplace_back(ptr_, current_tail);
       ptr_ = new char[cap_];
       reserved_tail_ = 0;
+      tail_ = 0;
     } // else if (current_tail > cap_): some push will flush the buffer
-    tail_ = 0;
     mutex_pop_.unlock();
     return result;
   }
