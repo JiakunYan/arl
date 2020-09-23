@@ -126,6 +126,7 @@ void progress_until(const std::function<bool()>& is_ready) {
       start = ticks_now();
     else if (debug::timeout > 0 && ticks_to_s(ticks_now() - start) > debug::timeout) {
       ARL_TIMEOUT_HANDLER();
+      sleep(debug::timeout); // wait for all the other workers
       throw std::runtime_error("progress_until: timeout\n");
     }
   }
