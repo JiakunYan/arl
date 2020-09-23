@@ -46,6 +46,10 @@ extern rank_t rank_me();
 extern rank_t rank_n();
 } // namespace local
 
+namespace amaggrd_internal {
+extern int get_amaggrd_buffer_size();
+}
+
 namespace debug {
 __thread double timeout = NO_TIMEOUT;
 }
