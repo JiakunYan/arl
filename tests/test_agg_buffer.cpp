@@ -6,9 +6,9 @@
 
 using namespace std;
 
-//using AggBuffer = arl::am_internal::AggBufferAtomic;
+using AggBuffer = arl::am_internal::AggBufferAtomic;
 //using AggBuffer = arl::am_internal::AggBufferSimple;
-using AggBuffer = arl::am_internal::AggBufferAdvanced;
+//using AggBuffer = arl::am_internal::AggBufferAdvanced;
 AggBuffer* aggBuffer_p;
 const int buf_size = 103;
 
