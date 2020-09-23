@@ -32,9 +32,11 @@ void flush_agg_buffer(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 void wait_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 void flush_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 bool progress(void);
-void progress_until(const std::function<bool()>&);
+void progress_until(const std::function<bool()>&); // with deadlock detector
 
+namespace debug {
 __thread double timeout = NO_TIMEOUT;
+}
 } // namespace arl
 
 #endif //ARL_GLOBAL_HPP

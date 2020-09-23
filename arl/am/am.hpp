@@ -124,7 +124,7 @@ void progress_until(const std::function<bool()>& is_ready) {
     bool active = progress();
     if (active)
       start = ticks_now();
-    else if (timeout != 0 && ticks_to_s(ticks_now() - start) > timeout) {
+    else if (debug::timeout > 0 && ticks_to_s(ticks_now() - start) > debug::timeout) {
       ARL_TIMEOUT_HANDLER();
       throw std::runtime_error("progress_until: timeout\n");
     }
