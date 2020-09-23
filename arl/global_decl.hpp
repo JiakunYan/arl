@@ -48,6 +48,7 @@ extern rank_t rank_n();
 
 namespace amaggrd_internal {
 extern int64_t get_amaggrd_buffer_size();
+extern std::string get_amaggrd_buffer_status();
 }
 
 namespace debug {

@@ -277,6 +277,16 @@ int64_t get_amaggrd_buffer_size() {
   return value;
 }
 
+std::string get_amaggrd_buffer_status() {
+  std::ostringstream os;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    std::string status = amaggrd_agg_buffer_p[i].get_status();
+    os << "No. " << i << "\n";
+    os << status;
+  }
+  return os.str();
+}
+
 void wait_amaggrd() {
   amaggrd_req_counter->val += amaggrd_req_local_counters[local::rank_me()].val;
   amaggrd_req_local_counters[local::rank_me()].val = 0;

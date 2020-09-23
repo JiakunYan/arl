@@ -452,6 +452,15 @@ class AggBufferAtomic {
     return tail_.load();
   }
 
+  [[nodiscard]] std::string get_status() const {
+    std::ostringstream os;
+    os << "ptr_  = " << (void*) ptr_ << '\n';
+    os << "tail_ = " << tail_.load() << "\n";
+    os << "reserved_tail_ = " << reserved_tail_.load() << "\n";
+    os << "cap_  = " << cap_ << "\n";
+    return os.str();
+  }
+
  private:
   alignas(alignof_cacheline) char* ptr_;
   alignas(alignof_cacheline) std::atomic<size_type> tail_;
