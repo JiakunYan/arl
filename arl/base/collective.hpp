@@ -9,7 +9,7 @@ namespace arl {
 
 alignas(alignof_cacheline) ThreadBarrier threadBarrier;
 
-inline void pure_barrier() {
+void pure_barrier() {
   threadBarrier.wait();
   if (local::rank_me() == 0) {
     backend::barrier();
@@ -17,7 +17,7 @@ inline void pure_barrier() {
   threadBarrier.wait();
 }
 
-inline void barrier() {
+void barrier() {
   threadBarrier.wait();
   flush_am();
   if (local::rank_me() == 0) {
@@ -40,7 +40,7 @@ namespace proc {
 
 namespace local {
 template <typename T>
-inline T broadcast(T& val, rank_t root) {
+T broadcast(T& val, rank_t root) {
   ARL_Assert(root < arl::local::rank_n(), "");
   static T shared_val;
   if (local::rank_me() == root) {
@@ -63,7 +63,7 @@ inline T broadcast(T& val, rank_t root) {
 } // namespace proc
 
 template <typename T>
-inline T broadcast(T& val, rank_t root) {
+T broadcast(T& val, rank_t root) {
   ARL_Assert(root < arl::rank_n(), "");
   if (local::rank_me() == root % local::rank_n()) {
     val = backend::broadcast(val, root / local::rank_n());
@@ -74,7 +74,7 @@ inline T broadcast(T& val, rank_t root) {
 
 namespace local {
 template <typename T, typename BinaryOp>
-inline T reduce_all(const T& value, const BinaryOp& op) {
+T reduce_all(const T& value, const BinaryOp& op) {
   static std::atomic<rank_t> order = -1;
   static T result = T();
 
@@ -92,7 +92,7 @@ inline T reduce_all(const T& value, const BinaryOp& op) {
 }
 
 template <typename T, typename BinaryOp>
-inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op) {
+std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op) {
   static std::atomic<rank_t> order = -1;
   static std::vector<T> result;
 
@@ -136,7 +136,7 @@ inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op
 } // namespace proc
 
 template <typename T, typename BinaryOp>
-inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
+T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
   ARL_Assert(root < arl::rank_n(), "");
   T result = local::reduce_all(value, op);
   if (local::rank_me() == root % local::rank_n()) {
@@ -150,7 +150,7 @@ inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
 }
 
 template <typename T, typename BinaryOp>
-inline std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op, rank_t root) {
+std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op, rank_t root) {
   ARL_Assert(root < arl::rank_n(), "");
   std::vector<T> result = local::reduce_all(value, op);
   if (local::rank_me() == root % local::rank_n()) {
@@ -164,7 +164,7 @@ inline std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op
 }
 
 template <typename T, typename BinaryOp>
-inline T reduce_all(const T& value, const BinaryOp& op) {
+T reduce_all(const T& value, const BinaryOp& op) {
   T result = local::reduce_all(value, op);
   if (local::rank_me() == 0) {
     result = backend::reduce_all(result, op);
@@ -174,7 +174,7 @@ inline T reduce_all(const T& value, const BinaryOp& op) {
 }
 
 template <typename T, typename BinaryOp>
-inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op) {
+std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op) {
   std::vector<T> result = local::reduce_all(value, op);
   if (local::rank_me() == 0) {
     result = backend::reduce_all(result, op);

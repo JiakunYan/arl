@@ -45,7 +45,7 @@ void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
   am_internal::exit_am_thread();
 }
 
-inline void init(size_t custom_num_workers_per_proc = 15,
+void init(size_t custom_num_workers_per_proc = 15,
     size_t custom_num_threads_per_proc = 16, size_t shared_segment_size = 256) {
   backend::init(shared_segment_size, true);
 
@@ -62,7 +62,7 @@ inline void init(size_t custom_num_workers_per_proc = 15,
   am_internal::init_am();
 }
 
-inline void finalize() {
+void finalize() {
   am_internal::exit_am();
   backend::finalize();
 }
