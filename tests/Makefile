@@ -4,35 +4,15 @@ SHELL='bash'
 # out of current directory.
 ARLROOT=$(PWD)/../
 
-PLATFORM = $(shell echo $(HOSTNAME) | tr '[:lower:]' '[:upper:]')
-
-TIMER_CMD=time
-
-BACKEND=GASNET_EX
-# make on Cori
-ifeq (CORI,$(findstring CORI,$(PLATFORM)))
-    include $(gasnet_prefix)/include/aries-conduit/aries-par.mak
-    CXX = CC
-# make on docker
-else
-include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
-CXX = mpic++
-endif
-
-ARLFLAGS = -lpthread $(GASNET_CXXCPPFLAGS) $(GASNET_CXXFLAGS) $(GASNET_LDFLAGS) $(GASNET_LIBS) -DGASNET_EX -I$(ARLROOT)
-
-CXXFLAGS = -std=gnu++17 $(ARLFLAGS) -g -rdynamic
+include $(ARLROOT)/Makefile.ARLdefaults
 
 SOURCES += $(wildcard *.cpp)
 TARGETS := $(patsubst %.cpp, %, $(SOURCES))
 
+.PHONY: all test clean
+.DEFAULT_GOAL := all
+
 all: $(TARGETS)
-
-%: %.cpp
-	@echo "C $@ $(BACKEND)"
-	@time $(CXX) -o $@ $^ $(CXXFLAGS) || echo "$@ $(BACKEND) BUILD FAIL"
-
-TEST_RUN=mpirun -n 4
 
 test: all
 	@for target in $(TARGETS) ; do \
