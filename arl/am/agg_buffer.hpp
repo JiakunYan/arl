@@ -456,7 +456,9 @@ class AggBufferAtomic {
       ptr_ = new char[cap_];
       reserved_tail_ = 0;
       tail_ = 0;
-    } // else if (current_tail > cap_): some push will flush the buffer
+    } else if (current_tail == 0) {
+      tail_ = 0;
+    } // else (current_tail > cap_): some push will flush the buffer
     mutex_pop_.unlock();
     return result;
   }
