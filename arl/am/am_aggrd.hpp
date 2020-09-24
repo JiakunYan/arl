@@ -341,7 +341,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
 //    return amagg_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
 //  }
 
-  Future<std::invoke_result_t<Fn, Args...>> future;
+  Future<std::invoke_result_t<Fn, Args...>> future(true);
   Payload payload{future.get_p(), remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));

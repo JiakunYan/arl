@@ -12,6 +12,9 @@ template<typename T>
 class FutureData {
  public:
   FutureData(): ready_(false) {}
+  ~FutureData() {
+    progress_until([&](){return ready();});
+  }
   bool ready() {
     return ready_.load();
   }
@@ -41,6 +44,9 @@ template<>
 class FutureData<void> {
  public:
   FutureData(): ready_(false) {}
+  ~FutureData() {
+    progress_until([&](){return ready();});
+  }
   bool ready() {
     return ready_.load();
   }
@@ -69,19 +75,17 @@ class FutureData<void> {
 template<typename T>
 class Future {
  public:
-  Future() : data_p_(new am_internal::FutureData<T>()) {}
-  Future(const Future& future) = delete;
-  Future& operator=(const Future& future) = delete;
+  explicit Future(bool init = false) : data_p_(nullptr) {
+    if (init)
+      data_p_ = std::make_shared<am_internal::FutureData<T>>();
+  }
+  Future(const Future& future) = default;
+  Future& operator=(const Future& future) = default;
   Future(Future&& future) noexcept = default;
   Future& operator=(Future&& future) noexcept = default;
+  ~Future() {}
 
-  ~Future() {
-    if (data_p_ != nullptr) {
-      progress_until([&](){return data_p_->ready();});
-    }
-  }
-
-  intptr_t get_p() const {
+  [[nodiscard]] intptr_t get_p() const {
     return reinterpret_cast<intptr_t>(data_p_.get());
   }
 
@@ -103,7 +107,7 @@ class Future {
   }
 
  private:
-  std::unique_ptr<am_internal::FutureData<T>> data_p_;
+  std::shared_ptr<am_internal::FutureData<T>> data_p_;
 };
 
 } // namespace arl

@@ -81,7 +81,7 @@ int main() {
   auto req_invoker = resolve_pi_fnptr<req_invoker_t >(req_invoker_p1);
 
   intptr_t fn_p1 = get_pi_fnptr(&foo1);
-  arl::Future<int> future1, future2;
+  arl::Future<int> future1(true), future2(true);
   Payload data1{future1.get_p(), 0, std::make_tuple('a', 233, true)};
   Payload data2{future2.get_p(), 1, std::make_tuple('b', 144, false)};
 

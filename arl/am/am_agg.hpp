@@ -235,7 +235,7 @@ template <typename Fn, typename... Args>
 Future<std::invoke_result_t<Fn, Args...>> run_lpc(rank_t context, Fn&& fn, Args&&... args) {
   using Result = std::invoke_result_t<Fn, Args...>;
 
-  Future<Result> future;
+  Future<Result> future(true);
   auto* future_p = reinterpret_cast<FutureData<Result>*>(future.get_p());
 
   rank_t mContext = rank_internal::get_context();
@@ -291,7 +291,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
 
-  Future<std::invoke_result_t<Fn, Args...>> future;
+  Future<std::invoke_result_t<Fn, Args...>> future(true);
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
   intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmaggTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
   AmaggReqMeta meta{fn_p, wrapper_p, future.get_p(), remote_worker_local};
@@ -326,7 +326,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
     return amagg_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
   }
 
-  Future<std::invoke_result_t<Fn, Args...>> future;
+  Future<std::invoke_result_t<Fn, Args...>> future(true);
   intptr_t fn_p = am_internal::get_pi_fnptr(&fn);
   intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmaggTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
   AmaggReqMeta meta{fn_p, wrapper_p, future.get_p(), remote_worker_local};

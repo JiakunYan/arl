@@ -53,7 +53,7 @@ void worker() {
       rank_t remote_proc = remote_worker / local::rank_n();
       int remote_worker_local = remote_worker % local::rank_n();
 
-      Future<AckPayload> my_future;
+      Future<AckPayload> my_future(true);
       intptr_t fn_p = am_internal::get_pi_fnptr(&empty_handler);
       intptr_t wrapper_p = am_internal::get_pi_fnptr(&AmaggTypeWrapper<decltype(empty_handler), ReqPayload>::invoker);
       AmaggReqMeta meta{fn_p, wrapper_p, my_future.get_p(), remote_worker_local};
