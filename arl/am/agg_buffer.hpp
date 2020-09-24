@@ -20,10 +20,11 @@ inline void do_something() {
 // flush() will trivially flush the whole aggregation buffer, because the buffer only has one memory chunk.
 class AggBufferSimple {
  public:
+  using size_type = int64_t;
   AggBufferSimple(): cap_(0), tail_(0), ptr_(nullptr) {
   }
 
-  void init(int cap) {
+  void init(size_type cap) {
     ARL_Assert(cap > 0);
     cap_ = cap;
     tail_ = 0;
@@ -36,11 +37,11 @@ class AggBufferSimple {
   }
 
   template <typename T, typename U>
-  std::pair<char*, int> push(const T& val1, const U& val2) {
+  std::pair<char*, size_type> push(const T& val1, const U& val2) {
     while (!lock.try_lock()) {
       do_something();
     }
-    std::pair<char*, int> result(nullptr, 0);
+    std::pair<char*, size_type> result(nullptr, 0);
     if (tail_ + sizeof(val1) + sizeof(val2) > cap_) {
       result = std::make_pair(ptr_, tail_);
       ptr_ = new char [cap_];
@@ -55,11 +56,11 @@ class AggBufferSimple {
   }
 
   template <typename T>
-  std::pair<char*, int> push(const T& value) {
+  std::pair<char*, size_type> push(const T& value) {
     while (!lock.try_lock()) {
       do_something();
     }
-    std::pair<char*, int> result(nullptr, 0);
+    std::pair<char*, size_type> result(nullptr, 0);
     if (tail_ + sizeof(value) > cap_) {
       result = std::make_pair(ptr_, tail_);
       ptr_ = new char [cap_];
@@ -71,8 +72,8 @@ class AggBufferSimple {
     return result;
   }
 
-  std::vector<std::pair<char*, int>> flush() {
-    std::vector<std::pair<char*, int>> result;
+  std::vector<std::pair<char*, size_type>> flush() {
+    std::vector<std::pair<char*, size_type>> result;
     if (tail_ == 0) return result;
     while (!lock.try_lock()) {
       do_something();
@@ -87,10 +88,22 @@ class AggBufferSimple {
     return result;
   }
 
+  [[nodiscard]] size_type get_size() const {
+    return tail_;
+  }
+
+  [[nodiscard]] std::string get_status() const {
+    std::ostringstream os;
+    os << "ptr_  = " << (void*) ptr_ << '\n';
+    os << "tail_ = " << tail_ << "\n";
+    os << "cap_  = " << cap_ << "\n";
+    return os.str();
+  }
+
  private:
   alignas(alignof_cacheline) char* ptr_;
-  alignas(alignof_cacheline) int cap_;
-  alignas(alignof_cacheline) int tail_;
+  alignas(alignof_cacheline) size_type cap_;
+  alignas(alignof_cacheline) size_type tail_;
   alignas(alignof_cacheline) std::mutex lock;
 };
 
