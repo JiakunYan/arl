@@ -8,25 +8,16 @@
 using namespace arl;
 
 using T = double;
-using index_type = int64_t;
+using index_type = int;
 
 bool is_test = false;
 int total_steps = 100;
-
-std::vector<T> *proc_v;
-
-T get_value(index_type global_index) {
-  index_type proc_v_n = proc_v->size();
-  ARL_Assert(global_index >= proc_v_n * proc::rank_me());
-  ARL_Assert(global_index < proc_v_n * (proc::rank_me() + 1));
-  index_type local_index = global_index % proc_v_n;
-  return proc_v->at(local_index);
-}
-
-void proc_setup(const BCL::CSRMatrix<T, index_type>& global_mat) {
-  index_type global_row_n = global_mat.shape()[0];
-  index_type proc_row_n = ceil((double) global_row_n / proc::rank_n());
-  proc_v = new std::vector<T>(proc_row_n, 1);
+T get_value(std::vector<T>* local_v, index_type global_index) {
+  index_type local_v_n = local_v->size();
+  ARL_Assert(global_index >= local_v_n * rank_me());
+  ARL_Assert(global_index < local_v_n * (rank_me() + 1));
+  index_type local_index = global_index % local_v_n;
+  return local_v->at(local_index);
 }
 
 
@@ -37,25 +28,26 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
   index_type local_row_end = std::min(local_row_n * ((index_type)rank_me() + 1), global_row_n);
   index_type global_col_n = global_mat.shape()[1];
   assert(global_row_n == global_col_n);
-  index_type proc_col_n = ceil((double) global_row_n / proc::rank_n());
-  index_type proc_col_start = std::min(proc_col_n * (index_type)proc::rank_me(), global_col_n);;
-  index_type proc_col_end = std::min(proc_col_n * ((index_type)proc::rank_me() + 1), global_col_n);
+  index_type local_col_start = local_row_start;
+  index_type local_col_end = local_row_end;
 
   BCL::CSRMatrix<T, index_type> local_mat =
-      global_mat.get_slice_impl_(local_row_start, local_row_end, proc_col_start, proc_col_end);
+      global_mat.get_slice_impl_(local_row_start, local_row_end, local_col_start, local_col_end);
 
   BCL::CSRMatrix<T, index_type> remote_mat1 =
-      global_mat.get_slice_impl_(local_row_start, local_row_end, 0, proc_col_start);
+      global_mat.get_slice_impl_(local_row_start, local_row_end, 0, local_col_start);
   BCL::CSRMatrix<T, index_type> remote_mat2 =
-      global_mat.get_slice_impl_(local_row_start, local_row_end, proc_col_end, global_col_n);
+      global_mat.get_slice_impl_(local_row_start, local_row_end, local_col_end, global_col_n);
   print("global_mat has %lu nonzeros\n", global_mat.nnz());
   print("local_mat has %lu nonzeros\n", local_mat.nnz());
   print("remote_mat1 has %lu nonzeros\n", remote_mat1.nnz());
   print("remote_mat2 has %lu nonzeros\n", remote_mat2.nnz());
 
+  std::vector<T> local_v(local_row_n, 1);
+  DistWrapper<std::vector<T>> dist_v(&local_v);
   std::vector<T> new_v(local_row_n, 0);
 
-  register_amaggrd(get_value, index_type());
+  register_amaggrd(get_value, dist_v.local(), index_type());
 
   debug::set_timeout(5);
   SimpleTimer timer;
@@ -70,8 +62,8 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
         index_type global_j = j;
 
         if (requests_pool.find(global_j) == requests_pool.end()) {
-          rank_t remote_target = global_j / proc_col_n;
-          Future<T> fut = rpc_aggrd(remote_target, get_value, global_j);
+          rank_t remote_target = global_j / local_row_n;
+          Future<T> fut = rpc_aggrd(remote_target, get_value, dist_v[remote_target], global_j);
           bool ok = requests_pool.insert({global_j, std::move(fut)}).second;
           assert(ok);
         }
@@ -82,11 +74,11 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
     for (index_type i = 0; i < remote_mat2.shape()[0]; i++) {
       for (index_type j_ptr = remote_mat2.rowptr_[i]; j_ptr < remote_mat2.rowptr_[i + 1]; j_ptr++) {
         index_type j = remote_mat2.colind_[j_ptr];
-        index_type global_j = j + proc_col_end;
+        index_type global_j = j + local_col_end;
 
         if (requests_pool.find(global_j) == requests_pool.end()) {
-          rank_t remote_target = global_j / proc_col_n;
-          Future<T> fut = rpc_aggrd(remote_target, get_value, global_j);
+          rank_t remote_target = global_j / local_row_n;
+          Future<T> fut = rpc_aggrd(remote_target, get_value, dist_v[remote_target], global_j);
           bool ok = requests_pool.insert({global_j, std::move(fut)}).second;
           assert(ok);
         }
@@ -98,9 +90,8 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
     for (index_type i = 0; i < local_mat.shape()[0]; i++) {
       for (index_type j_ptr = local_mat.rowptr_[i]; j_ptr < local_mat.rowptr_[i + 1]; j_ptr++) {
         index_type j = local_mat.colind_[j_ptr];
-        index_type global_j = j + proc_col_start;
         T m_value = local_mat.vals_[j_ptr];
-        T v_value = get_value(global_j);
+        T v_value = local_v[j];
         new_v[i] += m_value * v_value;
       }
     }
@@ -121,7 +112,7 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
     for (index_type i = 0; i < remote_mat2.shape()[0]; i++) {
       for (index_type j_ptr = remote_mat2.rowptr_[i]; j_ptr < remote_mat2.rowptr_[i + 1]; j_ptr++) {
         index_type j = remote_mat2.colind_[j_ptr];
-        index_type global_j = j + proc_col_end;
+        index_type global_j = j + local_col_end;
         T m_value = remote_mat2.vals_[j_ptr];
 
         auto it = requests_pool.find(global_j);
@@ -143,7 +134,7 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
   double bw_out_s = bw_out / timer.to_s();
   double bw_in_s = bw_in / timer.to_s();
   print("Bandwidth utilization (rank 0): %.2lf MB out (%.2lf MB/s), %.2f MB in (%.2lf MB/s)\n",
-      bw_out, bw_out_s, bw_in, bw_in_s);
+        bw_out, bw_out_s, bw_in, bw_in_s);
 
   if (is_test) {
     auto foutname = string_format("spmv_", rank_me(), ".tmp");
@@ -179,9 +170,7 @@ int main(int argc, char **argv) {
   BCL::CSRMatrix<T, index_type> global_mat(fname);
 
   arl::init(15, 16);
-  proc_setup(global_mat);
   arl::run(worker, global_mat);
-  delete proc_v;
   arl::finalize();
   return 0;
 }

@@ -78,9 +78,11 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
   timer.end();
   print("%d SPMV steps finished in %.2lf seconds, %.2lf us per SPMV\n", total_steps, timer.to_s(), timer.to_us() / total_steps);
   // profile
-  double bw_out = info::networkInfo.byte_send.get() / 1e6;
+  double bw_out_local = info::networkInfo.byte_send.get() / 1e6;
+  double bw_in_local = info::networkInfo.byte_recv.get() / 1e6;
+  double bw_out = reduce_all(bw_out_local, op_plus());
+  double bw_in = reduce_all(bw_in_local, op_plus());
   double bw_out_s = bw_out / timer.to_s();
-  double bw_in = info::networkInfo.byte_recv.get() / 1e6;
   double bw_in_s = bw_in / timer.to_s();
   print("Bandwidth utilization (rank 0): %.2lf MB out (%.2lf MB/s), %.2f MB in (%.2lf MB/s)\n",
         bw_out, bw_out_s, bw_in, bw_in_s);
