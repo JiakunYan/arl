@@ -133,7 +133,7 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
   double bw_in = reduce_all(bw_in_local, op_plus());
   double bw_out_s = bw_out / timer.to_s();
   double bw_in_s = bw_in / timer.to_s();
-  print("Bandwidth utilization (rank 0): %.2lf MB out (%.2lf MB/s), %.2f MB in (%.2lf MB/s)\n",
+  print("Bandwidth utilization: %.2lf MB out (%.2lf MB/s), %.2f MB in (%.2lf MB/s)\n",
         bw_out, bw_out_s, bw_in, bw_in_s);
 
   if (is_test) {

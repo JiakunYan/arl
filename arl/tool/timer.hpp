@@ -91,33 +91,39 @@ public:
 
   SimpleTimer& col_print_us(std::string &&name = "", rank_t r = 0) {
     double max_duration = reduce_all(to_us(), op_max());
+    double ave_duration = reduce_all(to_us(), op_plus()) / rank_n();
     double min_duration = reduce_all(to_us(), op_min());
     int64_t max_step = reduce_all(_step, op_max());
+    int64_t ave_step = reduce_all(_step, op_plus()) / rank_n();
     int64_t min_step = reduce_all(_step, op_min());
     double max_total_duration = reduce_all(to_s() * step(), op_max());
+    double ave_total_duration = reduce_all(to_s() * step(), op_plus()) / rank_n();
     double min_total_duration = reduce_all(to_s() * step(), op_min());
     if (rank_me() == r)
-      printf("Duration %s: %.3lf us (step %ld, total %.3lf s) (min/max one %.3f/%.3f step %ld/%ld total %.3f/%.3f)\n",
-             name.c_str(), to_us(), step(), to_s() * step(),
-             min_duration, max_duration,
-             min_step, max_step,
-             min_total_duration, max_total_duration);
+      printf("Duration %s: ave(min/max) one %.3f(%.3f,%.3f) us step %ld(%ld,%ld) total %.3f(%.3f,%.3f) s\n",
+             name.c_str(),
+             ave_duration, min_duration, max_duration,
+             ave_step, min_step, max_step,
+             ave_total_duration, min_total_duration, max_total_duration);
     return *this;
   }
 
   SimpleTimer& col_print_s(std::string &&name = "", rank_t r = 0) {
     double max_duration = reduce_all(to_s(), op_max());
+    double ave_duration = reduce_all(to_s(), op_plus()) / rank_n();
     double min_duration = reduce_all(to_s(), op_min());
     int64_t max_step = reduce_all(_step, op_max());
+    int64_t ave_step = reduce_all(_step, op_plus()) / rank_n();
     int64_t min_step = reduce_all(_step, op_min());
     double max_total_duration = reduce_all(to_s() * step(), op_max());
+    double ave_total_duration = reduce_all(to_s() * step(), op_plus()) / rank_n();
     double min_total_duration = reduce_all(to_s() * step(), op_min());
     if (rank_me() == r)
-      printf("Duration %s: %.3lf s (step %ld, total %.3lf s) (min/max one %.3f/%.3f step %ld/%ld total %.3f/%.3f)\n",
-          name.c_str(), to_s(), step(), to_s() * step(),
-          min_duration, max_duration,
-          min_step, max_step,
-          min_total_duration, max_total_duration);
+      printf("Duration %s: ave(min/max) one %.3f(%.3f,%.3f) s step %ld(%ld,%ld) total %.3f(%.3f,%.3f) s\n",
+             name.c_str(),
+             ave_duration, min_duration, max_duration,
+             ave_step, min_step, max_step,
+             ave_total_duration, min_total_duration, max_total_duration);
     return *this;
   }
 
