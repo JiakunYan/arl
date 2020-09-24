@@ -139,7 +139,7 @@ struct CSRMatrix {
 
   // Return a CSRMatrix representing the submatrix at coordinates [imin, imax), [jmin, jmax)
   CSRMatrix get_slice_impl_(size_type imin, size_type imax, size_type jmin,
-                            size_type jmax) {
+                            size_type jmax) const {
     std::vector<T, Allocator> vals;
     std::vector<index_type, IAllocator> rowptr;
     std::vector<index_type, IAllocator> colind;
