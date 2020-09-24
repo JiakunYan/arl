@@ -21,7 +21,7 @@ T get_value(std::vector<T>* local_v, index_type global_index) {
 }
 
 
-void worker(std::string fname) {
+void worker(const std::string& fname) {
 
   BCL::CSRMatrix<T, index_type> global_mat(fname);
   size_t global_row_n = global_mat.shape()[0];
@@ -51,7 +51,6 @@ void worker(std::string fname) {
         index_type j = local_mat.colind_[j_ptr];
 
         if (requests_pool.find(j) == requests_pool.end()) {
-//          printf("Issue rpc request for %d\n", j);
           rank_t remote_target = j / local_row_n;
           Future<T> fut = rpc_aggrd(remote_target, get_value, dist_v[remote_target], j);
           bool ok = requests_pool.insert({j, std::move(fut)}).second;
@@ -60,22 +59,18 @@ void worker(std::string fname) {
       }
     }
 
-//    threadBarrier.wait();
-    flush_agg_buffer(RPC_AGGRD); // lead to deadlock, which is weird
+    flush_agg_buffer(RPC_AGGRD);
     for (size_t i = 0; i < local_mat.shape()[0]; i++) {
       for (index_type j_ptr = local_mat.rowptr_[i]; j_ptr < local_mat.rowptr_[i + 1]; j_ptr++) {
         index_type j = local_mat.colind_[j_ptr];
         T m_value = local_mat.vals_[j_ptr];
 
         auto it = requests_pool.find(j);
-//        printf("Getting rpc request for %d\n", j);
         T v_value = it->second.get();
-//        printf("Got %f for %d\n", v_value, j);
         new_v[i] += m_value * v_value;
       }
     }
-    barrier();
-    print("%d\n", k);
+    pure_barrier();
   }
   barrier();
   debug::set_timeout(NO_TIMEOUT);
