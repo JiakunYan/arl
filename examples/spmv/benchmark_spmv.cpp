@@ -4,6 +4,7 @@
 #define ARL_INFO
 #include "arl/arl.hpp"
 #include "csrmat/CSRMatrix.hpp"
+#include "external/libcuckoo/cuckoohash_map.hh"
 
 using namespace arl;
 
@@ -14,6 +15,7 @@ bool is_test = false;
 int total_steps = 100;
 
 std::vector<T> *proc_v;
+libcuckoo::cuckoohash_map<index_type, Future<T>> *requests_pool;
 
 T get_value(index_type global_index) {
   index_type proc_v_n = proc_v->size();
@@ -37,6 +39,7 @@ void proc_setup(const BCL::CSRMatrix<T, index_type>& global_mat) {
   index_type global_row_n = global_mat.shape()[0];
   index_type proc_row_n = ceil((double) global_row_n / proc::rank_n());
   proc_v = new std::vector<T>(proc_row_n, 1);
+  requests_pool = new libcuckoo::cuckoohash_map<index_type, Future<T>>();
 }
 
 
@@ -74,20 +77,19 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
   barrier();
   timer.start();
   for (int k = 0; k < total_steps; ++k) {
-    std::unordered_map<index_type, Future<T>> requests_pool;
     // remote_mat1
     for (index_type i = 0; i < remote_mat1.shape()[0]; i++) {
       for (index_type j_ptr = remote_mat1.rowptr_[i]; j_ptr < remote_mat1.rowptr_[i + 1]; j_ptr++) {
         index_type j = remote_mat1.colind_[j_ptr];
         index_type global_j = j;
 
-        if (requests_pool.find(global_j) == requests_pool.end()) {
+        Future<T> tmp(false);
+        if (!requests_pool->insert(global_j, tmp)) {
           rank_t remote_target = global_j / proc_col_n;
           timer_rpc.start();
           Future<T> fut = rpc_aggrd(remote_target, get_value, global_j);
           timer_rpc.end();
-          bool ok = requests_pool.insert({global_j, std::move(fut)}).second;
-          assert(ok);
+          bool ok = requests_pool->insert(global_j, std::move(fut));
         }
       }
     }
@@ -98,13 +100,13 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
         index_type j = remote_mat2.colind_[j_ptr];
         index_type global_j = j + proc_col_end;
 
-        if (requests_pool.find(global_j) == requests_pool.end()) {
+        Future<T> tmp(false);
+        if (!requests_pool->find(global_j, tmp)) {
           rank_t remote_target = global_j / proc_col_n;
           timer_rpc.start();
           Future<T> fut = rpc_aggrd(remote_target, get_value, global_j);
           timer_rpc.end();
-          bool ok = requests_pool.insert({global_j, std::move(fut)}).second;
-          assert(ok);
+          bool ok = requests_pool->insert(global_j, std::move(fut));
         }
       }
     }
@@ -130,8 +132,10 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
         index_type global_j = j;
         T m_value = remote_mat1.vals_[j_ptr];
 
-        auto it = requests_pool.find(global_j);
-        T v_value = it->second.get();
+        Future<T> fut(false);
+        bool ok = requests_pool->find(global_j, fut);
+        assert(ok);
+        T v_value = fut.get();
         new_v[i] += m_value * v_value;
       }
     }
@@ -142,10 +146,17 @@ void worker(const BCL::CSRMatrix<T, index_type>& global_mat) {
         index_type global_j = j + proc_col_end;
         T m_value = remote_mat2.vals_[j_ptr];
 
-        auto it = requests_pool.find(global_j);
-        T v_value = it->second.get();
+        Future<T> fut(false);
+        bool ok = requests_pool->find(global_j, fut);
+        assert(ok);
+        T v_value = fut.get();
         new_v[i] += m_value * v_value;
       }
+    }
+
+    local::barrier();
+    if (local::rank_me() == 0) {
+      requests_pool->clear();
     }
     pure_barrier();
   }
@@ -201,6 +212,7 @@ int main(int argc, char **argv) {
   arl::init(15, 16);
   proc_setup(global_mat);
   arl::run(worker, global_mat);
+  delete requests_pool;
   delete proc_v;
   arl::finalize();
   return 0;

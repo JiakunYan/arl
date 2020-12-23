@@ -21,6 +21,10 @@ ifeq (CORI,$(findstring CORI,$(PLATFORM)))
     CXX = CC
 endif
 
+ifndef gasnet_prefix
+	gasnet_prefix=/usr/local/gasnet
+endif
+
 ifeq ($(BACKEND), GASNET_EX_MPI)
 	include $(gasnet_prefix)/include/mpi-conduit/mpi-par.mak
 else ifeq ($(BACKEND), GASNET_EX_ARIES)
