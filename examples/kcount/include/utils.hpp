@@ -10,7 +10,7 @@
 #include <limits>
 #include <regex>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using std::string;
 using std::stringstream;

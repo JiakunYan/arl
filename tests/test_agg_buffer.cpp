@@ -1,5 +1,5 @@
 #define ARL_DEBUG
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include <sstream>
 #include <random>
 #include "external/typename.hpp"

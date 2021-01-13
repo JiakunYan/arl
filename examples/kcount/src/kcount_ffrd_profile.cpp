@@ -8,7 +8,7 @@
 #include <fcntl.h>
 
 #include "config.hpp"
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "utils.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"

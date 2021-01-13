@@ -1,4 +1,4 @@
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include <cassert>
 #include "external/cxxopts.hpp"
 #include "external/bcl/containers/experimental/SafeChecksumQueue.hpp"

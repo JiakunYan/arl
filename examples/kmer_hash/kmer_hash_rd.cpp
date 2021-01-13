@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <chrono>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "kmer_t.hpp"
 #include "read_kmers.hpp"
 

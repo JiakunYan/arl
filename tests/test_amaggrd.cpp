@@ -2,7 +2,7 @@
 // Created by jackyan on 3/10/20.
 //
 #define ARL_DEBUG
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include <iostream>
 #include <random>
 

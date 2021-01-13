@@ -8,7 +8,7 @@
 #include <chrono>
 #include <stdarg.h>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "progressbar.hpp"
 #include "kmer.hpp"
 #include "zstr.hpp"

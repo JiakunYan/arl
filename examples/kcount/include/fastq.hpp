@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <zlib.h>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "utils.hpp"
 
 using std::string;

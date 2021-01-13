@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <fstream>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using std::string;
 

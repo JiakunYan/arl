@@ -3,7 +3,7 @@
 //
 
 #define ARL_DEBUG
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using namespace arl;
 using namespace std;

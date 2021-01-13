@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using namespace std;
 

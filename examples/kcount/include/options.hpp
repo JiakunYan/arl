@@ -5,7 +5,7 @@
 #include <regex>
 #include <sys/stat.h>
 
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "external/cxxopts.hpp"
 
 using std::cout;

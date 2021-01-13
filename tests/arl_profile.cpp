@@ -1,5 +1,5 @@
 #define ARL_DEBUG
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 void worker() {
   arl::print("The number of processors configured is %ld\n", sysconf(_SC_NPROCESSORS_CONF));

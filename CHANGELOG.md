@@ -1,5 +1,10 @@
 # ARL Changelog
 
+## [Unreleased]
+### New
+- cmake build system
+- spmv benchmark
+
 ## [0.4.0]
 ### Changed
 - rpc, rpc_{agg,ff,aggrd,ffrd}: move the execution of ARL handlers out of GASNet-EX handlers.

@@ -1,6 +1,8 @@
-#include "arl/arl.hpp"
+//#define ARL_DEBUG
+#include "arl.hpp"
 #include <cassert>
 #include <random>
+#include "external/typename.hpp"
 //#include "external/cxxopts.hpp"
 
 using namespace arl;
@@ -18,7 +20,7 @@ void empty_handler(Payload<N> payload) {
 
 template<int N>
 void worker(int64_t total_MB_to_send) {
-  Payload<N> payload;
+  Payload<N> payload = {0};
 
   double my_byte_to_send = total_MB_to_send * ONE_MB / rank_n();
   int num_ops = my_byte_to_send / N;
@@ -27,18 +29,21 @@ void worker(int64_t total_MB_to_send) {
   std::default_random_engine generator(my_rank);
   std::uniform_int_distribution<int> distribution(0, nworkers-1);
   distribution(generator);
+
   barrier();
   tick_t start = ticks_now();
+  register_amffrd(empty_handler<N>, payload);
 
   for (int i = 0; i < num_ops; i++) {
     int target_rank = distribution(generator);
-    rpc_ff(target_rank, empty_handler<N>, payload);
+    rpc_ffrd(target_rank, empty_handler<N>, payload);
   }
 
   barrier();
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
+  using amffrd_internal::AmffrdReqPayload;
   print("Total MB to send is %d MB\n", total_MB_to_send);
   print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(Payload<N>)) * num_ops * local::rank_n() * 2 / duration_total));
 }

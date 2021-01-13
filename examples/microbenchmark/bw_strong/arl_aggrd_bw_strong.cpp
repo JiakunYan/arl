@@ -1,7 +1,7 @@
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include <cassert>
 #include <random>
-//#include "external/cxxopts.hpp"
+#include "external/cxxopts.hpp"
 
 using namespace arl;
 using namespace std;
@@ -37,30 +37,39 @@ void worker(int64_t total_MB_to_send) {
   vector<Future<AckPayload<ACK_N>>> futures;
   barrier();
   tick_t start = ticks_now();
+  register_amaggrd(empty_handler<REQ_N, ACK_N>, req_payload);
 
   for (int i = 0; i < num_ops; ++i) {
     int target_rank = distribution(generator);
-    auto future = rpc_agg(target_rank, empty_handler<REQ_N, ACK_N>, req_payload);
+    auto future = rpc_aggrd(target_rank, empty_handler<REQ_N, ACK_N>, req_payload);
     futures.push_back(move(future));
   }
 
   barrier();
   for (int i = 0; i < num_ops; ++i) {
     futures[i].get();
-//    int result = futures[i].get();
-//    if (result != 233) {
-//      printf("error!");
-//    }
   }
   barrier();
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
+  using amaggrd_internal::AmaggrdReqMeta;
+  using amaggrd_internal::AmaggrdReqPayload;
+  using amaggrd_internal::AmaggrdAckMeta;
+  using amaggrd_internal::AmaggrdAckPayload;
   print("Total MB to send is %d MB\n", total_MB_to_send);
-  print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(ReqPayload<REQ_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n",
+      sizeof(ReqPayload<REQ_N>) * num_ops * local::rank_n() * 2 / duration_total);
 }
 
 int main(int argc, char** argv) {
+  cxxopts::Options options("ARL Benchmark", "Benchmark of ARL system");
+  options.add_options()
+      ("req", "Size of Request Payload", cxxopts::value<int>()->default_value("64"))
+      ("ack", "Size of Request Payload", cxxopts::value<int>()->default_value("64"))
+      ;
+  auto result = options.parse(argc, argv);
+
   // one process per node
   init(15, 16);
 

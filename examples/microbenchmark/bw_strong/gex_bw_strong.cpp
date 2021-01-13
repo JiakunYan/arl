@@ -1,10 +1,11 @@
-#include <arl/arl.hpp>
+#include "arl.hpp"
 #include <queue>
 #include <mutex>
 #include <thread>
 #include <random>
 
 bool thread_run = true;
+const double ONE_MB = 1e6;
 
 std::vector<std::atomic<int>> receiveds(16);
 size_t req_num;
@@ -25,9 +26,12 @@ void reply_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id)
   receiveds[id]++;
 }
 
-void worker(int id) {
+void worker(int id, int64_t total_MB_to_send) {
   int issued = 0;
-  size_t num_ams = 10000;
+  double my_byte_to_send = total_MB_to_send * ONE_MB / arl::backend::rank_n() / 16;
+  int num_ams = my_byte_to_send / payload_size;
+  if (arl::backend::rank_me() == 0 && id == 0)
+    printf("%d %lf %lu\n", num_ams, my_byte_to_send, payload_size);
   std::default_random_engine generator(arl::backend::rank_me());
   std::uniform_int_distribution<int> distribution(0, arl::backend::rank_n()-1);
   distribution(generator);
@@ -63,7 +67,23 @@ void worker(int id) {
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
   if (id == 0) {
-    arl::backend::print("Node single-direction bandwidth = %.3lf MB/S\n", bandwidth_node_s / 1e6);
+    arl::backend::print("Total MB to send is %d MB\n", total_MB_to_send);
+    arl::backend::print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
+  }
+}
+
+
+template <typename Fn, typename... Args>
+void run(Fn &&fn, Args &&... args) {
+  using fn_t = decltype(+std::declval<std::remove_reference_t<Fn>>());
+  std::vector<std::thread> worker_pool;
+  for (size_t i = 0; i < 16; ++i) {
+    std::thread t(std::forward<fn_t>(+fn), i, std::forward<Args>(args)...);
+    worker_pool.push_back(std::move(t));
+  }
+
+  for (size_t i = 0; i < 16; ++i) {
+    worker_pool[i].join();
   }
 }
 
@@ -102,15 +122,11 @@ int main() {
 
   threadBarrier.init(16);
 
-  std::vector<std::thread> worker_pool;
-  for (size_t i = 0; i < 16; ++i) {
-    auto t = std::thread(worker, i);
-    worker_pool.push_back(std::move(t));
-  }
-
-  for (size_t i = 0; i < 16; ++i) {
-    worker_pool[i].join();
-  }
+  run(worker, 10);
+  run(worker, 100);
+  run(worker, 1000);
+  run(worker, 10000);
+  run(worker, 100000);
   arl::backend::finalize();
   return 0;
 

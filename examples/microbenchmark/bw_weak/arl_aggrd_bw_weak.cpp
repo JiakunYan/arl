@@ -1,4 +1,4 @@
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include <cassert>
 #include <random>
 #include "external/cxxopts.hpp"

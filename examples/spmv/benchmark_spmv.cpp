@@ -2,7 +2,7 @@
 // Created by jiakun on 2020/8/28.
 //
 #define ARL_INFO
-#include "arl/arl.hpp"
+#include "arl.hpp"
 #include "csrmat/CSRMatrix.hpp"
 #include "external/libcuckoo/cuckoohash_map.hh"
 

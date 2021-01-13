@@ -11,7 +11,7 @@ Remote Procedure Call (RPC) requesting and execution. It is powered by:
 ## Example
 
 ```cpp
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using namespace arl;
 

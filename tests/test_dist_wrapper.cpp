@@ -1,5 +1,5 @@
 #define ARL_DEBUG
-#include "arl/arl.hpp"
+#include "arl.hpp"
 
 using T = std::vector<int>;
 const int VEC_LEN = 10;
