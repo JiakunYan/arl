@@ -2,8 +2,8 @@
 // Created by Jiakun Yan on 1/14/20.
 //
 
-#ifndef ARL_CONFIG_HPP
-#define ARL_CONFIG_HPP
+#ifndef KCOUNT_CONFIG_HPP
+#define KCOUNT_CONFIG_HPP
 
 #define MAX_KMER_LEN 160
 //# quality encoding is logarithmic, so the probability of an error is:
@@ -19,8 +19,7 @@
 #define USE_COLORS
 #define USE_BYTELL
 #define USE_PROGBAR
-#define NDEBUG
-#define MHM_VERSION "unknown version ARL"
+#define MHM_VERSION "ARL v0.5.0"
 #define ALL_DEFNS "all defns"
 
-#endif //ARL_CONFIG_HPP
+#endif //KCOUNT_CONFIG_HPP

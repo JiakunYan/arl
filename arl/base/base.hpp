@@ -20,21 +20,18 @@ alignas(alignof_cacheline) std::atomic<bool> worker_exit = false;
 void progress_handler(rank_t id) {
   rank_internal::my_rank = id;
   rank_internal::my_context = id;
-  am_internal::init_am_thread();
   while (!thread_run) {
     usleep(1);
   }
   while (!worker_exit) {
     progress();
   }
-  am_internal::exit_am_thread();
 }
 
 template <typename Fn, typename... Args>
 void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
   rank_internal::my_rank = id;
   rank_internal::my_context = id;
-  am_internal::init_am_thread();
   while (!thread_run) {
     usleep(1);
   }
@@ -42,18 +39,17 @@ void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
   std::invoke(std::forward<Fn>(fn),
               std::forward<Args>(args)...);
   barrier();
-  am_internal::exit_am_thread();
 }
 
 void init(size_t custom_num_workers_per_proc = 15,
     size_t custom_num_threads_per_proc = 16, size_t shared_segment_size = 256) {
-  backend::init(shared_segment_size, true);
+  backend::init(shared_segment_size);
 
 #ifdef ARL_DEBUG
-  backend::print("%s", "WARNING: Running low-performance debug mode.\n");
+  proc::print("%s", "WARNING: Running low-performance debug mode.\n");
 #endif
 #ifndef ARL_THREAD_PIN
-  backend::print("%s", "WARNING: Haven't pinned threads to cores.\n");
+  proc::print("%s", "WARNING: Haven't pinned threads to cores.\n");
 #endif
   rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
   rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
@@ -142,7 +138,17 @@ void print(const std::string& format, Args... args) {
 namespace proc {
 template <typename ...Args>
 void print(const std::string& format, Args... args) {
-  backend::print(format, std::forward<Args>(args)...);
+  fflush(stdout);
+  proc::barrier();
+  if (proc::rank_me() == 0) {
+    if constexpr (sizeof...(args) == 0) {
+      printf("%s", format.c_str());
+    } else {
+      printf(format.c_str(), args...);
+    }
+  }
+  fflush(stdout);
+  proc::barrier();
 }
 } // namespace proc
 

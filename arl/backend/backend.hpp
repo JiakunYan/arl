@@ -1,108 +1,47 @@
 //
-// Created by Jiakun Yan on 12/31/19.
+// Created by jiakunyan on 1/13/21.
 //
-/*
- * Acknowledgement:
- *   Most content in this file is based on the source code of
- *   the Berkeley Container Library (https://github.com/berkeley-container-library/bcl).
-*/
 
 #ifndef ARL_BACKEND_HPP
 #define ARL_BACKEND_HPP
 
-namespace arl {
-namespace backend {
-rank_t my_proc;
-rank_t nprocs;
-bool finalized;
+namespace arl::backend {
+// Active message handler
+using tag_t = uint16_t;
 
-gex_Client_t client;
-gex_EP_t ep;
-gex_TM_t tm;
-const char* clientName = "ARL";
+struct cq_entry_t {
+  rank_t srcRank;
+  tag_t tag;
+  void* buf;
+  int nbytes;
+};
 
-gasnet_seginfo_t* gasnet_seginfo;
-uint64_t shared_segment_size;
-void *smem_base_ptr;
+extern inline rank_t rank_me();
+extern inline rank_t rank_n();
+extern inline void barrier();
+extern inline void init(uint64_t shared_segment_size);
+extern inline void finalize();
+template <typename T>
+extern inline T broadcast(T& val, rank_t root);
+template<typename T, typename BinaryOp>
+extern inline T reduce_one(const T& value, const BinaryOp& op, rank_t root);
+template<typename T, typename BinaryOp>
+extern inline std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op, rank_t root);
+template<typename T, typename BinaryOp>
+extern inline T reduce_all(const T& value, const BinaryOp& op);
+template<typename T, typename BinaryOp>
+extern inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op);
+extern inline const int get_max_buffer_size();
+extern inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes);
+extern inline int recvm(cq_entry_t& entry);
+extern inline int progress();
+} // namespace arl::backend
 
-//    extern inline void init_malloc();
-
-inline rank_t rank_me() {
-  return my_proc;
-}
-
-inline rank_t rank_n() {
-  return nprocs;
-}
-
-inline void barrier() {
-  gex_Event_t event = gex_Coll_BarrierNB(tm, 0);
-  progress_until([&](){return !gex_Event_Test(event);});
-}
-
-inline void init(uint64_t shared_segment_size, bool thread_safe) {
-  shared_segment_size = 1024*1024*shared_segment_size;
-
-  gex_Client_Init(&client, &ep, &tm, clientName, NULL, NULL, 0);
-
-  if (thread_safe) {
-#ifndef GASNET_PAR
-    throw std::runtime_error("Need to use a par build of GASNet-EX");
+#ifdef ARL_USE_GEX
+#include <gasnetex.h>
+#include "GASNet-EX/base.hpp"
+#include "GASNet-EX/collective.hpp"
+#include "GASNet-EX/reduce.hpp"
 #endif
-  }
-
-  gex_Segment_t segment;
-  gex_Segment_Attach(&segment, tm, shared_segment_size);
-
-  smem_base_ptr = gex_Segment_QueryAddr(segment);
-
-  if (smem_base_ptr == NULL) {
-    throw std::runtime_error("arl::backend: Could not allocate shared memory segment.");
-  }
-
-  my_proc = gex_System_QueryJobRank();
-  nprocs = gex_System_QueryJobSize();
-
-  gasnet_seginfo = (gasnet_seginfo_t*) malloc(sizeof(gasnet_seginfo_t) * nprocs);
-  gasnet_getSegmentInfo(gasnet_seginfo, rank_n());
-
-//      init_malloc();
-//      init_atomics();
-
-  finalized = false;
-
-  barrier();
-}
-
-inline void finalize() {
-  barrier();
-//      finalize_atomics();
-  free(gasnet_seginfo);
-  finalized = true;
-  gasnet_exit(0);
-} // namespace backend
-
-void print(const std::string& format) {
-  fflush(stdout);
-  barrier();
-  if (rank_me() == 0) {
-    printf("%s\n", format.c_str());
-  }
-  fflush(stdout);
-  barrier();
-}
-
-template <typename T, typename ...Args>
-void print(const std::string& format, T arg, Args... args) {
-  fflush(stdout);
-  barrier();
-  if (rank_me() == 0) {
-    printf(format.c_str(), arg, args...);
-  }
-  fflush(stdout);
-  barrier();
-}
-}
-}
 
 #endif //ARL_BACKEND_HPP

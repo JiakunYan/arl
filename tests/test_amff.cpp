@@ -91,7 +91,7 @@ int main() {
 //  offset += sizeof(AmffReqMeta);
 //  *reinterpret_cast<Payload*>(ptr + offset) = Payload{'b', 134, false};
 //  if (arl::rank_me() == 0) {
-//    gex_AM_RequestMedium0(arl::backend::tm, 0, arl::amff_internal::hidx_generic_am_ff_reqhandler, buf,
+//    gex_AM_RequestMedium0(arl::backend::internal::tm, 0, arl::amff_internal::hidx_generic_am_ff_reqhandler, buf,
 //                          offset + sizeof(Payload), GEX_EVENT_NOW, 0);
 //  }
 

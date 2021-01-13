@@ -28,7 +28,7 @@ void default_timeout_handler() {
   fprintf(fp, "Rank %ld\n", rank_me());
 //  fprintf(fp, "AggBuffer status:\n%s\n", amaggrd_internal::get_amaggrd_buffer_status().c_str());
   fflush(fp);
-  arl::debug::arl_traceback(fp);
+  arl_traceback(fp);
 }
 
 inline void set_timeout(double t) {

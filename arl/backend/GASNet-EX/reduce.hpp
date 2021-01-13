@@ -1,6 +1,6 @@
 // This file is simplified based on UPC++(https://bitbucket.org/berkeleylab/upcxx/wiki/Home) reduce.hpp, reduce.cpp
-#ifndef ARL_REDUCE_HPP
-#define ARL_REDUCE_HPP
+#ifndef ARL_BACKEND_REDUCE_HPP
+#define ARL_BACKEND_REDUCE_HPP
 
 namespace arl::backend {
 template<int bits, bool is_signed>
@@ -58,10 +58,10 @@ template<typename T, typename BinaryOp>
 inline T reduce_one(const T& value, const BinaryOp& op, rank_t root) {
   T result = T();
   gex_Event_t event = gex_Coll_ReduceToOneNB(
-      tm, root, &result, &value,
-      reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
-      reduce_gex_op_id<BinaryOp>::op_id,
-      NULL, NULL, 0);
+        internal::tm, root, &result, &value,
+        reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
+        reduce_gex_op_id<BinaryOp>::op_id,
+        NULL, NULL, 0);
   progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
@@ -70,10 +70,10 @@ template<typename T, typename BinaryOp>
 inline std::vector<T> reduce_one(const std::vector<T>& value, const BinaryOp& op, rank_t root) {
   std::vector<T> result = std::vector<T>(value.size());
   gex_Event_t event = gex_Coll_ReduceToOneNB(
-      tm, root, result.data(), value.data(),
-      reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
-      reduce_gex_op_id<BinaryOp>::op_id,
-      NULL, NULL, 0);
+        internal::tm, root, result.data(), value.data(),
+        reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
+        reduce_gex_op_id<BinaryOp>::op_id,
+        NULL, NULL, 0);
   progress_until([&](){return !gex_Event_Test(event);});
   if (backend::rank_me() == root) {
     return result;
@@ -86,10 +86,10 @@ template<typename T, typename BinaryOp>
 inline T reduce_all(const T& value, const BinaryOp& op) {
   T result = T();
   gex_Event_t event = gex_Coll_ReduceToAllNB(
-      tm, &result, &value,
-      reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
-      reduce_gex_op_id<BinaryOp>::op_id,
-      NULL, NULL, 0);
+        internal::tm, &result, &value,
+        reduce_gex_ty_id<T>::ty_id, sizeof(T), 1,
+        reduce_gex_op_id<BinaryOp>::op_id,
+        NULL, NULL, 0);
   progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
@@ -98,13 +98,13 @@ template<typename T, typename BinaryOp>
 inline std::vector<T> reduce_all(const std::vector<T>& value, const BinaryOp& op) {
   std::vector<T> result = std::vector<T>(value.size());
   gex_Event_t event = gex_Coll_ReduceToAllNB(
-      tm, result.data(), value.data(),
-      reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
-      reduce_gex_op_id<BinaryOp>::op_id,
-      NULL, NULL, 0);
+        internal::tm, result.data(), value.data(),
+        reduce_gex_ty_id<T>::ty_id, sizeof(T), value.size(),
+        reduce_gex_op_id<BinaryOp>::op_id,
+        NULL, NULL, 0);
   progress_until([&](){return !gex_Event_Test(event);});
   return result;
 }
 }
 
-#endif //ARL_REDUCE_HPP
+#endif //ARL_BACKEND_REDUCE_HPP

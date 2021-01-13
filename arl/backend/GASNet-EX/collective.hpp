@@ -11,7 +11,7 @@ namespace arl::backend {
 template <typename T>
 inline T broadcast(T& val, rank_t root) {
   T rv;
-  gex_Event_t event = gex_Coll_BroadcastNB(tm, root, &rv, &val, sizeof(T), 0);
+  gex_Event_t event = gex_Coll_BroadcastNB(internal::tm, root, &rv, &val, sizeof(T), 0);
   progress_until([&](){return !gex_Event_Test(event);});
 
   return rv;

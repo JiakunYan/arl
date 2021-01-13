@@ -5,10 +5,12 @@
 #ifndef ARL_CONFIG_HPP
 #define ARL_CONFIG_HPP
 
-#define ARL_INFO
-
 #ifndef ARL_TIMEOUT_HANDLER
 #define ARL_TIMEOUT_HANDLER arl::debug::default_timeout_handler
 #endif
 
-#endif //ARL_CONFIG_HPP
+#cmakedefine ARL_INFO
+#cmakedefine ARL_DEBUG
+#cmakedefine ARL_USE_GEX
+
+#endif//ARL_CONFIG_HPP

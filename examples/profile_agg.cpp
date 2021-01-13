@@ -67,7 +67,7 @@ void worker() {
       timer_gex.start();
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
-          gex_AM_RequestMedium0(backend::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
+          gex_AM_RequestMedium0(backend::internal::tm, remote_proc, amagg_internal::hidx_generic_amagg_reqhandler,
                                 std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
         }
         delete [] std::get<0>(result);

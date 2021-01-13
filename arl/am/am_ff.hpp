@@ -12,9 +12,6 @@ using am_internal::get_pi_fnptr;
 using am_internal::resolve_pi_fnptr;
 using am_internal::AggBuffer;
 
-// GASNet AM handlers and their indexes
-alignas(alignof_cacheline) gex_AM_Index_t hidx_gex_amff_reqhandler;
-void gex_amff_reqhandler(gex_Token_t token, void *buf, size_t nbytes);
 // AM synchronous counters
 alignas(alignof_cacheline) AlignedAtomicInt64 *amff_recv_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amff_req_counters; // of length proc::rank_n()
@@ -25,23 +22,11 @@ alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amff() {
-  hidx_gex_amff_reqhandler = am_internal::gex_am_handler_num++;
-  ARL_Assert(am_internal::gex_am_handler_num < 256, "GASNet handler index overflow!");
-
-  gex_AM_Entry_t htable[1] = {
-      { hidx_gex_amff_reqhandler,
-        (gex_AM_Fn_t) gex_amff_reqhandler,
-        GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REQUEST,
-        0 }
-  };
-
-  gex_EP_RegisterHandlers(backend::ep, htable, sizeof(htable)/sizeof(gex_AM_Entry_t));
-
   amff_agg_buffer_p = new AggBuffer[proc::rank_n()];
 
-  int max_buffer_size = gex_AM_MaxRequestMedium(backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
+  int max_buffer_size = gex_AM_MaxRequestMedium(backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amff_agg_buffer_p[i].init(max_buffer_size);
+    amff_agg_buffer_p[i].init(max_buffer_size, 0);
   }
   amff_recv_counter = new AlignedAtomicInt64;
   amff_recv_counter->val = 0;
@@ -102,28 +87,14 @@ class AmffTypeWrapper {
   }
 };
 
-void gex_amff_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes) {
-  gex_Token_Info_t info;
-  gex_TI_t rc = gex_Token_Info(token, &info, GEX_TI_SRCRANK);
-  gex_Rank_t srcRank = info.gex_srcrank;
-  char* buf_p = new char[unbytes];
-  memcpy(buf_p, void_buf, unbytes);
-  am_internal::UniformGexAMEventData event {
-      am_internal::HandlerType::AM_FF_REQ, srcRank,
-      0, nullptr,
-      static_cast<int>(unbytes), buf_p
-  };
-  am_internal::am_event_queue_p->push(event);
-  info::networkInfo.byte_recv.add(unbytes);
-}
-
-void generic_amff_reqhandler(const am_internal::UniformGexAMEventData& event) {
+void generic_amff_reqhandler(const backend::cq_entry_t& event) {
   using payload_size_t = int();
   using req_invoker_t = void(intptr_t, int, char*, int);
+  ARL_Assert(event.tag == am_internal::HandlerType::AM_FF_REQ);
 //  printf("rank %ld amff reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 
-  char* buf = event.buf_p;
-  int nbytes = event.buf_n;
+  char* buf = (char*) event.buf;
+  int nbytes = event.nbytes;
   int n = 0;
   int consumed = 0;
   while (nbytes > consumed) {
@@ -166,8 +137,7 @@ void flush_amff_buffer() {
     for (auto result: results) {
       if ( std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
-          gex_AM_RequestMedium0(backend::tm, i, hidx_gex_amff_reqhandler,
-                                std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+          backend::sendm(i, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
           info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
@@ -225,8 +195,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
   std::pair<char*, int64_t> result = amff_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
-      gex_AM_RequestMedium0(backend::tm, remote_proc, amff_internal::hidx_gex_amff_reqhandler,
-                            std::get<0>(result), std::get<1>(result), GEX_EVENT_NOW, 0);
+      backend::sendm(remote_proc, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
       info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }

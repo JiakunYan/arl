@@ -85,7 +85,7 @@ int main() {
 //  arl::register_amffrd(foo2, char(), int(), bool());
 //  cout << "sizeof(Payload) is " << sizeof(Payload) << endl;
 //  cout << "hidx_generic_amffrd_reqhandler is " << (int)arl::amffrd_internal::hidx_generic_amffrd_reqhandler << endl;
-//  gex_AM_RequestMedium4(arl::backend::tm, 0, arl::amffrd_internal::hidx_generic_amffrd_reqhandler, buf,
+//  gex_AM_RequestMedium4(arl::backend::internal::tm, 0, arl::amffrd_internal::hidx_generic_amffrd_reqhandler, buf,
 //                        buf_len, GEX_EVENT_NOW, 0, meta_p1[0], meta_p1[1], meta_p1[2], meta_p1[3]);
 //  arl::amffrd_internal::send_amffrd_to_gex(0, meta, buf, buf_len);
   // ---

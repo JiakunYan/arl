@@ -4,3 +4,5 @@ add_all_examples(
 )
 
 add_subdirectory(microbenchmark)
+add_subdirectory(kcount)
+add_subdirectory(kmer_hash)

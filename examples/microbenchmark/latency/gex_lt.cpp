@@ -43,7 +43,7 @@ void worker(int id) {
 //    if (remote_proc >= BCL::rank()) {
 //      remote_proc++;
 //    }
-    int rv = gex_AM_RequestMedium(arl::backend::tm, remote_proc, req_num, nullptr, 0, GEX_EVENT_NOW, 0, id);
+    int rv = gex_AM_RequestMedium(arl::backend::internal::tm, remote_proc, req_num, nullptr, 0, GEX_EVENT_NOW, 0, id);
     issued++;
 
     while (receiveds[id] < issued) {
@@ -59,12 +59,12 @@ void worker(int id) {
   auto end = std::chrono::high_resolution_clock::now();
   double duration_s = std::chrono::duration<double>(end - begin).count();
   if (id == 0) {
-    arl::backend::print("AM latency is %.2lf us (total %.2lf s)\n", duration_s * 1e6 / num_ops, duration_s);
+    arl::proc::print("AM latency is %.2lf us (total %.2lf s)\n", duration_s * 1e6 / num_ops, duration_s);
   }
 }
 
 int main() {
-  arl::backend::init(2048, true);
+  arl::backend::init(2048);
 
   size_t max_args = gex_AM_MaxArgs();
   size_t handler_num = GEX_AM_INDEX_BASE;
@@ -82,7 +82,7 @@ int main() {
   entry[1].gex_flags = GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REPLY;
   entry[1].gex_nargs = 1;
 
-  int rv = gex_EP_RegisterHandlers(arl::backend::ep, entry, 2);
+  int rv = gex_EP_RegisterHandlers(arl::backend::internal::ep, entry, 2);
 
   threadBarrier.init(16);
 

@@ -102,7 +102,7 @@ int main() {
   // ---
 //  arl::register_amaggrd(foo2, char(), int(), bool());
 //  cout << "hidx_generic_amffrd_reqhandler is " << (int)arl::amaggrd_internal::hidx_generic_amaggrd_reqhandler << endl;
-//  gex_AM_RequestMedium4(arl::backend::tm, 0, arl::amaggrd_internal::hidx_generic_amaggrd_reqhandler, buf,
+//  gex_AM_RequestMedium4(arl::backend::internal::tm, 0, arl::amaggrd_internal::hidx_generic_amaggrd_reqhandler, buf,
 //                        buf_len, GEX_EVENT_NOW, 0, meta_p1[0], meta_p1[1], meta_p1[2], meta_p1[3]);
 //  cout << "ack counter is " << *arl::amaggrd_internal::amaggrd_ack_counter << endl;
 //  cout << "future1.get() is " << future1.get() << endl;

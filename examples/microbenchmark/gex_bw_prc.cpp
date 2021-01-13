@@ -40,7 +40,7 @@ void worker(int id) {
 //    }
 
     issued++;
-    int rv = gex_AM_RequestMedium(arl::backend::tm, remote_proc, req_num, payload, payload_size, GEX_EVENT_NOW, 0, id);
+    int rv = gex_AM_RequestMedium(arl::backend::internal::tm, remote_proc, req_num, payload, payload_size, GEX_EVENT_NOW, 0, id);
   }
 
   while (received < issued) {
@@ -51,15 +51,15 @@ void worker(int id) {
   double duration_s = std::chrono::duration<double>(end - begin).count();
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
-  arl::backend::print("Node single-direction bandwidth = %.3lf MB/S (duration %lf s)\n", bandwidth_node_s / 1e6, duration_s);
+  arl::proc::print("Node single-direction bandwidth = %.3lf MB/S (duration %lf s)\n", bandwidth_node_s / 1e6, duration_s);
 }
 
 int main() {
-  arl::backend::init(2048, true);
+  arl::backend::init(2048);
 
   payload_size = std::min(
-          gex_AM_MaxRequestMedium(arl::backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1),
-          gex_AM_MaxReplyMedium  (arl::backend::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1)
+          gex_AM_MaxRequestMedium(arl::backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1),
+          gex_AM_MaxReplyMedium  (arl::backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1)
   );
   payload_size = std::min(max_payload_size, payload_size);
   payload_size = payload_size;
@@ -85,7 +85,7 @@ int main() {
   entry[1].gex_flags = GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REPLY;
   entry[1].gex_nargs = 1;
 
-  int rv = gex_EP_RegisterHandlers(arl::backend::ep, entry, 2);
+  int rv = gex_EP_RegisterHandlers(arl::backend::internal::ep, entry, 2);
 
   worker(0);
 

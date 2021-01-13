@@ -354,20 +354,21 @@ class AggBufferAdvanced {
 class AggBufferAtomic {
  public:
   using size_type = int64_t;
-  AggBufferAtomic() : cap_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
+  AggBufferAtomic() : cap_(0), prefix_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
 
   ~AggBufferAtomic() {
     delete [] ptr_;
   }
 
-  void init(size_type cap) {
-    ARL_Assert(cap > 0);
+  void init(size_type cap, size_type prefix = 0) {
+    ARL_Assert(cap > prefix);
 //    cap_ = cap / sizeof(T) * sizeof(T);
     cap_ = cap;
+    prefix_ = prefix;
     delete [] ptr_;
     ptr_ = new char[cap_];
-    reserved_tail_ = 0;
-    tail_ = 0;
+    reserved_tail_ = prefix_;
+    tail_ = prefix_;
   }
 
   template <typename T, typename U>
@@ -379,7 +380,7 @@ class AggBufferAtomic {
     while (current_tail > cap_) {
       do_something();
       current_tail = tail_.fetch_add(val_size);
-      ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
+      ARL_Assert(current_tail >= prefix_, "AggBuffer: tail overflow!");
     }
     if (current_tail <= cap_ && current_tail + val_size > cap_) {
       while (!mutex_pop_.try_lock()) {
@@ -391,11 +392,11 @@ class AggBufferAtomic {
       }
       result = std::make_pair(ptr_, current_tail);
       ptr_ = new char[cap_];
-      reserved_tail_ = 0;
-      tail_ = val_size;
+      reserved_tail_ = prefix_;
+      tail_ = prefix_ + val_size;
 
       mutex_pop_.unlock();
-      current_tail = 0;
+      current_tail = prefix_;
     }
     std::memcpy(ptr_ + current_tail, &val1, sizeof(val1));
     current_tail += sizeof(val1);
@@ -413,7 +414,7 @@ class AggBufferAtomic {
     while (current_tail > cap_) {
       do_something();
       current_tail = tail_.fetch_add(sizeof(val));
-      ARL_Assert(current_tail >= 0, "AggBuffer: tail overflow!");
+      ARL_Assert(current_tail >= prefix_, "AggBuffer: tail overflow!");
     }
     if (current_tail <= cap_ && current_tail + sizeof(val) > cap_) {
       while (!mutex_pop_.try_lock()) {
@@ -425,11 +426,11 @@ class AggBufferAtomic {
       }
       result = std::make_pair(ptr_, current_tail);
       ptr_ = new char[cap_];
-      reserved_tail_ = 0;
-      tail_ = sizeof(val);
+      reserved_tail_ = prefix_;
+      tail_ = prefix_ + sizeof(val);
 
       mutex_pop_.unlock();
-      current_tail = 0;
+      current_tail = prefix_;
     }
     std::memcpy(ptr_ + current_tail, &val, sizeof(val));
     reserved_tail_.fetch_add(sizeof(val));
@@ -438,14 +439,14 @@ class AggBufferAtomic {
 
   std::vector<std::pair<char*, size_type>> flush() {
     std::vector<std::pair<char*, size_type>> result;
-    if (tail_.load() == 0) {
+    if (tail_.load() == prefix_) {
       return result;
     }
     if (!mutex_pop_.try_lock()) {
       return result;
     }
     size_type current_tail = tail_.fetch_add(cap_ + 1); // prevent others from begining pushing
-    if (current_tail <= cap_ && current_tail > 0) {
+    if (current_tail <= cap_ && current_tail > prefix_) {
       // wait until those who is pushing finish
       while (reserved_tail_ != current_tail) {
         do_something();
@@ -454,10 +455,10 @@ class AggBufferAtomic {
 
       result.emplace_back(ptr_, current_tail);
       ptr_ = new char[cap_];
-      reserved_tail_ = 0;
-      tail_ = 0;
-    } else if (current_tail == 0) {
-      tail_ = 0;
+      reserved_tail_ = prefix_;
+      tail_ = prefix_;
+    } else if (current_tail == prefix_) {
+      tail_ = prefix_;
     } // else (current_tail > cap_): some push will flush the buffer
     mutex_pop_.unlock();
     return result;
@@ -481,6 +482,7 @@ class AggBufferAtomic {
   alignas(alignof_cacheline) std::atomic<size_type> tail_;
   alignas(alignof_cacheline) std::atomic<size_type> reserved_tail_;
   alignas(alignof_cacheline) size_type cap_;
+  alignas(alignof_cacheline) size_type prefix_;
   alignas(alignof_cacheline) std::mutex mutex_pop_;
 }; // class AggBufferAtomic
 
