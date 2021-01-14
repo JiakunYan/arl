@@ -33,4 +33,4 @@ before_install:
 script:
   - docker run --name container -u ubuntu -w /home/ubuntu -v $(pwd):/home/ubuntu/host-arl -d -it --shm-size=2048M -d benbrock/bcl:mpich-debug # keep container alive
   - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/host-arl"
-  - docker exec --user ubuntu container bash -c "cd ./host-arl/tests/ && ./run_tests.sh gasnet_ex" # run the test script
+  - docker exec --user ubuntu container bash -c "cd ./host-arl/ && mkdir build && cd build && cmake .. && make && ctest --timeout 30 --verbose" # run the test script
