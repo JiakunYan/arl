@@ -27,10 +27,9 @@ matrix:
             - wget
 
 before_install:
-  - docker pull benbrock/bcl:mpich-debug
+  - docker pull jiakuny/arl-testbed:latest
   - eval "${MATRIX_EVAL}"
 
 script:
-  - docker run --name container -u ubuntu -w /home/ubuntu -v $(pwd):/home/ubuntu/host-arl -d -it --shm-size=2048M -d benbrock/bcl:mpich-debug # keep container alive
-  - docker exec --user root container bash -c "chown -R ubuntu:ubuntu /home/ubuntu/host-arl"
-  - docker exec --user ubuntu container bash -c "cd ./host-arl/ && mkdir build && cd build && cmake .. && make && ctest --timeout 30 --verbose" # run the test script
+  - docker run --name arl-testbed -w /root -v $(pwd):/root/host -d -it --shm-size=2048M -d jiakuny/arl-testbed:latest # keep container alive
+  - docker exec --user root arl-testbed bash -c "cd ./host/ && mkdir build && cd build && cmake .. && make && ctest --timeout 30 --verbose"
