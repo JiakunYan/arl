@@ -55,7 +55,6 @@ void gex_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes, gex_AM_Ar
   cq_mutex.lock();
   cq_p->push(event_p);
   cq_mutex.unlock();
-  info::networkInfo.byte_recv.add(unbytes);
 }
 } // namespace internal
 
@@ -129,6 +128,7 @@ inline const int get_max_buffer_size() {
 inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes) {
   CHECK_GEX(gex_AM_RequestMedium1(backend::internal::tm, target, internal::gex_handler_idx,
                         buf, nbytes, GEX_EVENT_NOW, 0, static_cast<gex_AM_Arg_t>(tag)));
+  info::networkInfo.byte_send.add(nbytes);
   return ARL_OK;
 }
 
@@ -140,6 +140,7 @@ inline int recvm(cq_entry_t& entry) {
     if (!internal::cq_p->empty()) {
       entry = internal::cq_p->front();
       internal::cq_p->pop();
+      info::networkInfo.byte_recv.add(entry.nbytes);
       ret = ARL_OK;
     }
     internal::cq_mutex.unlock();

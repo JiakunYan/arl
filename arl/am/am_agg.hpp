@@ -150,7 +150,6 @@ void generic_amagg_reqhandler(const backend::cq_entry_t& event) {
     ++n;
   }
   backend::sendm(event.srcRank, am_internal::HandlerType::AM_ACK, o_buf, o_consumed);
-  info::networkInfo.byte_send.add(o_consumed);
   delete [] o_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
@@ -211,7 +210,6 @@ void flush_amagg_buffer() {
         if (std::get<1>(result) != 0) {
 //          printf("rank %ld send %p, %d\n", rank_me(), std::get<0>(result), std::get<1>(result));
           backend::sendm(i, am_internal::HandlerType::AM_REQ, std::get<0>(result), std::get<1>(result));
-          info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
         delete [] std::get<0>(result);
@@ -251,7 +249,6 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
   *reinterpret_cast<AmaggReqMeta*>(ptr) = meta;
   *reinterpret_cast<Payload*>(ptr+sizeof(AmaggReqMeta)) = payload;
   backend::sendm(remote_proc, am_internal::HandlerType::AM_REQ, ptr, sizeof(AmaggReqMeta) + sizeof(Payload));
-  info::networkInfo.byte_send.add(sizeof(AmaggReqMeta) + sizeof(Payload));
   progress_external();
   delete [] ptr;
   ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
@@ -285,7 +282,6 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       backend::sendm(remote_proc, am_internal::HandlerType::AM_REQ, std::get<0>(result), std::get<1>(result));
-      info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }
     delete [] std::get<0>(result);

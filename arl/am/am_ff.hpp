@@ -138,7 +138,6 @@ void flush_amff_buffer() {
       if ( std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
           backend::sendm(i, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
-          info::networkInfo.byte_send.add(std::get<1>(result));
           progress_external();
         }
         delete [] std::get<0>(result);
@@ -196,7 +195,6 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       backend::sendm(remote_proc, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
-      info::networkInfo.byte_send.add(std::get<1>(result));
       progress_external();
     }
     delete [] std::get<0>(result);

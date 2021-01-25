@@ -95,7 +95,6 @@ void sendm_amffrd(rank_t remote_proc, AmffrdReqMeta meta, void* buf, size_t nbyt
 //  printf("send meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
   ARL_Assert(nbytes >= sizeof(AmffrdReqMeta));
   backend::sendm(remote_proc, am_internal::HandlerType::AM_FFRD_REQ, buf, nbytes);
-  info::networkInfo.byte_send.add(nbytes);
 }
 
 alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;
