@@ -2,8 +2,18 @@
 
 ## [Unreleased]
 ### New
-- cmake build system
-- spmv benchmark
+- cmake build system.
+- spmv benchmark.
+- deadlock_detector: provide timeout+traceback functionality to debug deadlock applications.
+- networkInfo: make ARL runtime able to provide network information.
+- dist_wrapper: a distributed data structure wrapper for traditional data structures
+
+### Changed
+- Refactor communication backend.
+- AggBufferAtomic: optionally reserve prefix buffer space for metadata.
+
+### Fix
+- AggBufferAtomic: fix a bug when concurrently invoking push and flush
 
 ## [0.4.0]
 ### Changed
