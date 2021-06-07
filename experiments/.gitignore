@@ -1,0 +1,5 @@
+init
+run
+draw
+external/*
+!external/*.sh

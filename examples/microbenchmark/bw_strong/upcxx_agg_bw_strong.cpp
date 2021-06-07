@@ -13,8 +13,8 @@
 #include <vector>
 #include <random>
 #include <chrono>
-#include "examples/microbenchmark/aggr_store.hpp"
-#include "examples/microbenchmark/gex_timer.hpp"
+#include "aggr_store.hpp"
+#include "gex_timer.hpp"
 
 using namespace upcxx;
 

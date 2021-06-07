@@ -39,7 +39,7 @@ TARGETS := $(patsubst %.cpp, %, $(SOURCES))
 
 all: $(TARGETS)
 
-upcxx_agg_bw: upcxx_agg_bw.cpp
+upcxx_agg_bw: upcxx_agg_bw_strong.cpp
 	upcxx -O $(CFLAGS) $^ -o $@ -I$(ARLROOT)
 
 %: %.cpp
