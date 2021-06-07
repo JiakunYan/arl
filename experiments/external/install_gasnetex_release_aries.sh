@@ -10,7 +10,7 @@ gasnet_prefix=$(readlink -f $package_name)
 cd GASNet-2021.3.0-source
 cp other/contrib/cross-configure-cray-aries-slurm .
 cd ../GASNet-2021.3.0-build
-../GASNet-2021.3.0-source/configure --prefix=$gasnet_prefix
+../GASNet-2021.3.0-source/cross-configure-cray-aries-slurm --prefix=$gasnet_prefix
 make -j
 make install
 cd ..

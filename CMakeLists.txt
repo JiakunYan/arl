@@ -34,8 +34,10 @@ if(NOT gasnet_FOUND)
     target_link_libraries(arl INTERFACE ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 endif()
 # fix a cmake bug when encountering multiple "--param <val>" options
-string(REPLACE "--param;" "SHELL:--param " gasnet_LDFLAGS_FIX "${gasnet_LDFLAGS}")
-set_target_properties(PkgConfig::gasnet PROPERTIES INTERFACE_LINK_OPTIONS "${gasnet_LDFLAGS_FIX}")
+string(REPLACE "--param;" "SHELL:--param " gasnet_CFLAGS_OTHER_FIX "${gasnet_CFLAGS_OTHER}")
+set_target_properties(PkgConfig::gasnet PROPERTIES INTERFACE_COMPILE_OPTIONS "${gasnet_CFLAGS_OTHER_FIX}")
+string(REPLACE "--param;" "SHELL:--param " gasnet_LDFLAGS_OTHER_FIX "${gasnet_LDFLAGS_OTHER}")
+set_target_properties(PkgConfig::gasnet PROPERTIES INTERFACE_LINK_OPTIONS "${gasnet_LDFLAGS_OTHER_FIX}")
 target_link_libraries(arl INTERFACE PkgConfig::gasnet)
 
 add_subdirectory(examples)
