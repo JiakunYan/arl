@@ -67,8 +67,7 @@ void worker(int id, int64_t total_MB_to_send) {
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
   if (id == 0) {
-    arl::proc::print("Total MB to send is %d MB\n", total_MB_to_send);
-    arl::proc::print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
+    arl::proc::print("Node single-direction bandwidth = %.3lf MB/S\n", bandwidth_node_s / 1e6);
   }
 }
 
@@ -103,7 +102,7 @@ int main() {
     std::printf("enable gasnet multi domain\n");
 #endif
   size_t max_args = gex_AM_MaxArgs();
-  size_t handler_num = GEX_AM_INDEX_BASE;
+  size_t handler_num = GEX_AM_INDEX_BASE + 1;
   req_num = handler_num++;
   rep_num = handler_num++;
 

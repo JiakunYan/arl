@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-package_name=GASNet-2021.3.0-release
+package_name=GASNet-2021.3.0-release-aries
 wget "https://gasnet.lbl.gov/EX/GASNet-2021.3.0.tar.gz"
 tar -xf GASNet-2021.3.0.tar.gz
 mv GASNet-2021.3.0 GASNet-2021.3.0-source

@@ -8,7 +8,7 @@
 #include <random>
 #include <chrono>
 #include <upcxx/upcxx.hpp>
-#include "examples/microbenchmark/gex_timer.hpp"
+#include "gex_timer.hpp"
 
 using namespace upcxx;
 

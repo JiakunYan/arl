@@ -67,7 +67,7 @@ int main() {
   arl::backend::init(2048);
 
   size_t max_args = gex_AM_MaxArgs();
-  size_t handler_num = GEX_AM_INDEX_BASE;
+  size_t handler_num = GEX_AM_INDEX_BASE + 1;
   req_num = handler_num++;
   rep_num = handler_num++;
 

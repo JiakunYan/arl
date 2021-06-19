@@ -13,7 +13,7 @@ else()
     message(FATAL_ERROR "Fabric ${LCI_SERVER} not supported")
 endif()
 
-option(ARL_DEBUG "Enable debug mode" ON)
+option(ARL_DEBUG "Enable debug mode" OFF)
 option(ARL_INFO "Enable info mode" OFF)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
@@ -29,16 +29,19 @@ pkg_check_modules(gasnet QUIET IMPORTED_TARGET gasnet-aries-par)
 if(NOT gasnet_FOUND)
     pkg_check_modules(gasnet REQUIRED IMPORTED_TARGET gasnet-mpi-par)
     find_package(MPI REQUIRED)
-    target_include_directories(arl INTERFACE ${MPI_CXX_INCLUDE_PATH})
-    target_compile_options(arl INTERFACE ${MPI_CXX_COMPILE_FLAGS})
-    target_link_libraries(arl INTERFACE ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+    set(NEED_MPI ON)
 endif()
 # fix a cmake bug when encountering multiple "--param <val>" options
 string(REPLACE "--param;" "SHELL:--param " gasnet_CFLAGS_OTHER_FIX "${gasnet_CFLAGS_OTHER}")
 set_target_properties(PkgConfig::gasnet PROPERTIES INTERFACE_COMPILE_OPTIONS "${gasnet_CFLAGS_OTHER_FIX}")
 string(REPLACE "--param;" "SHELL:--param " gasnet_LDFLAGS_OTHER_FIX "${gasnet_LDFLAGS_OTHER}")
 set_target_properties(PkgConfig::gasnet PROPERTIES INTERFACE_LINK_OPTIONS "${gasnet_LDFLAGS_OTHER_FIX}")
+# Since GASNet is a static library, the order of linkage matters.
+# You need to first link GASNet and then MPI, not the reverse.
 target_link_libraries(arl INTERFACE PkgConfig::gasnet)
+if(NEED_MPI)
+    target_link_libraries(arl INTERFACE MPI::MPI_C)
+endif()
 
 add_subdirectory(examples)
 add_subdirectory(tests)

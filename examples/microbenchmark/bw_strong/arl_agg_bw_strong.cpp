@@ -56,8 +56,11 @@ void worker(int64_t total_MB_to_send) {
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
-  print("Total MB to send is %d MB\n", total_MB_to_send);
+  print("rpc_agg overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
+  print("Total single-direction node bandwidth (req/gross): %.2lf MB/s\n", ((sizeof(amagg_internal::AmaggReqMeta) + sizeof(ReqPayload<REQ_N>)) * num_ops * local::rank_n() * 2 / duration_total));
   print("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", ((sizeof(ReqPayload<REQ_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/gross): %.2lf MB/s\n", ((sizeof(amagg_internal::AmaggAckMeta) + sizeof(AckPayload<ACK_N>)) * num_ops * local::rank_n() * 2 / duration_total));
+  print("Total single-direction node bandwidth (ack/pure): %.2lf MB/s\n", ((sizeof(AckPayload<ACK_N>)) * num_ops * local::rank_n() * 2 / duration_total));
 }
 
 int main(int argc, char** argv) {

@@ -59,7 +59,8 @@ int worker(int64_t total_MB_to_send) {
   double duration_s = timer_total.to_s();
   double bandwidth_node_s = (double) N * num_ops * 32 / duration_s;
   if (!rank_me()) {
-    printf("Total MB to send is %d MB\n", total_MB_to_send);
+    printf("req payload size = %lu Byte\n", sizeof(Payload<N>));
+    printf("aggr_store overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
     printf("Total single-direction node bandwidth (req/pure): %.2lf MB/s\n", bandwidth_node_s / 1e6);
   }
 //  if (!rank_me()) {
