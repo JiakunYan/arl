@@ -24,7 +24,7 @@ alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
 void init_amff() {
   amff_agg_buffer_p = new AggBuffer[proc::rank_n()];
 
-  int max_buffer_size = gex_AM_MaxRequestMedium(backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,0);
+  int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
     amff_agg_buffer_p[i].init(max_buffer_size, 0);
   }
@@ -57,6 +57,7 @@ class AmffTypeWrapper {
     } else if (cmd == "req_invoker") {
       return get_pi_fnptr(req_invoker);
     } else {
+      printf("cmd: %s\n", cmd.c_str());
       throw std::runtime_error("Unknown function call");
     }
   }

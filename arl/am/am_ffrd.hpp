@@ -104,7 +104,7 @@ alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;
 void init_amffrd() {
   amffrd_internal::amffrd_agg_buffer_p = new amffrd_internal::AggBuffer[proc::rank_n()];
 
-  int max_buffer_size = gex_AM_MaxRequestMedium(backend::internal::tm, GEX_RANK_INVALID, GEX_EVENT_NOW, 0, 4);
+  int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
     amffrd_internal::amffrd_agg_buffer_p[i].init(max_buffer_size, sizeof(AmffrdReqMeta));
   }

@@ -7,7 +7,7 @@
 
 namespace arl::am_internal {
 enum HandlerType {
-  AM_REQ, AM_ACK,
+  AM_REQ = 10, AM_ACK,
   AM_RD_REQ, AM_RD_ACK,
   AM_FF_REQ, AM_FFRD_REQ
 };
@@ -36,6 +36,9 @@ inline bool pool_am_event_queue() {
     case AM_FFRD_REQ:
       amffrd_internal::generic_amffrd_reqhandler(event);
       break;
+    default:
+      fprintf(stderr, "Unknown tag %d\n", event.tag);
+      exit(0);
   }
   delete [] (char*)event.buf;
   return true;
