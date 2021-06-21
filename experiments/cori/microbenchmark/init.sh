@@ -54,3 +54,11 @@ make VERBOSE=1 -j | tee init-make.log 2>&1 || { echo "make error!"; exit 1; }
 #echo "Installing ARL to ${ARL_INSTALL_PATH}"
 #make install > init-install.log 2>&1 || { echo "install error!"; exit 1; }
 mv *.log ../log
+
+# download dataset
+if [[ ! -f "${SCRATCH}/kcount/gut-5x.fastq" ]]; then
+  echo "Downloading dataset into ${SCRATCH}/kcount..."
+  cd ${SCRATCH}/kcount
+  wget https://portal.nersc.gov/project/hipmer/MetaHipMer_datasets_12_2019/gut-5x.fastq.gz
+  gzip -d gut-5x.fastq.gz
+fi

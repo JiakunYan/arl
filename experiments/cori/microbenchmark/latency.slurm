@@ -8,7 +8,7 @@
 #SBATCH --constraint=haswell
 
 PATH_TO_BUILD_DIR=${1:-./init/build/}
-PATH_TO_EXE=${PATH_TO_BUILD_DIR}/examples/microbenchmark/bw_weak
+PATH_TO_EXE=${PATH_TO_BUILD_DIR}/examples/microbenchmark/latency
 
 echo "srun --ntasks-per-node=2 arl_lt"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_lt
