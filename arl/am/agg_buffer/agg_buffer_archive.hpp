@@ -19,7 +19,7 @@ inline void do_something() {
 // push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() will trivially flush the whole aggregation buffer, because the buffer only has one memory chunk.
 class AggBufferSimple {
- public:
+  public:
   using size_type = int64_t;
   AggBufferSimple(): cap_(0), tail_(0), ptr_(nullptr) {
   }
@@ -100,7 +100,7 @@ class AggBufferSimple {
     return os.str();
   }
 
- private:
+  private:
   alignas(alignof_cacheline) char* ptr_;
   alignas(alignof_cacheline) size_type cap_;
   alignas(alignof_cacheline) size_type tail_;
@@ -112,7 +112,7 @@ class AggBufferSimple {
 // push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() only flushes the caller's local memory chunk.
 class AggBufferLocal {
- public:
+  public:
   AggBufferLocal(): cap_(0), thread_num_(0), thread_tail_(nullptr), thread_ptr_(nullptr) {
   }
 
@@ -200,7 +200,7 @@ class AggBufferLocal {
     return results;
   }
 
- private:
+  private:
   struct AlignedCharPtr {
     alignas(alignof_cacheline) char* val;
   };
@@ -219,7 +219,7 @@ class AggBufferLocal {
 // push() will push one or two elements into the buffer and, if the buffer is full, flush the buffer.
 // flush() will flush all the memory chunks, and thus cost more time.
 class AggBufferAdvanced {
- public:
+  public:
   AggBufferAdvanced(): cap_(0), thread_num_(0), thread_tail_(nullptr), thread_ptr_(nullptr), lock_ptr_(nullptr) {
   }
 
@@ -328,7 +328,7 @@ class AggBufferAdvanced {
     return results;
   }
 
- private:
+  private:
   struct AlignedCharPtr {
     alignas(alignof_cacheline) char* val;
   };
@@ -352,7 +352,7 @@ class AggBufferAdvanced {
 // The thread safety between push() and push()/flush() is achieved by atomic operations.
 // The thread safety between flush() and flush() is achieved by a mutex lock.
 class AggBufferAtomic {
- public:
+  public:
   using size_type = int64_t;
   AggBufferAtomic() : cap_(0), prefix_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
 
@@ -477,7 +477,7 @@ class AggBufferAtomic {
     return os.str();
   }
 
- private:
+  private:
   alignas(alignof_cacheline) char* ptr_;
   alignas(alignof_cacheline) std::atomic<size_type> tail_;
   alignas(alignof_cacheline) std::atomic<size_type> reserved_tail_;

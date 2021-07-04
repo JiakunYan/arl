@@ -16,7 +16,7 @@ using am_internal::AggBuffer;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_recv_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_req_counters; // of length proc::rank_n()
 // other variables whose names are clear
-alignas(alignof_cacheline) AggBuffer* amffrd_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer** amffrd_agg_buffer_p;
 
 struct AmffrdReqMeta {
   intptr_t fn_p;
@@ -102,11 +102,12 @@ alignas(alignof_cacheline) AmffrdReqMeta* global_meta_p = nullptr;
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amffrd() {
-  amffrd_internal::amffrd_agg_buffer_p = new amffrd_internal::AggBuffer[proc::rank_n()];
+  amffrd_agg_buffer_p = new AggBuffer*[proc::rank_n()];
 
   int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amffrd_internal::amffrd_agg_buffer_p[i].init(max_buffer_size, sizeof(AmffrdReqMeta));
+    amffrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    amffrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmffrdReqMeta));
   }
 
   amffrd_recv_counter = new AlignedAtomicInt64;
@@ -121,13 +122,16 @@ void exit_amffrd() {
   delete [] amffrd_req_counters;
   delete amffrd_recv_counter;
   delete amffrd_internal::global_meta_p;
-  delete[] amffrd_internal::amffrd_agg_buffer_p;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    delete amffrd_agg_buffer_p[i];
+  }
+  delete [] amffrd_agg_buffer_p;
 }
 
 void flush_amffrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int64_t>> results = amffrd_internal::amffrd_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amffrd_internal::amffrd_agg_buffer_p[i]->flush();
     for (auto result: results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -213,7 +217,7 @@ void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
 //  printf("Rank %ld send rpc to rank %ld\n", rank_me(), remote_worker);
 //  std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
 
-  std::pair<char*, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  std::pair<char*, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc]->push((char*) &payload, sizeof(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       amffrd_internal::sendm_amffrd(remote_proc, *amffrd_internal::global_meta_p,

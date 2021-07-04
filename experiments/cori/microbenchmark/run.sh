@@ -5,7 +5,7 @@ set -e
 # import the the script containing common functions
 source ../../include/scripts.sh
 
-TASKS=("bw_strong.slurm" "latency.slurm" "attentiveness.slurm" "heavy_handler.slurm" "kcount.slurm")
+TASKS=("bw_weak.slurm" "bw_strong.slurm" "latency.slurm" "attentiveness.slurm" "heavy_handler.slurm" "kcount.slurm")
 BUILD_ROOT=$(realpath "${BUILD_ROOT:-init/build}")
 NNODES=(8)
 #NNODES=(1 2 4 8 16 32)

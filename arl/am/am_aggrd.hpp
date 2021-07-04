@@ -18,7 +18,7 @@ alignas(alignof_cacheline) AlignedAtomicInt64 *amaggrd_ack_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amaggrd_req_counter;
 alignas(alignof_cacheline) AlignedInt64 *amaggrd_req_local_counters;
 
-alignas(alignof_cacheline) AggBuffer* amaggrd_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer** amaggrd_agg_buffer_p;
 
 struct AmaggrdReqMeta {
   intptr_t fn_p;
@@ -172,12 +172,13 @@ alignas(alignof_cacheline) AmaggrdReqMeta* global_meta_p = nullptr;
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amaggrd() {
-  amaggrd_agg_buffer_p = new AggBuffer[proc::rank_n()];
+  amaggrd_agg_buffer_p = new AggBuffer*[proc::rank_n()];
 
   // TODO: might have problem if sizeof(result) > sizeof(arguments)
   int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amaggrd_agg_buffer_p[i].init(max_buffer_size, sizeof(AmaggrdReqMeta));
+    amaggrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    amaggrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmaggrdReqMeta));
   }
 
   amaggrd_ack_counter = new AlignedAtomicInt64;
@@ -196,13 +197,16 @@ void exit_amaggrd() {
   delete global_meta_p;
   delete amaggrd_ack_counter;
   delete amaggrd_req_counter;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    delete amaggrd_agg_buffer_p[i];
+  }
   delete [] amaggrd_agg_buffer_p;
 }
 
 void flush_amaggrd_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int64_t>> results = amaggrd_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amaggrd_agg_buffer_p[i]->flush();
     for (auto result: results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -219,7 +223,7 @@ void flush_amaggrd_buffer() {
 int64_t get_amaggrd_buffer_size() {
   int64_t value = 0;
   for (int i = 0; i < proc::rank_n(); ++i) {
-    value += amaggrd_agg_buffer_p[i].get_size();
+    value += amaggrd_agg_buffer_p[i]->get_size();
   }
   return value;
 }
@@ -227,7 +231,7 @@ int64_t get_amaggrd_buffer_size() {
 std::string get_amaggrd_buffer_status() {
   std::ostringstream os;
   for (int i = 0; i < proc::rank_n(); ++i) {
-    std::string status = amaggrd_agg_buffer_p[i].get_status();
+    std::string status = amaggrd_agg_buffer_p[i]->get_status();
     os << "No. " << i << "\n";
     os << status;
   }
@@ -293,7 +297,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  std::pair<char*, int64_t> result = amaggrd_internal::amaggrd_agg_buffer_p[remote_proc].push(std::move(payload));
+  std::pair<char*, int64_t> result = amaggrd_internal::amaggrd_agg_buffer_p[remote_proc]->push((char*) &payload, sizeof(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       sendm_amaggrd(remote_proc, *amaggrd_internal::global_meta_p, std::get<0>(result), std::get<1>(result));

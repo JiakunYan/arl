@@ -27,7 +27,7 @@ void worker() {
 
   for (int i = 0; i < N_STEPS; ++i) {
     int val = distribution(generator);
-    BufPair result = aggBuffer_p->push(val);
+    BufPair result = aggBuffer_p->push((char*) &val, sizeof(val));
     int count = counts[val]++;
 
     if (get<0>(result) != nullptr) {
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   arl::init(15, 16);
   cout << "Testing " << type_name<AggBuffer>() << endl;
   aggBuffer_p = new AggBuffer();
-  aggBuffer_p->init(buf_size);
+  aggBuffer_p->init(buf_size, 0);
   for (int i = 0; i < MAX_VAL; ++i) {
     counts[i] = 0;
   }

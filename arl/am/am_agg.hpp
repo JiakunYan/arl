@@ -18,17 +18,18 @@ alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_ack_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amagg_req_counter;
 alignas(alignof_cacheline) AlignedInt64 *amagg_req_local_counters;
 
-alignas(alignof_cacheline) AggBuffer* amagg_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer** amagg_agg_buffer_p;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amagg() {
-  amagg_agg_buffer_p = new AggBuffer[proc::rank_n()];
+  amagg_agg_buffer_p = new AggBuffer*[proc::rank_n()];
 
   // TODO: might have problem if sizeof(result) > sizeof(arguments)
   int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amagg_agg_buffer_p[i].init(max_buffer_size, 0);
+    amagg_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    amagg_agg_buffer_p[i]->init(max_buffer_size, 0);
   }
   amagg_ack_counter = new AlignedAtomicInt64;
   amagg_ack_counter->val = 0;
@@ -45,6 +46,9 @@ void exit_amagg() {
   delete [] amagg_req_local_counters;
   delete amagg_req_counter;
   delete amagg_ack_counter;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    delete amagg_agg_buffer_p[i];
+  }
   delete [] amagg_agg_buffer_p;
 }
 
@@ -204,7 +208,7 @@ Future<std::invoke_result_t<Fn, Args...>> run_lpc(rank_t context, Fn&& fn, Args&
 void flush_amagg_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int64_t>> results = amagg_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amagg_agg_buffer_p[i]->flush();
     for (auto result: results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -278,7 +282,7 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  std::pair<char*, int64_t> result = amagg_internal::amagg_agg_buffer_p[remote_proc].push(meta, std::move(payload));
+  std::pair<char*, int64_t> result = amagg_internal::amagg_agg_buffer_p[remote_proc]->push((char*) &meta, sizeof(meta), (char*) &payload, sizeof(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       backend::sendm(remote_proc, am_internal::HandlerType::AM_REQ, std::get<0>(result), std::get<1>(result));

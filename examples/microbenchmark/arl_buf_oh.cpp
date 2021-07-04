@@ -22,7 +22,7 @@ int buf_n = 64;
 void init_buf(int buf_num) {
   buffer_p = new AggBuffer[buf_num];
   for (int i = 0; i < buf_num; ++i) {
-    buffer_p[i].init(buffer_cap);
+    buffer_p[i].init(buffer_cap, 0);
   }
 }
 
@@ -43,7 +43,7 @@ void worker() {
   for (int i = 0; i < num_ops; i++) {
     size_t target_rank = distribution(generator);
     Payload payload{0};
-    std::pair<char*, int64_t> result = buffer_p[target_rank].push(payload);
+    std::pair<char*, int64_t> result = buffer_p[target_rank].push((char*) (char*) &payload, sizeof(payload));
     delete []  std::get<0>(result);
   }
 

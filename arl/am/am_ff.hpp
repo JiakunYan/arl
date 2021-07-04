@@ -16,17 +16,18 @@ using am_internal::AggBuffer;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amff_recv_counter;
 alignas(alignof_cacheline) AlignedAtomicInt64 *amff_req_counters; // of length proc::rank_n()
 
-alignas(alignof_cacheline) AggBuffer* amff_agg_buffer_p;
+alignas(alignof_cacheline) AggBuffer** amff_agg_buffer_p;
 
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
 void init_amff() {
-  amff_agg_buffer_p = new AggBuffer[proc::rank_n()];
+  amff_agg_buffer_p = new AggBuffer*[proc::rank_n()];
 
   int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amff_agg_buffer_p[i].init(max_buffer_size, 0);
+    amff_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    amff_agg_buffer_p[i]->init(max_buffer_size, 0);
   }
   amff_recv_counter = new AlignedAtomicInt64;
   amff_recv_counter->val = 0;
@@ -39,6 +40,9 @@ void init_amff() {
 void exit_amff() {
   delete [] amff_req_counters;
   delete amff_recv_counter;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    delete amff_agg_buffer_p[i];
+  }
   delete [] amff_agg_buffer_p;
 }
 
@@ -134,7 +138,7 @@ void run_lpc(rank_t context, Fn&& fn, Args&&... args) {
 void flush_amff_buffer() {
   for (int ii = 0; ii < proc::rank_n(); ++ii) {
     int i = (ii + local::rank_me()) % proc::rank_n();
-    std::vector<std::pair<char*, int64_t>> results = amff_agg_buffer_p[i].flush();
+    std::vector<std::pair<char*, int64_t>> results = amff_agg_buffer_p[i]->flush();
     for (auto result: results) {
       if ( std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
@@ -192,7 +196,7 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
 //  printf("send meta: %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  std::pair<char*, int64_t> result = amff_internal::amff_agg_buffer_p[remote_proc].push(meta, std::move(payload));
+  std::pair<char*, int64_t> result = amff_internal::amff_agg_buffer_p[remote_proc]->push((char*) &meta, sizeof(meta), (char*) &payload, sizeof(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
       backend::sendm(remote_proc, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
