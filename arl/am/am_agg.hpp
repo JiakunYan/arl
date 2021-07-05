@@ -28,7 +28,14 @@ void init_amagg() {
   // TODO: might have problem if sizeof(result) > sizeof(arguments)
   int max_buffer_size = backend::get_max_buffer_size();
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amagg_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    if (config::aggBufferType == config::AGG_BUFFER_SIMPLE)
+      amagg_agg_buffer_p[i] = new am_internal::AggBufferSimple();
+    else if (config::aggBufferType == config::AGG_BUFFER_LOCAL)
+      amagg_agg_buffer_p[i] = new am_internal::AggBufferLocal();
+    else {
+      assert(config::aggBufferType == config::AGG_BUFFER_ATOMIC);
+      amagg_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    }
     amagg_agg_buffer_p[i]->init(max_buffer_size, 0);
   }
   amagg_ack_counter = new AlignedAtomicInt64;

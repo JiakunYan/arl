@@ -96,6 +96,25 @@ class AggBufferLocal : public AggBuffer {
     return results;
   }
 
+  [[nodiscard]] size_type get_size() const {
+    size_type total = 0;
+    for (int i = 0; i < thread_num_; ++i) {
+      total += thread_tail_[i].val;
+    }
+    return total;
+  }
+
+  [[nodiscard]] std::string get_status() const {
+    std::ostringstream os;
+    for (int i = 0; i < thread_num_; ++i) {
+      os << "BUFFER[" << i << "]:\n";
+      os << "ptr_  = " << (void *) thread_ptr_[i].val << '\n';
+      os << "tail_ = " << thread_tail_[i].val << "\n";
+      os << "cap_  = " << cap_ << "\n";
+    }
+    return os.str();
+  }
+
   private:
   struct AlignedCharPtr {
     alignas(alignof_cacheline) char* val;

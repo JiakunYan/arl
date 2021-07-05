@@ -20,12 +20,14 @@
 #include <sstream>
 #include <execinfo.h>
 #include <unistd.h>
+#include <cassert>
 #include <stdio.h>
 #include <sys/time.h>
 
 #include "external/typename.hpp"
 
 #include "config.hpp"
+#include "config_env.hpp"
 #include "global_decl.hpp"
 // tools
 #include "tool/colors.hpp"

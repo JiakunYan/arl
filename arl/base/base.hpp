@@ -43,6 +43,7 @@ void worker_handler(Fn &&fn, rank_t id, Args &&... args) {
 
 void init(size_t custom_num_workers_per_proc = 15,
     size_t custom_num_threads_per_proc = 16, size_t shared_segment_size = 256) {
+  config::init();
   backend::init(shared_segment_size);
 
 #ifdef ARL_DEBUG
