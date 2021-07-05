@@ -66,7 +66,7 @@ void worker(int id) {
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
   if (id == 0) {
-    arl::proc::print("Node single-direction bandwidth = %.3lf MB/S\n", bandwidth_node_s / 1e6);
+    arl::proc::print("Node single-direction bandwidth = %.3lf MB/s\n", bandwidth_node_s / 1e6);
   }
 }
 

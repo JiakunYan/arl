@@ -51,7 +51,7 @@ void worker(int id) {
   double duration_s = std::chrono::duration<double>(end - begin).count();
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
-  arl::proc::print("Node single-direction bandwidth = %.3lf MB/S (duration %lf s)\n", bandwidth_node_s / 1e6, duration_s);
+  arl::proc::print("Node single-direction bandwidth = %.3lf MB/s (duration %lf s)\n", bandwidth_node_s / 1e6, duration_s);
 }
 
 int main() {

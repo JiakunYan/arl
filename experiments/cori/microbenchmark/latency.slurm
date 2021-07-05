@@ -10,9 +10,9 @@
 PATH_TO_BUILD_DIR=${1:-./init/build/}
 PATH_TO_EXE=${PATH_TO_BUILD_DIR}/examples/microbenchmark/latency
 
-echo "srun --ntasks-per-node=2 arl_lt"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_lt"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_lt
-echo "srun --ntasks-per-node=2 gex_lt"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 gex_lt"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/gex_lt
-echo "srun --ntasks-per-node=32 upcxx_lt"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=32 upcxx_lt"
 srun --ntasks-per-node=32 ${PATH_TO_EXE}/upcxx_lt

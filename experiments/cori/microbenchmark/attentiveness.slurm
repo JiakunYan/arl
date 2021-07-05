@@ -10,7 +10,7 @@
 PATH_TO_BUILD_DIR=${1:-./init/build/}
 PATH_TO_EXE=${PATH_TO_BUILD_DIR}/examples/microbenchmark/attentiveness
 
-echo "srun --ntasks-per-node=2 arl_at"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_at"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_at
-echo "srun --ntasks-per-node=32 upcxx_at"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=32 upcxx_at"
 srun --ntasks-per-node=32 ${PATH_TO_EXE}/upcxx_at

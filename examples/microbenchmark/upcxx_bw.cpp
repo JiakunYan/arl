@@ -1,7 +1,3 @@
-//
-// Created by jackyan on 2/26/20.
-//
-
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
@@ -48,7 +44,7 @@ int main(int argc, char **argv) {
   double bandwidth_node_s = payload_size * num_ops * 32 / duration_s;
   if (!rank_me) {
     printf("payload size = %lu Byte\n", sizeof(Payload));
-    printf("Node single-direction bandwidth = %.3lf MB/S\n", bandwidth_node_s / 1e6);
+    printf("Node single-direction bandwidth = %.3lf MB/s\n", bandwidth_node_s / 1e6);
   }
 
   upcxx::finalize();

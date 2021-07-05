@@ -10,15 +10,15 @@
 PATH_TO_BUILD_DIR=${1:-./init/build/}
 PATH_TO_EXE=${PATH_TO_BUILD_DIR}/examples/microbenchmark/bw_strong
 
-echo "srun --ntasks-per-node=2 arl_agg_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_agg_bw_strong"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_agg_bw_strong
-echo "srun --ntasks-per-node=2 arl_aggrd_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_aggrd_bw_strong"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_aggrd_bw_strong
-echo "srun --ntasks-per-node=2 arl_ff_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_ff_bw_strong"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_ff_bw_strong
-echo "srun --ntasks-per-node=2 arl_ffrd_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 arl_ffrd_bw_strong"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/arl_ffrd_bw_strong
-echo "srun --ntasks-per-node=2 gex_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=2 gex_bw_strong"
 srun --ntasks-per-node=2 ${PATH_TO_EXE}/gex_bw_strong
-echo "srun --ntasks-per-node=32 upcxx_agg_bw_strong"
+echo "srun -N=${SLURM_NNODES} --ntasks-per-node=32 upcxx_agg_bw_strong"
 srun --ntasks-per-node=32 ${PATH_TO_EXE}/upcxx_agg_bw_strong
