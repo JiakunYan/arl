@@ -3,4 +3,5 @@ run
 data
 draw
 external/*
+__pycache__
 !external/*.sh

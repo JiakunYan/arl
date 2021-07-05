@@ -1,5 +1,6 @@
 add_arl_executable(arl_barrier_oh arl_barrier_oh.cpp)
 add_arl_executable(arl_buf_oh arl_buf_oh.cpp)
+add_arl_executable(arl_bw arl_bw.cpp)
 
 include_directories(.)
 add_subdirectory(bw_strong)

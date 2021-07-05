@@ -63,8 +63,15 @@ def draw_primitive():
     tag_key = "task"
     y_key = 'total_time'
     # tag_mask = ["kcount-upcxx", "kcount_ffrd"]
-    tag_mask = ["kcount_ffrd", "kcount_ff", "kcount_aggrd", "kcount_agg", "kcount_upcxx",
-                "kcount_ffrd aggBuffer=simple", "kcount_ffrd aggBuffer=local"]
+    tag_mask = [
+        "kcount_ffrd",
+        # "kcount_ff",
+        # "kcount_aggrd",
+        # "kcount_agg",
+        "kcount_upcxx",
+        "kcount_ffrd aggBuffer=simple",
+        "kcount_ffrd aggBuffer=local",
+    ]
 
     df = pd.read_csv("data/kcount.csv")[[tag_key, x_key, y_key]]
     lines = []
