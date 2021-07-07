@@ -4,8 +4,10 @@ function(add_arl_executable EXEC)
 endfunction()
 
 function(add_gex_executable EXEC)
-    add_executable(${EXEC} ${ARGN})
-    target_link_libraries(${EXEC} PRIVATE PkgConfig::gasnet arl)
+    if(gasnet_FOUND)
+        add_executable(${EXEC} ${ARGN})
+        target_link_libraries(${EXEC} PRIVATE PkgConfig::gasnet arl)
+    endif()
 endfunction()
 
 function(add_upcxx_executable EXEC)

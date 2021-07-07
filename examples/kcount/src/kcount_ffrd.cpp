@@ -114,7 +114,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
         }
         num_kmers++;
       }
-      progress();
+      progress_external();
     }
     progbar.done(true);
     barrier();

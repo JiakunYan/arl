@@ -63,7 +63,7 @@ void worker() {
 
 int main() {
   using req_invoker_t = int(intptr_t, char*, int, char*, int);
-  arl::init(1, 1);
+  arl::init();
 
   //---
   cout << "sizeof(AmaggrdReqMeta) is " << sizeof(arl::amaggrd_internal::AmaggrdReqMeta) << endl;
@@ -71,33 +71,33 @@ int main() {
   cout << "sizeof(AmaggrdAckMeta) is " << sizeof(arl::amaggrd_internal::AmaggrdAckMeta) << endl;
   cout << "sizeof(AmaggrdAckPayload) is " << sizeof(arl::amaggrd_internal::AmaggrdAckPayload<int>) << endl;
 
-  // ---
-  using Payload = arl::amaggrd_internal::AmaggrdReqPayload<char, int, bool>;
-  using AckPayload = arl::amaggrd_internal::AmaggrdAckPayload<int>;
-
-  intptr_t wrapper_p1 = get_pi_fnptr(arl::amaggrd_internal::AmaggrdTypeWrapper<decltype(foo1), char, int, bool>::invoker);
-  auto invoker1 = resolve_pi_fnptr<intptr_t(const std::string&)>(wrapper_p1);
-  intptr_t req_invoker_p1 = invoker1("req_invoker");
-  auto req_invoker = resolve_pi_fnptr<req_invoker_t >(req_invoker_p1);
-
-  intptr_t fn_p1 = get_pi_fnptr(&foo1);
-  arl::Future<int> future1(true), future2(true);
-  Payload data1{future1.get_p(), 0, std::make_tuple('a', 233, true)};
-  Payload data2{future2.get_p(), 1, std::make_tuple('b', 144, false)};
-
-  arl::amaggrd_internal::AmaggrdReqMeta meta{fn_p1, wrapper_p1};
-  gex_AM_Arg_t* meta_p1 = reinterpret_cast<gex_AM_Arg_t*>(&meta);
-  char buf[100];
-  int buf_len = 0;
-  std::memcpy(buf + buf_len, &data1, sizeof(data1));
-  buf_len += sizeof(data1);
-  std::memcpy(buf + buf_len, &data2, sizeof(data2));
-  buf_len += sizeof(data2);
-  char out_buf[100];
-  int out_len = req_invoker(fn_p1, buf, buf_len, out_buf, 100);
-  cout << "out_len is " << out_len << endl;
-  cout << "result1 is " << reinterpret_cast<AckPayload*>(out_buf)->data << endl;
-  cout << "result2 is " << reinterpret_cast<AckPayload*>(out_buf + sizeof(AckPayload))->data << endl;
+//  // ---
+//  using Payload = arl::amaggrd_internal::AmaggrdReqPayload<char, int, bool>;
+//  using AckPayload = arl::amaggrd_internal::AmaggrdAckPayload<int>;
+//
+//  intptr_t wrapper_p1 = get_pi_fnptr(arl::amaggrd_internal::AmaggrdTypeWrapper<decltype(foo1), char, int, bool>::invoker);
+//  auto invoker1 = resolve_pi_fnptr<intptr_t(const std::string&)>(wrapper_p1);
+//  intptr_t req_invoker_p1 = invoker1("req_invoker");
+//  auto req_invoker = resolve_pi_fnptr<req_invoker_t >(req_invoker_p1);
+//
+//  intptr_t fn_p1 = get_pi_fnptr(&foo1);
+//  arl::Future<int> future1(true), future2(true);
+//  Payload data1{future1.get_p(), 0, std::make_tuple('a', 233, true)};
+//  Payload data2{future2.get_p(), 1, std::make_tuple('b', 144, false)};
+//
+//  arl::amaggrd_internal::AmaggrdReqMeta meta{fn_p1, wrapper_p1};
+////  gex_AM_Arg_t* meta_p1 = reinterpret_cast<gex_AM_Arg_t*>(&meta);
+//  char buf[100];
+//  int buf_len = 0;
+//  std::memcpy(buf + buf_len, &data1, sizeof(data1));
+//  buf_len += sizeof(data1);
+//  std::memcpy(buf + buf_len, &data2, sizeof(data2));
+//  buf_len += sizeof(data2);
+//  char out_buf[100];
+//  int out_len = req_invoker(fn_p1, buf, buf_len, out_buf, 100);
+//  cout << "out_len is " << out_len << endl;
+//  cout << "result1 is " << reinterpret_cast<AckPayload*>(out_buf)->data << endl;
+//  cout << "result2 is " << reinterpret_cast<AckPayload*>(out_buf + sizeof(AckPayload))->data << endl;
 
   // ---
 //  arl::register_amaggrd(foo2, char(), int(), bool());

@@ -24,7 +24,7 @@ void progress_handler(rank_t id) {
     usleep(1);
   }
   while (!worker_exit) {
-    progress();
+    progress_internal();
   }
 }
 

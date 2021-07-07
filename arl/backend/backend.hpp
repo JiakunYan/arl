@@ -35,6 +35,8 @@ extern inline const int get_max_buffer_size();
 extern inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes);
 extern inline int recvm(cq_entry_t& entry);
 extern inline int progress();
+extern inline void *buffer_alloc();
+extern inline void buffer_free(void *);
 } // namespace arl::backend
 
 #ifdef ARL_USE_GEX
@@ -42,6 +44,13 @@ extern inline int progress();
 #include "GASNet-EX/base.hpp"
 #include "GASNet-EX/collective.hpp"
 #include "GASNet-EX/reduce.hpp"
+#endif
+#ifdef ARL_USE_LCI
+#include <mpi.h>
+#include <lci.h>
+#include "LCI/base.hpp"
+#include "LCI/collective.hpp"
+#include "LCI/reduce.hpp"
 #endif
 
 #endif //ARL_BACKEND_HPP

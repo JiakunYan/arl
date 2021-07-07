@@ -5,14 +5,17 @@
 #ifndef ARL_BACKEND_COLLECTIVE_HPP
 #define ARL_BACKEND_COLLECTIVE_HPP
 
-#include <gasnet_coll.h>
-
 namespace arl::backend {
 template <typename T>
 inline T broadcast(T& val, rank_t root) {
-  T rv;
-  gex_Event_t event = gex_Coll_BroadcastNB(internal::tm, root, &rv, &val, sizeof(T), 0);
-  progress_external_until([&](){return !gex_Event_Test(event);});
+  T rv = val;
+  MPI_Request request;
+  MPI_Ibcast(&rv, sizeof(T), MPI_BYTE, root, MPI_COMM_WORLD, &request);
+  progress_external_until([&](){
+    int flag;
+    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
+    return flag;
+  });
 
   return rv;
 }

@@ -113,7 +113,7 @@ void worker(size_t n_kmers) {
       } else {
         // current task is not ready
         ++it;
-//        arl::progress();
+//        arl::progress_external();
       }
     }
 
@@ -127,7 +127,7 @@ void worker(size_t n_kmers) {
       } else {
         ++flush_count;
       }
-      while(arl::progress()) continue;
+      while(arl::progress_external()) continue;
     } else {
       flush_count = 0;
     }

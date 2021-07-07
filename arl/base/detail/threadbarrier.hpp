@@ -18,7 +18,7 @@ class ThreadBarrier {
       step++;
     }
     else {
-      progress_until([&](){return step != mstep;});
+      progress_external_until([&](){return step != mstep;});
     }
   }
 

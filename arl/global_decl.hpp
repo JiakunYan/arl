@@ -27,7 +27,7 @@ Register_Op(op_max, std::max)
 #undef Register_Op
 
 const int ARL_OK = 0;
-const int ARL_ERROR = -1;
+const int ARL_RETRY = -1;
 const int alignof_cacheline = 64;
 const double NO_TIMEOUT = 0;
 
@@ -52,8 +52,9 @@ enum RPCType {
 extern void flush_agg_buffer(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 extern void wait_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 extern void flush_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
-extern bool progress(void);
-extern void progress_until(const std::function<bool()>&); // with deadlock detector
+inline void progress_internal();
+inline bool progress_external();
+extern void progress_external_until(const std::function<bool()>&); // with deadlock detector
 extern rank_t rank_me();
 extern rank_t rank_n();
 

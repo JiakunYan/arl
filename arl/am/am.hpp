@@ -109,22 +109,16 @@ inline bool progress_external() {
   return am_internal::pool_am_event_queue();
 }
 
-// return value indicates whether this function actually executes some works.
-bool progress() {
-  progress_internal();
-  return progress_external();
-}
-
-void progress_until(const std::function<bool()>& is_ready) {
+void progress_external_until(const std::function<bool()>& is_ready) {
   tick_t start = ticks_now();
   while (!is_ready()) {
-    bool active = progress();
+    bool active = progress_external();
     if (active)
       start = ticks_now();
     else if (debug::timeout > 0 && ticks_to_s(ticks_now() - start) > debug::timeout) {
       ARL_TIMEOUT_HANDLER();
       sleep(debug::timeout); // wait for all the other workers
-      throw std::runtime_error("progress_until: timeout\n");
+      throw std::runtime_error("progress_external_until: timeout\n");
     }
   }
 }

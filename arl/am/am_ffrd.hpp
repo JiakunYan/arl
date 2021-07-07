@@ -161,7 +161,7 @@ int64_t get_expected_recv_num() {
 void wait_amffrd() {
   local::barrier();
   int64_t expected_recv_num = get_expected_recv_num();
-  progress_until([&](){return expected_recv_num <= amffrd_recv_counter->val;});
+  progress_external_until([&](){return expected_recv_num <= amffrd_recv_counter->val;});
 }
 
 } // namespace amffrd_internal

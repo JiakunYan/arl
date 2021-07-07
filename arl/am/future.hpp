@@ -13,7 +13,7 @@ class FutureData {
  public:
   FutureData(): ready_(false) {}
   ~FutureData() {
-    progress_until([&](){return ready();});
+    progress_external_until([&](){return ready();});
   }
   bool ready() {
     return ready_.load();
@@ -45,7 +45,7 @@ class FutureData<void> {
  public:
   FutureData(): ready_(false) {}
   ~FutureData() {
-    progress_until([&](){return ready();});
+    progress_external_until([&](){return ready();});
   }
   bool ready() {
     return ready_.load();
@@ -90,7 +90,7 @@ class Future {
   }
 
   T get() const {
-    progress_until([&](){return data_p_->ready();});
+    progress_external_until([&](){return data_p_->ready();});
     return data_p_->get();
   }
 

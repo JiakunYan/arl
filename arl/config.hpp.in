@@ -1,7 +1,3 @@
-//
-// Created by jiakun on 2020/9/16.
-//
-
 #ifndef ARL_CONFIG_HPP
 #define ARL_CONFIG_HPP
 
@@ -12,5 +8,6 @@
 #cmakedefine ARL_INFO
 #cmakedefine ARL_DEBUG
 #cmakedefine ARL_USE_GEX
+#cmakedefine ARL_USE_LCI
 
 #endif//ARL_CONFIG_HPP

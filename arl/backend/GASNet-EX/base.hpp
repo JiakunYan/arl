@@ -68,7 +68,7 @@ inline rank_t rank_n() {
 
 inline void barrier() {
   gex_Event_t event = gex_Coll_BarrierNB(internal::tm, 0);
-  progress_until([&](){return !gex_Event_Test(event);});
+  progress_external_until([&](){return !gex_Event_Test(event);});
 }
 
 inline void init(uint64_t shared_segment_size) {
@@ -134,7 +134,7 @@ inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes) {
 
 inline int recvm(cq_entry_t& entry) {
   ARL_Assert(internal::cq_p != nullptr, "Didn't initialize the backend!");
-  int ret = ARL_ERROR;
+  int ret = ARL_RETRY;
   if (!internal::cq_p->empty()) {
     internal::cq_mutex.lock();
     if (!internal::cq_p->empty()) {
@@ -151,6 +151,17 @@ inline int recvm(cq_entry_t& entry) {
 inline int progress() {
   CHECK_GEX(gasnet_AMPoll());
   return ARL_OK;
+}
+
+inline void *buffer_alloc() {
+  void *ptr = malloc(get_max_buffer_size());
+  return ptr;
+}
+
+inline void buffer_free(void *buffer) {
+  if (buffer != nullptr) {
+    free(buffer);
+  }
 }
 } // namespace arl::backend
 

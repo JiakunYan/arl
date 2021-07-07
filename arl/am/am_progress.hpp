@@ -16,7 +16,7 @@ enum HandlerType {
 inline bool pool_am_event_queue() {
   backend::cq_entry_t event;
   int ret = backend::recvm(event);
-  if (ret == ARL_ERROR) return false;
+  if (ret == ARL_RETRY) return false;
   switch (event.tag) {
     case AM_REQ :
       amagg_internal::generic_amagg_reqhandler(event);
@@ -40,7 +40,7 @@ inline bool pool_am_event_queue() {
       fprintf(stderr, "Unknown tag %d\n", event.tag);
       exit(0);
   }
-  delete [] (char*)event.buf;
+  backend::buffer_free(event.buf);
   return true;
 }
 

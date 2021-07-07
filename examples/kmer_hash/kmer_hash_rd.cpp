@@ -112,14 +112,14 @@ void worker(size_t n_kmers) {
       } else {
         // current task is not ready
         ++it;
-        arl::progress();
+        arl::progress_external();
       }
     }
 
     if (!is_active) {
       // flush buffer
       arl::flush_agg_buffer(arl::RPC_AGGRD);
-      while(arl::progress()) continue;
+      while(arl::progress_external()) continue;
     }
   }
 

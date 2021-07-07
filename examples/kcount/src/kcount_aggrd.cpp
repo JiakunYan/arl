@@ -109,7 +109,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
         futures.push_back(move(future));
         num_kmers++;
       }
-      progress();
+      progress_external();
     }
     progbar.done(true);
     barrier();
