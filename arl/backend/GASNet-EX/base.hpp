@@ -129,6 +129,7 @@ inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes) {
   CHECK_GEX(gex_AM_RequestMedium1(backend::internal::tm, target, internal::gex_handler_idx,
                         buf, nbytes, GEX_EVENT_NOW, 0, static_cast<gex_AM_Arg_t>(tag)));
   info::networkInfo.byte_send.add(nbytes);
+  free(buf);
   return ARL_OK;
 }
 
@@ -153,8 +154,8 @@ inline int progress() {
   return ARL_OK;
 }
 
-inline void *buffer_alloc() {
-  void *ptr = malloc(get_max_buffer_size());
+inline void *buffer_alloc(int nbytes) {
+  void *ptr = malloc(nbytes);
   return ptr;
 }
 

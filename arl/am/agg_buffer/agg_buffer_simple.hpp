@@ -18,12 +18,12 @@ class AggBufferSimple : public AggBuffer {
     cap_ = cap;
     prefix_ = prefix;
     tail_ = prefix_;
-    delete[] ptr_;
-    ptr_ = new char[cap];
+    backend::buffer_free(ptr_);
+    ptr_ = (char*)backend::buffer_alloc(cap_);
   }
 
   ~AggBufferSimple() override {
-    delete[] ptr_;
+    backend::buffer_free(ptr_);
   }
 
   std::pair<char *, size_type> push(char *p1, size_t s1,
@@ -34,7 +34,7 @@ class AggBufferSimple : public AggBuffer {
     std::pair<char *, size_type> result(nullptr, 0);
     if (tail_ + s1 + s2 > cap_) {
       result = std::make_pair(ptr_, tail_);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       tail_ = prefix_;
     }
     std::memcpy(ptr_ + tail_, p1, s1);
@@ -52,7 +52,7 @@ class AggBufferSimple : public AggBuffer {
     std::pair<char *, size_type> result(nullptr, 0);
     if (tail_ + s > cap_) {
       result = std::make_pair(ptr_, tail_);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       tail_ = prefix_;
     }
     std::memcpy(ptr_ + tail_, p, s);
@@ -70,7 +70,7 @@ class AggBufferSimple : public AggBuffer {
     }
     if (tail_ > prefix_) {
       result.emplace_back(ptr_, tail_);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       tail_ = prefix_;
     }
     lock.unlock();

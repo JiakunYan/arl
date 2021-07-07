@@ -26,13 +26,13 @@ class AggBufferLocal : public AggBuffer {
 
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i].val;
+        backend::buffer_free(thread_ptr_[i].val);
       }
       delete [] thread_ptr_;
     }
     thread_ptr_ = new AlignedCharPtr[thread_num_];
     for (int i = 0; i < thread_num_; ++i) {
-      thread_ptr_[i].val = new char[cap];
+      thread_ptr_[i].val = (char*)backend::buffer_alloc(cap_);
     }
   }
 
@@ -40,7 +40,7 @@ class AggBufferLocal : public AggBuffer {
     delete [] thread_tail_;
     if (thread_ptr_ != nullptr) {
       for (int i = 0; i < thread_num_; ++i) {
-        delete [] thread_ptr_[i].val;
+        backend::buffer_free(thread_ptr_[i].val);
       }
       delete [] thread_ptr_;
     }
@@ -53,7 +53,7 @@ class AggBufferLocal : public AggBuffer {
     if (thread_tail_[my_rank].val + s1 + s2 > cap_) {
       // push my
       result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
-      thread_ptr_[my_rank].val = new char [cap_];
+      thread_ptr_[my_rank].val = (char*)backend::buffer_alloc(cap_);
       thread_tail_[my_rank].val = prefix_;
     }
     std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, p1, s1);
@@ -69,7 +69,7 @@ class AggBufferLocal : public AggBuffer {
     if (thread_tail_[my_rank].val + s > cap_) {
       // push my
       result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
-      thread_ptr_[my_rank].val = new char [cap_];
+      thread_ptr_[my_rank].val = (char*)backend::buffer_alloc(cap_);
       thread_tail_[my_rank].val = prefix_;
     }
     std::memcpy(thread_ptr_[my_rank].val + thread_tail_[my_rank].val, p, s);
@@ -90,7 +90,7 @@ class AggBufferLocal : public AggBuffer {
     std::vector<std::pair<char*, size_type>> results;
     if (thread_tail_[my_rank].val > prefix_) {
       results.emplace_back(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
-      thread_ptr_[my_rank].val = new char [cap_];
+      thread_ptr_[my_rank].val = (char*)backend::buffer_alloc(cap_);
       thread_tail_[my_rank].val = prefix_;
     }
     return results;

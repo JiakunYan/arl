@@ -135,7 +135,7 @@ void generic_amagg_reqhandler(const backend::cq_entry_t& event) {
   char* buf = (char*) event.buf;
   int nbytes = event.nbytes;
   int o_cap = backend::get_max_buffer_size();
-  char* o_buf = new char[o_cap];
+  char* o_buf = (char*)backend::buffer_alloc(o_cap);
   int o_consumed = 0;
   int n = 0;
   int consumed = 0;
@@ -161,7 +161,6 @@ void generic_amagg_reqhandler(const backend::cq_entry_t& event) {
     ++n;
   }
   backend::sendm(event.srcRank, am_internal::HandlerType::AM_ACK, o_buf, o_consumed);
-  delete [] o_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
@@ -223,7 +222,6 @@ void flush_amagg_buffer() {
           backend::sendm(i, am_internal::HandlerType::AM_REQ, std::get<0>(result), std::get<1>(result));
           progress_external();
         }
-        delete [] std::get<0>(result);
       }
     }
   }
@@ -256,12 +254,11 @@ Future<std::invoke_result_t<Fn, Args...>> rpc(rank_t remote_worker, Fn&& fn, Arg
 //  printf("send meta: %ld, %ld, %ld, %d\n", meta.fn_p, meta.type_wrapper_p, meta.future_p, meta.target_local_rank);
 //  printf("sizeof(payload): %lu\n", sizeof(Payload));
 
-  char* ptr = new char[sizeof(AmaggReqMeta) + sizeof(Payload)];
+  char* ptr = (char*)backend::buffer_alloc(sizeof(AmaggReqMeta) + sizeof(Payload));
   *reinterpret_cast<AmaggReqMeta*>(ptr) = meta;
   *reinterpret_cast<Payload*>(ptr+sizeof(AmaggReqMeta)) = payload;
   backend::sendm(remote_proc, am_internal::HandlerType::AM_REQ, ptr, sizeof(AmaggReqMeta) + sizeof(Payload));
   progress_external();
-  delete [] ptr;
   ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
   return future;
 }
@@ -295,7 +292,6 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_agg(rank_t remote_worker, Fn&& fn,
       backend::sendm(remote_proc, am_internal::HandlerType::AM_REQ, std::get<0>(result), std::get<1>(result));
       progress_external();
     }
-    delete [] std::get<0>(result);
   }
   ++amagg_internal::amagg_req_local_counters[local::rank_me()].val;
   return future;

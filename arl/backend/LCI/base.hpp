@@ -40,7 +40,7 @@ inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes) {
   LCI_mbuffer_t src_buf;
   src_buf.address = buf;
   src_buf.length = nbytes;
-  while (LCI_putma(LCI_UR_ENDPOINT, src_buf, target, tag, LCI_UR_CQ_REMOTE) == LCI_ERR_RETRY)
+  while (LCI_putmna(LCI_UR_ENDPOINT, src_buf, target, tag, LCI_UR_CQ_REMOTE) == LCI_ERR_RETRY)
     LCI_progress(LCI_UR_DEVICE);
   info::networkInfo.byte_send.add(nbytes);
   return ARL_OK;
@@ -65,9 +65,11 @@ inline int progress() {
   return ARL_OK;
 }
 
-inline void *buffer_alloc() {
+inline void *buffer_alloc(int nbytes) {
+  ARL_Assert(nbytes <= LCI_MEDIUM_SIZE);
   LCI_mbuffer_t mbuffer;
-  LCI_mbuffer_alloc(LCI_UR_DEVICE, &mbuffer);
+  while (LCI_mbuffer_alloc(LCI_UR_DEVICE, &mbuffer) == LCI_ERR_RETRY)
+    progress_external();
   return mbuffer.address;
 }
 

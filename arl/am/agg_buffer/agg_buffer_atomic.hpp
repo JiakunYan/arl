@@ -14,7 +14,7 @@ class AggBufferAtomic : public AggBuffer {
   AggBufferAtomic() : cap_(0), prefix_(0), tail_(0), reserved_tail_(0), ptr_(nullptr) {}
 
   ~AggBufferAtomic() override {
-    delete [] ptr_;
+    backend::buffer_free(ptr_);
   }
 
   void init(size_type cap, size_type prefix) override {
@@ -22,8 +22,8 @@ class AggBufferAtomic : public AggBuffer {
 //    cap_ = cap / sizeof(T) * sizeof(T);
     cap_ = cap;
     prefix_ = prefix;
-    delete [] ptr_;
-    ptr_ = new char[cap_];
+    backend::buffer_free(ptr_);
+    ptr_ = (char*)backend::buffer_alloc(cap_);
     reserved_tail_ = prefix_;
     tail_ = prefix_;
   }
@@ -48,7 +48,7 @@ class AggBufferAtomic : public AggBuffer {
         do_something();
       }
       result = std::make_pair(ptr_, current_tail);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       reserved_tail_ = prefix_;
       tail_ = prefix_ + val_size;
 
@@ -81,7 +81,7 @@ class AggBufferAtomic : public AggBuffer {
         do_something();
       }
       result = std::make_pair(ptr_, current_tail);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       reserved_tail_ = prefix_;
       tail_ = prefix_ + s;
 
@@ -110,7 +110,7 @@ class AggBufferAtomic : public AggBuffer {
       }
 
       result.emplace_back(ptr_, current_tail);
-      ptr_ = new char[cap_];
+      ptr_ = (char*)backend::buffer_alloc(cap_);
       reserved_tail_ = prefix_;
       tail_ = prefix_;
     } else if (current_tail == prefix_) {

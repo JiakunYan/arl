@@ -1,7 +1,3 @@
-//
-// Created by jackyan on 3/10/20.
-//
-
 #ifndef ARL_AM_FFRD_HPP
 #define ARL_AM_FFRD_HPP
 
@@ -139,7 +135,6 @@ void flush_amffrd_buffer() {
                                               std::get<0>(result), std::get<1>(result));
           progress_external();
         }
-        delete [] std::get<0>(result);
       }
     }
   }
@@ -224,7 +219,6 @@ void rpc_ffrd(rank_t remote_worker, Fn&& fn, Args&&... args) {
                                           std::get<0>(result), std::get<1>(result));
       progress_external();
     }
-    delete [] std::get<0>(result);
   }
   ++(amffrd_internal::amffrd_req_counters[remote_proc].val);
 }

@@ -125,7 +125,7 @@ void generic_amaggrd_reqhandler(const backend::cq_entry_t& event) {
   in_nbytes -= sizeof(AmaggrdReqMeta);
 //  printf("recv meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
   int out_nbytes = backend::get_max_buffer_size();
-  char* out_buf = new char[out_nbytes];
+  char* out_buf = (char*)backend::buffer_alloc(out_nbytes);
   AmaggrdAckMeta out_meta{in_meta.type_wrapper_p};
   memcpy(out_buf, &out_meta, sizeof(AmaggrdAckMeta));
 
@@ -136,7 +136,6 @@ void generic_amaggrd_reqhandler(const backend::cq_entry_t& event) {
   out_consumed += sizeof(AmaggrdAckMeta);
 
   backend::sendm(event.srcRank, am_internal::HandlerType::AM_RD_ACK, out_buf, out_consumed);
-  delete [] out_buf;
 //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
@@ -214,7 +213,6 @@ void flush_amaggrd_buffer() {
           sendm_amaggrd(i, *amaggrd_internal::global_meta_p, std::get<0>(result), std::get<1>(result));
           progress_external();
         }
-        delete [] std::get<0>(result);
       }
     }
   }
@@ -303,7 +301,6 @@ Future<std::invoke_result_t<Fn, Args...>> rpc_aggrd(rank_t remote_worker, Fn&& f
       sendm_amaggrd(remote_proc, *amaggrd_internal::global_meta_p, std::get<0>(result), std::get<1>(result));
       progress_external();
     }
-    delete [] std::get<0>(result);
   }
   ++(amaggrd_internal::amaggrd_req_local_counters[local::rank_me()].val);
   return future;

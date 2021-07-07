@@ -37,7 +37,7 @@ void worker() {
         int val = *reinterpret_cast<int*>(ptr + i * sizeof(int));
         counts[val]--;
       }
-      delete [] ptr;
+      arl::backend::buffer_free(ptr);
     }
   }
 
@@ -53,7 +53,7 @@ void worker() {
         int val = *reinterpret_cast<int*>(ptr + i * sizeof(int));
         counts[val]--;
       }
-      delete [] ptr;
+      arl::backend::buffer_free(ptr);
     }
   }
 

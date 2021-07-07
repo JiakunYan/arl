@@ -35,7 +35,7 @@ extern inline const int get_max_buffer_size();
 extern inline int sendm(rank_t target, tag_t tag, void *buf, int nbytes);
 extern inline int recvm(cq_entry_t& entry);
 extern inline int progress();
-extern inline void *buffer_alloc();
+extern inline void *buffer_alloc(int nbytes);
 extern inline void buffer_free(void *);
 } // namespace arl::backend
 

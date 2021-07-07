@@ -145,7 +145,6 @@ void flush_amff_buffer() {
           backend::sendm(i, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
           progress_external();
         }
-        delete [] std::get<0>(result);
       }
     }
   }
@@ -202,7 +201,6 @@ void rpc_ff(rank_t remote_worker, Fn&& fn, Args&&... args) {
       backend::sendm(remote_proc, am_internal::HandlerType::AM_FF_REQ, std::get<0>(result), std::get<1>(result));
       progress_external();
     }
-    delete [] std::get<0>(result);
   }
   ++(amff_internal::amff_req_counters[remote_proc].val);
 }
