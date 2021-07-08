@@ -68,7 +68,12 @@ inline rank_t rank_n() {
 
 inline void barrier() {
   gex_Event_t event = gex_Coll_BarrierNB(internal::tm, 0);
-  progress_external_until([&](){return !gex_Event_Test(event);});
+  progress_external_until([&](){
+    int done = !gex_Event_Test(event);
+    if (!done)
+      CHECK_GEX(gasnet_AMPoll());
+    return done;
+  });
 }
 
 inline void init(uint64_t shared_segment_size) {

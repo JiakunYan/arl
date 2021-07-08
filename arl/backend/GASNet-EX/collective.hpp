@@ -12,7 +12,12 @@ template <typename T>
 inline T broadcast(T& val, rank_t root) {
   T rv;
   gex_Event_t event = gex_Coll_BroadcastNB(internal::tm, root, &rv, &val, sizeof(T), 0);
-  progress_external_until([&](){return !gex_Event_Test(event);});
+  progress_external_until([&](){
+    int done = !gex_Event_Test(event);
+    if (!done)
+    CHECK_GEX(gasnet_AMPoll());
+    return done;
+  });
 
   return rv;
 }
