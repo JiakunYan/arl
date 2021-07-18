@@ -79,6 +79,8 @@ void run(Fn &&fn, Args &&... args) {
   using fn_t = decltype(+std::declval<std::remove_reference_t<Fn>>());
   std::vector<std::thread> worker_pool;
   std::vector<std::thread> progress_pool;
+  thread_run = false;
+  worker_exit = false;
 
 #ifdef ARL_THREAD_PIN
   int numberOfProcessors = sysconf(_SC_NPROCESSORS_ONLN);
