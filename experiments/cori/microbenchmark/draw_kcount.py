@@ -65,9 +65,9 @@ def draw_primitive():
     # tag_mask = ["kcount-upcxx", "kcount_ffrd"]
     tag_mask = [
         "kcount_ffrd",
-        # "kcount_ff",
-        # "kcount_aggrd",
-        # "kcount_agg",
+        "kcount_ff",
+        "kcount_aggrd",
+        "kcount_agg",
         "kcount_upcxx",
         "kcount_ffrd aggBuffer=simple",
         "kcount_ffrd aggBuffer=local",

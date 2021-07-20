@@ -37,9 +37,9 @@ void worker(int id, int64_t sleep_us) {
   int issued = 0;
   int num_ops;
   if (sleep_us > 0)
-    num_ops = 1000000 / sleep_us;
+    num_ops = 100000 / sleep_us;
   else
-    num_ops = 1000000;
+    num_ops = 100000;
   SleepPayload sleep_payload{sleep_us, Payload<56>{}};
   std::default_random_engine generator(arl::backend::rank_me());
   std::uniform_int_distribution<int> distribution(0, arl::backend::rank_n()-1);
@@ -69,7 +69,7 @@ void worker(int id, int64_t sleep_us) {
   threadBarrier.wait();
   timer_total.end();
 
-  if (id == 0) {
+  if (arl::backend::rank_me() == 0 && id == 0) {
     printf("sleep time is %ld us\n", sleep_us);
     printf("GASNet overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
   }
