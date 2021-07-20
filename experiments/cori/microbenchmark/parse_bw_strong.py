@@ -32,10 +32,9 @@ if __name__ == "__main__":
     )
 
     node3 = ParserNode(
-        '''Maximum medium payload size is (\d+)
-           Total MB to send is (\d+) MB
+        '''Total MB to send is (\d+) MB
            Node single-direction bandwidth = (.+) MB/s''',
-        ["payload_size", "total_data", "pure_bw"],
+        ["total_data", "pure_bw"],
         name="gex"
     )
 

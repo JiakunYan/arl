@@ -37,7 +37,7 @@ def draw_version():
         current_domain = []
         current_value = []
         for x in df1[x_key].unique():
-            y = df1[df[x_key] == x].median()[y_key]
+            y = df1[df[x_key] == x].min()[y_key]
             if y is np.nan:
                 continue
             if y == 0:
@@ -81,7 +81,7 @@ def draw_primitive():
         current_domain = []
         current_value = []
         for x in df1[x_key].unique():
-            y = df1[df[x_key] == x].median()[y_key]
+            y = df1[df[x_key] == x].min()[y_key]
             if y is np.nan:
                 continue
             if y == 0:

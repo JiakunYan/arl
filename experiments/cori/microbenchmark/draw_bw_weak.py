@@ -39,8 +39,8 @@ if __name__ == "__main__":
         current_value1 = []
         current_value2 = []
         for x in df1[x_key].unique():
-            y1 = df1[df[x_key] == x].median()[y1_key]
-            y2 = df1[df[x_key] == x].median()[y2_key]
+            y1 = df1[df[x_key] == x].max()[y1_key]
+            y2 = df1[df[x_key] == x].max()[y2_key]
             current_domain.append(x)
             current_value1.append(y1)
             current_value2.append(y2-y1)

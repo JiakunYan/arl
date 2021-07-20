@@ -30,8 +30,8 @@ void worker(int id, int64_t total_MB_to_send) {
   int issued = 0;
   double my_byte_to_send = total_MB_to_send * ONE_MB / arl::backend::rank_n() / 16;
   int num_ams = my_byte_to_send / payload_size;
-  if (arl::backend::rank_me() == 0 && id == 0)
-    printf("%d %lf %lu\n", num_ams, my_byte_to_send, payload_size);
+//  if (arl::backend::rank_me() == 0 && id == 0)
+//    printf("%d %lf %lu\n", num_ams, my_byte_to_send, payload_size);
   std::default_random_engine generator(arl::backend::rank_me());
   std::uniform_int_distribution<int> distribution(0, arl::backend::rank_n()-1);
   distribution(generator);
@@ -67,7 +67,7 @@ void worker(int id, int64_t total_MB_to_send) {
 
   double bandwidth_node_s = payload_size * num_ams * 32 / duration_s;
   if (id == 0) {
-    printf("Total MB to send is %ld MB\n", total_MB_to_send);
+    arl::proc::print("Total MB to send is %ld MB\n", total_MB_to_send);
     arl::proc::print("Node single-direction bandwidth = %.3lf MB/s\n", bandwidth_node_s / 1e6);
   }
 }

@@ -69,9 +69,9 @@ void worker(int id, int64_t sleep_us) {
   threadBarrier.wait();
   timer_total.end();
 
-  if (arl::backend::rank_me() == 0 && id == 0) {
-    printf("sleep time is %ld us\n", sleep_us);
-    printf("GASNet overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
+  if (id == 0) {
+    arl::proc::print("sleep time is %ld us\n", sleep_us);
+    arl::proc::print("GASNet overhead is %.2lf us (total %.2lf s)\n", timer_total.to_us() / num_ops, timer_total.to_s());
   }
 }
 
