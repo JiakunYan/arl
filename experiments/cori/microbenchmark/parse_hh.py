@@ -6,6 +6,11 @@ name = "heavy_handler"
 input_path = "run/slurm_output.heavy_handler-o*"
 output_path = "data/"
 if __name__ == "__main__":
+    node0 = ParserNode(
+        "srun -N=(\d+) --ntasks-per-node=\d+ .+",
+        ["node_num"],
+        name = "srun"
+    )
 
     node1 = ParserNode(
         '''sleep time is (\d+) us
@@ -13,11 +18,13 @@ if __name__ == "__main__":
         ["handler_time", "task", "total_time"],
     )
 
-    all_labels = ["handler_time", "task", "total_time"]
+    node0.connect([node1])
+
+    all_labels = ["node_num", "handler_time", "task", "total_time"]
 
     lines = file_to_lines(input_path)
 
-    graph = ParserGraph(node1, all_labels)
+    graph = ParserGraph(node0, all_labels)
     df = graph.parse(lines)
 
     df.sort_values(by=["handler_time"], inplace=True)

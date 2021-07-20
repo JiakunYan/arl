@@ -17,7 +17,7 @@ cd run
 
 for i in $(eval echo {1..${1:-1}}); do
   for task in "${TASKS[@]}"; do
-    if [ "$task.x" = "bw_weak.x" ]; then
+    if [ "$task.x" = "bw_weak.x" ] || [ "$task.x" = "heavy_handler.x" ]; then
       if [[ ! ${SLURM_NTASKS} =~ ^(32)$ ]]; then
         continue
       fi
