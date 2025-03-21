@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <cassert>
 #include <upcxx/upcxx.hpp>
 
 //#include "utils.hpp"
