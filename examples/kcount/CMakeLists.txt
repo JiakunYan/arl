@@ -16,9 +16,11 @@ add_executable(kcount_aggrd src/kcount_aggrd.cpp src/kmer_dht_arl.hpp src/config
 target_include_directories(kcount_aggrd PRIVATE include src/zstr/src)
 target_link_libraries(kcount_aggrd PRIVATE arl ZLIB::ZLIB)
 
-add_upcxx_executable(kcount_upcxx src/kcount_upcxx.cpp)
-target_include_directories(kcount_upcxx PRIVATE include_upcxx src/zstr/src)
-target_link_libraries(kcount_upcxx PRIVATE ZLIB::ZLIB)
+if(UPCXX_FOUND)
+  add_upcxx_executable(kcount_upcxx src/kcount_upcxx.cpp)
+  target_include_directories(kcount_upcxx PRIVATE include_upcxx src/zstr/src)
+  target_link_libraries(kcount_upcxx PRIVATE ZLIB::ZLIB)
+endif()
 
 configure_file(src/get_standard_result.sh get_standard_result.sh COPYONLY)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/sample DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
