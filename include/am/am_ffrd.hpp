@@ -1,0 +1,229 @@
+#ifndef ARL_AM_FFRD_HPP
+#define ARL_AM_FFRD_HPP
+
+namespace arl {
+namespace amffrd_internal {
+
+using am_internal::AggBuffer;
+using am_internal::get_pi_fnptr;
+using am_internal::resolve_pi_fnptr;
+
+// AM synchronous counters
+alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_recv_counter;
+alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_req_counters;// of length proc::rank_n()
+// other variables whose names are clear
+alignas(alignof_cacheline) AggBuffer **amffrd_agg_buffer_p;
+
+struct AmffrdReqMeta {
+  intptr_t fn_p;
+  intptr_t type_wrapper_p;
+};
+
+template<typename... Args>
+struct AmffrdReqPayload {
+  int target_local_rank;
+  std::tuple<Args...> data;
+};
+
+template<typename Fn, typename... Args>
+class AmffrdTypeWrapper {
+  public:
+  static intptr_t invoker(const std::string &cmd) {
+    if (cmd == "req_invoker") {
+      return get_pi_fnptr(req_invoker);
+    } else {
+      throw std::runtime_error("Unknown function call");
+    }
+  }
+
+  static int req_invoker(intptr_t fn_p, char *buf, int nbytes) {
+    static_assert(std::is_void_v<Result>);
+    ARL_Assert(nbytes >= (int) sizeof(Payload), "(", nbytes, " >= ", sizeof(Payload), ")");
+    ARL_Assert(nbytes % (int) sizeof(Payload) == 0, "(", nbytes, " % ", sizeof(Payload), " == 0)");
+    //    printf("req_invoker: fn_p %ld, buf %p, nbytes %d, sizeof(Payload) %lu\n", fn_p, buf, nbytes, sizeof(Payload));
+    Fn *fn = resolve_pi_fnptr<Fn>(fn_p);
+    auto ptr = reinterpret_cast<Payload *>(buf);
+
+    for (int i = 0; i < nbytes; i += sizeof(Payload)) {
+      Payload &payload = *reinterpret_cast<Payload *>(buf + i);
+      rank_t mContext = rank_internal::get_context();
+      rank_internal::set_context(payload.target_local_rank);
+      run_fn(fn, payload.data, std::index_sequence_for<Args...>());
+      rank_internal::set_context(mContext);
+    }
+    return nbytes / (int) sizeof(Payload);
+  }
+
+  private:
+  using Payload = AmffrdReqPayload<Args...>;
+  using Result = std::invoke_result_t<Fn, Args...>;
+
+  template<size_t... I>
+  static void run_fn(Fn *fn, const std::tuple<Args...> &data, std::index_sequence<I...>) {
+    std::invoke(*fn, std::get<I>(data)...);
+  }
+};
+
+void generic_amffrd_reqhandler(const backend::cq_entry_t &event) {
+  using req_invoker_t = int(intptr_t, char *, int);
+  //  printf("rank %ld reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+  ARL_Assert(event.tag == am_internal::HandlerType::AM_FFRD_REQ);
+
+  char *buf = (char *) event.buf;
+  int nbytes = event.nbytes;
+  ARL_Assert(nbytes >= (int) sizeof(AmffrdReqMeta), "(", nbytes, " >= ", sizeof(AmffrdReqMeta), ")");
+  AmffrdReqMeta &meta = *reinterpret_cast<AmffrdReqMeta *>(buf);
+  buf += sizeof(AmffrdReqMeta);
+  nbytes -= sizeof(AmffrdReqMeta);
+  //  printf("recv meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
+
+  auto invoker = resolve_pi_fnptr<intptr_t(const std::string &)>(meta.type_wrapper_p);
+  intptr_t req_invoker_p = invoker("req_invoker");
+  auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
+  int ack_n = req_invoker(meta.fn_p, buf, nbytes);
+
+  amffrd_recv_counter->val += ack_n;
+  //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
+}
+
+void sendm_amffrd(rank_t remote_proc, AmffrdReqMeta meta, void *buf, size_t nbytes) {
+  memcpy(buf, &meta, sizeof(AmffrdReqMeta));
+  //  printf("send meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
+  ARL_Assert(nbytes >= sizeof(AmffrdReqMeta));
+  backend::send_msg(remote_proc, am_internal::HandlerType::AM_FFRD_REQ, buf, nbytes);
+}
+
+alignas(alignof_cacheline) AmffrdReqMeta *global_meta_p = nullptr;
+
+// Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
+// Should be called after arl::backend::init
+void init_amffrd() {
+  amffrd_agg_buffer_p = new AggBuffer *[proc::rank_n()];
+
+  int max_buffer_size = backend::get_max_buffer_size();
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    amffrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    amffrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmffrdReqMeta));
+  }
+
+  amffrd_recv_counter = new AlignedAtomicInt64;
+  amffrd_recv_counter->val = 0;
+  amffrd_req_counters = new AlignedAtomicInt64[proc::rank_n()];
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    amffrd_req_counters[i].val = 0;
+  }
+}
+
+void exit_amffrd() {
+  delete[] amffrd_req_counters;
+  delete amffrd_recv_counter;
+  delete amffrd_internal::global_meta_p;
+  for (int i = 0; i < proc::rank_n(); ++i) {
+    delete amffrd_agg_buffer_p[i];
+  }
+  delete[] amffrd_agg_buffer_p;
+}
+
+void flush_amffrd_buffer() {
+  for (int ii = 0; ii < proc::rank_n(); ++ii) {
+    int i = (ii + local::rank_me()) % proc::rank_n();
+    std::vector<std::pair<char *, int64_t>> results = amffrd_internal::amffrd_agg_buffer_p[i]->flush();
+    for (auto result : results) {
+      if (std::get<0>(result) != nullptr) {
+        if (std::get<1>(result) != 0) {
+          amffrd_internal::sendm_amffrd(i, *amffrd_internal::global_meta_p,
+                                        std::get<0>(result), std::get<1>(result));
+          progress_external();
+        }
+      }
+    }
+  }
+}
+
+int64_t get_expected_recv_num() {
+  int64_t expected_recv_num = 0;
+  if (local::rank_me() == 0) {
+    std::vector<int64_t> src_v(proc::rank_n());
+    for (int i = 0; i < proc::rank_n(); ++i) {
+      src_v[i] = amffrd_req_counters[i].val.load();
+    }
+    auto dst_v = proc::reduce_all(src_v, op_plus());
+    expected_recv_num = dst_v[proc::rank_me()];
+  }
+  return local::broadcast(expected_recv_num, 0);
+}
+
+void wait_amffrd() {
+  local::barrier();
+  int64_t expected_recv_num = get_expected_recv_num();
+  progress_external_until([&]() { return expected_recv_num <= amffrd_recv_counter->val; });
+}
+
+}// namespace amffrd_internal
+
+// TODO: handle function pointer situation
+template<typename Fn, typename... Args>
+void register_amffrd(const Fn &fn) {
+  pure_barrier();
+  if (local::rank_me() == 0) {
+    delete amffrd_internal::global_meta_p;
+    intptr_t fn_p = amffrd_internal::get_pi_fnptr(&fn);
+    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
+    amffrd_internal::global_meta_p = new amffrd_internal::AmffrdReqMeta{fn_p, wrapper_p};
+    //    printf("register meta: %ld, %ld\n", amffrd_internal::global_meta_p->fn_p, amffrd_internal::global_meta_p->type_wrapper_p);
+  }
+  pure_barrier();
+}
+
+// TODO: handle function pointer situation
+template<typename Fn, typename... Args>
+void register_amffrd(Fn &&fn, Args &&...) {
+  pure_barrier();
+  if (local::rank_me() == 0) {
+    delete amffrd_internal::global_meta_p;
+    intptr_t fn_p = amffrd_internal::get_pi_fnptr(&fn);
+    intptr_t wrapper_p = amffrd_internal::get_pi_fnptr(&amffrd_internal::AmffrdTypeWrapper<std::remove_reference_t<Fn>, std::remove_reference_t<Args>...>::invoker);
+    amffrd_internal::global_meta_p = new amffrd_internal::AmffrdReqMeta{fn_p, wrapper_p};
+    //    printf("register meta: %ld, %ld\n", amffrd_internal::global_meta_p->fn_p, amffrd_internal::global_meta_p->type_wrapper_p);
+  }
+  pure_barrier();
+}
+
+// TODO: memcpy on tuple is dangerous
+template<typename Fn, typename... Args>
+void rpc_ffrd(rank_t remote_worker, Fn &&fn, Args &&...args) {
+  using Payload = amffrd_internal::AmffrdReqPayload<std::remove_reference_t<Args>...>;
+  using amffrd_internal::AmffrdReqMeta;
+  using amffrd_internal::AmffrdTypeWrapper;
+
+  ARL_Assert(amffrd_internal::global_meta_p != nullptr, "call rpc_ffrd before register_ffrd!");
+  ARL_Assert(remote_worker < rank_n(), "");
+
+  rank_t remote_proc = remote_worker / local::rank_n();
+  int remote_worker_local = remote_worker % local::rank_n();
+  // TODO: fix LPC
+  //  if (remote_proc == proc::rank_me()) {
+  //    // local precedure call
+  //    Fn* fn_p = am_internal::resolve_pi_fnptr<Fn>(amffrd_internal::global_meta_p->fn_p);
+  //    amff_internal::run_lpc(remote_worker_local, *fn_p, std::forward<Args>(args)...);
+  //    return;
+  //  }
+
+  Payload payload{remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
+  //  printf("Rank %ld send rpc to rank %ld\n", rank_me(), remote_worker);
+  //  std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
+
+  std::pair<char *, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc]->push((char *) &payload, sizeof(payload));
+  if (std::get<0>(result) != nullptr) {
+    if (std::get<1>(result) != 0) {
+      amffrd_internal::sendm_amffrd(remote_proc, *amffrd_internal::global_meta_p,
+                                    std::get<0>(result), std::get<1>(result));
+      progress_external();
+    }
+  }
+  ++(amffrd_internal::amffrd_req_counters[remote_proc].val);
+}
+
+}// namespace arl
+
+#endif//ARL_AM_FFRD_HPP

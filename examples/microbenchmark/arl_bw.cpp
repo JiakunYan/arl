@@ -124,7 +124,7 @@ void worker() {
 }
 
 int main(int argc, char** argv) {
-  init(15, 16, 2048);
+  init(15, 16);
 
   run(worker<64, 8>);
 
