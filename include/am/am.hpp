@@ -8,12 +8,12 @@
 namespace arl {
 
 namespace amagg_internal {
-extern void init_amagg();
-extern void exit_amagg();
-extern void flush_amagg_buffer();
-extern void wait_amagg();
-extern void generic_amagg_reqhandler(const backend::cq_entry_t &event);
-extern void generic_amagg_ackhandler(const backend::cq_entry_t &event);
+void init_amagg();
+void exit_amagg();
+void flush_amagg_buffer();
+void wait_amagg();
+void generic_amagg_reqhandler(const backend::cq_entry_t &event);
+void generic_amagg_ackhandler(const backend::cq_entry_t &event);
 }// namespace amagg_internal
 
 namespace amff_internal {
@@ -42,6 +42,16 @@ extern void generic_amffrd_reqhandler(const backend::cq_entry_t &event);
 }// namespace amffrd_internal
 
 namespace am_internal {
+
+enum HandlerType {
+  AM_REQ,
+  AM_ACK,
+  AM_RD_REQ,
+  AM_RD_ACK,
+  AM_FF_REQ,
+  AM_FFRD_REQ
+};
+
 extern inline bool pool_am_event_queue();
 
 // Get a *position independent* function pointer
@@ -57,23 +67,12 @@ T *resolve_pi_fnptr(std::uintptr_t fn) {
   return reinterpret_cast<T *>(fn + reinterpret_cast<std::uintptr_t>(init));
 }
 
-inline void init_am() {
-  amagg_internal::init_amagg();
-  amff_internal::init_amff();
-  amaggrd_internal::init_amaggrd();
-  amffrd_internal::init_amffrd();
-}
-
-inline void exit_am() {
-  amffrd_internal::exit_amffrd();
-  amaggrd_internal::exit_amaggrd();
-  amff_internal::exit_amff();
-  amagg_internal::exit_amagg();
-}
+extern void init_am();
+extern void exit_am();
 
 }// namespace am_internal
 
-void flush_agg_buffer(char rpc_type) {
+inline void flush_agg_buffer(char rpc_type) {
   if (rpc_type & RPC_AGG)
     amagg_internal::flush_amagg_buffer();
   if (rpc_type & RPC_FF)
@@ -84,7 +83,7 @@ void flush_agg_buffer(char rpc_type) {
     amffrd_internal::flush_amffrd_buffer();
 }
 
-void wait_am(char rpc_type) {
+inline void wait_am(char rpc_type) {
   if (rpc_type & RPC_AGG)
     amagg_internal::wait_amagg();
   if (rpc_type & RPC_FF)
@@ -95,7 +94,7 @@ void wait_am(char rpc_type) {
     amffrd_internal::wait_amffrd();
 }
 
-void flush_am(char rpc_type) {
+inline void flush_am(char rpc_type) {
   flush_agg_buffer(rpc_type);
   wait_am(rpc_type);
 }
@@ -109,7 +108,7 @@ inline bool progress_external() {
   return am_internal::pool_am_event_queue();
 }
 
-void progress_external_until(const std::function<bool()> &is_ready) {
+inline void progress_external_until(const std::function<bool()> &is_ready) {
   tick_t start = ticks_now();
   while (!is_ready()) {
     bool active = progress_external();
@@ -123,7 +122,7 @@ void progress_external_until(const std::function<bool()> &is_ready) {
   }
 }
 
-int get_agg_size() {
+inline int get_agg_size() {
   return backend::get_max_buffer_size();
 }
 }// namespace arl

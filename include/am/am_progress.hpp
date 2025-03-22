@@ -6,14 +6,6 @@
 #define ARL_AM_PROGRESS_HPP
 
 namespace arl::am_internal {
-enum HandlerType {
-  AM_REQ,
-  AM_ACK,
-  AM_RD_REQ,
-  AM_RD_ACK,
-  AM_FF_REQ,
-  AM_FFRD_REQ
-};
 
 // return value indicates whether this function actually executes some works.
 inline bool pool_am_event_queue() {

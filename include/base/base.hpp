@@ -13,11 +13,11 @@ extern void init_am_thread();
 extern void exit_am_thread();
 }// namespace am_internal
 
-alignas(alignof_cacheline) std::atomic<bool> thread_run = false;
-alignas(alignof_cacheline) std::atomic<bool> worker_exit = false;
+extern std::atomic<bool> thread_run;
+extern std::atomic<bool> worker_exit;
 
 // progress thread
-void progress_handler(rank_t id) {
+static void progress_handler(rank_t id) {
   rank_internal::my_rank = id;
   rank_internal::my_context = id;
   while (!thread_run) {
@@ -29,7 +29,7 @@ void progress_handler(rank_t id) {
 }
 
 template<typename Fn, typename... Args>
-void worker_handler(Fn &&fn, rank_t id, Args &&...args) {
+static void worker_handler(Fn &&fn, rank_t id, Args &&...args) {
   rank_internal::my_rank = id;
   rank_internal::my_context = id;
   while (!thread_run) {
@@ -41,7 +41,7 @@ void worker_handler(Fn &&fn, rank_t id, Args &&...args) {
   barrier();
 }
 
-void init(size_t custom_num_workers_per_proc = 15,
+static void init(size_t custom_num_workers_per_proc = 15,
           size_t custom_num_threads_per_proc = 16) {
   config::init();
   backend::init();
@@ -59,12 +59,12 @@ void init(size_t custom_num_workers_per_proc = 15,
   am_internal::init_am();
 }
 
-void finalize() {
+static void finalize() {
   am_internal::exit_am();
   backend::finalize();
 }
 
-void set_affinity(pthread_t pthread_handler, size_t target) {
+static void set_affinity(pthread_t pthread_handler, size_t target) {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(target, &cpuset);
@@ -75,7 +75,7 @@ void set_affinity(pthread_t pthread_handler, size_t target) {
 }
 
 template<typename Fn, typename... Args>
-void run(Fn &&fn, Args &&...args) {
+static void run(Fn &&fn, Args &&...args) {
   using fn_t = decltype(+std::declval<std::remove_reference_t<Fn>>());
   std::vector<std::thread> worker_pool;
   std::vector<std::thread> progress_pool;
@@ -124,7 +124,7 @@ void run(Fn &&fn, Args &&...args) {
 }
 
 template<typename... Args>
-void print(const std::string &format, Args... args) {
+static void print(const std::string &format, Args... args) {
   fflush(stdout);
   pure_barrier();
   if (rank_me() == 0) {
@@ -140,7 +140,7 @@ void print(const std::string &format, Args... args) {
 
 namespace proc {
 template<typename... Args>
-void print(const std::string &format, Args... args) {
+static void print(const std::string &format, Args... args) {
   fflush(stdout);
   proc::barrier();
   if (proc::rank_me() == 0) {
@@ -156,7 +156,7 @@ void print(const std::string &format, Args... args) {
 }// namespace proc
 
 template<typename... Args>
-void cout(Args... args) {
+static void cout(Args... args) {
   std::cout.flush();
   barrier();
   if (rank_me() == 0) {

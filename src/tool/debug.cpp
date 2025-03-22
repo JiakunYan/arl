@@ -1,9 +1,4 @@
-//
-// Created by jiakun on 2020/9/22.
-//
-
-#ifndef ARL_TRACEBACK_HPP
-#define ARL_TRACEBACK_HPP
+#include "arl_internal.hpp"
 
 namespace arl::debug {
 void arl_traceback(FILE *fp) {
@@ -31,9 +26,7 @@ void default_timeout_handler() {
   arl_traceback(fp);
 }
 
-inline void set_timeout(double t) {
+void set_timeout(double t) {
   timeout = t;
 }
-}// namespace arl::debug
-
-#endif//ARL_TRACEBACK_HPP
+} // namespace arl::debug

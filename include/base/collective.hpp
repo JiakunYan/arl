@@ -7,9 +7,9 @@
 
 namespace arl {
 
-alignas(alignof_cacheline) ThreadBarrier threadBarrier;
+extern ThreadBarrier threadBarrier;
 
-void pure_barrier() {
+inline void pure_barrier() {
   threadBarrier.wait();
   if (local::rank_me() == 0) {
     backend::barrier();
@@ -17,7 +17,7 @@ void pure_barrier() {
   threadBarrier.wait();
 }
 
-void barrier() {
+inline void barrier() {
   threadBarrier.wait();
   flush_am();
   if (local::rank_me() == 0) {
@@ -136,7 +136,7 @@ inline std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op
 }// namespace proc
 
 template<typename T, typename BinaryOp>
-T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
+inline T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
   ARL_Assert(root < arl::rank_n(), "");
   T result = local::reduce_all(value, op);
   if (local::rank_me() == root % local::rank_n()) {
@@ -150,7 +150,7 @@ T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
 }
 
 template<typename T, typename BinaryOp>
-std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_t root) {
+inline std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_t root) {
   ARL_Assert(root < arl::rank_n(), "");
   std::vector<T> result = local::reduce_all(value, op);
   if (local::rank_me() == root % local::rank_n()) {
@@ -164,7 +164,7 @@ std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_
 }
 
 template<typename T, typename BinaryOp>
-T reduce_all(const T &value, const BinaryOp &op) {
+inline T reduce_all(const T &value, const BinaryOp &op) {
   T result = local::reduce_all(value, op);
   if (local::rank_me() == 0) {
     result = backend::reduce_all(result, op);
@@ -174,7 +174,7 @@ T reduce_all(const T &value, const BinaryOp &op) {
 }
 
 template<typename T, typename BinaryOp>
-std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op) {
+inline std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op) {
   std::vector<T> result = local::reduce_all(value, op);
   if (local::rank_me() == 0) {
     result = backend::reduce_all(result, op);

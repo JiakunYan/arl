@@ -37,36 +37,8 @@ struct reduce_mpi_op_id {
   static const MPI_Op op_id;// the MPI OP name for this operation (ex: op_id = GEX_OP_ADD when OpFn = opfn_add)
 };
 
-template<>
-const MPI_Datatype reduce_mpi_ty_id_integral<32, /*signed=*/true>::ty_id = MPI_INT32_T;
-template<>
-const MPI_Datatype reduce_mpi_ty_id_integral<64, /*signed=*/true>::ty_id = MPI_INT64_T;
-template<>
-const MPI_Datatype reduce_mpi_ty_id_integral<32, /*signed=*/false>::ty_id = MPI_UINT32_T;
-template<>
-const MPI_Datatype reduce_mpi_ty_id_integral<64, /*signed=*/false>::ty_id = MPI_UINT64_T;
-template<>
-const MPI_Datatype reduce_mpi_ty_id_floating<32>::ty_id = MPI_FLOAT;
-template<>
-const MPI_Datatype reduce_mpi_ty_id_floating<64>::ty_id = MPI_DOUBLE;
-
-template<>
-const MPI_Op reduce_mpi_op_id<op_plus>::op_id = MPI_SUM;
-template<>
-const MPI_Op reduce_mpi_op_id<op_multiplies>::op_id = MPI_PROD;
-template<>
-const MPI_Op reduce_mpi_op_id<op_min>::op_id = MPI_MIN;
-template<>
-const MPI_Op reduce_mpi_op_id<op_max>::op_id = MPI_MAX;
-template<>
-const MPI_Op reduce_mpi_op_id<op_bit_and>::op_id = MPI_BAND;
-template<>
-const MPI_Op reduce_mpi_op_id<op_bit_or>::op_id = MPI_BOR;
-template<>
-const MPI_Op reduce_mpi_op_id<op_bit_xor>::op_id = MPI_BXOR;
-
 template<typename T, typename BinaryOp>
-inline T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
+T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
   T result = T();
   MPI_Request request;
   MPI_Ireduce(&value, &result, 1, reduce_mpi_ty_id<T>::ty_id,
@@ -80,7 +52,7 @@ inline T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
 }
 
 template<typename T, typename BinaryOp>
-inline std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_t root) {
+std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_t root) {
   std::vector<T> result = std::vector<T>(value.size());
   MPI_Request request;
   MPI_Ireduce(value.data(), result.data(), value.size(), reduce_mpi_ty_id<T>::ty_id,
@@ -98,7 +70,7 @@ inline std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op
 }
 
 template<typename T, typename BinaryOp>
-inline T reduce_all(const T &value, const BinaryOp &op) {
+T reduce_all(const T &value, const BinaryOp &op) {
   T result = T();
   MPI_Request request;
   MPI_Iallreduce(&value, &result, 1, reduce_mpi_ty_id<T>::ty_id,
@@ -112,7 +84,7 @@ inline T reduce_all(const T &value, const BinaryOp &op) {
 }
 
 template<typename T, typename BinaryOp>
-inline std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op) {
+std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op) {
   std::vector<T> result = std::vector<T>(value.size());
   MPI_Request request;
   MPI_Iallreduce(value.data(), result.data(), value.size(), reduce_mpi_ty_id<T>::ty_id,
