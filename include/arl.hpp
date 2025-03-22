@@ -43,7 +43,9 @@ inline void set_timeout(double t);
 #include "tool/utils.hpp"
 // backend
 #include "backend/backend.hpp"
+#include "backend/reduce.hpp"
 // base
+#include "base/fn_register.hpp"
 #include "base/rank.hpp"
 #include "base/detail/threadbarrier.hpp"
 #include "base/collective.hpp"

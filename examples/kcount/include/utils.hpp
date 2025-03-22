@@ -270,7 +270,11 @@ static string get_basename(const string &fname) {
 
 static int64_t get_file_size(string fname) {
   struct stat s;
-  if (stat(fname.c_str(), &s) != 0) return -1;
+  if (stat(fname.c_str(), &s) != 0) {
+    fprintf(stderr, "Could not stat file %s: %s\n", fname.c_str(), strerror(errno));
+    return -1;
+  }
+  fprintf(stderr, "File size of %s is %ld\n", fname.c_str(), s.st_size);
   return s.st_size;
 }
 

@@ -1,5 +1,5 @@
-#ifndef ARL_BACKEND_BASE_HPP
-#define ARL_BACKEND_BASE_HPP
+#ifndef ARL_BACKEND_LCI_BASE_HPP
+#define ARL_BACKEND_LCI_BASE_HPP
 
 namespace arl::backend::internal {
 
@@ -69,6 +69,55 @@ inline void *buffer_alloc(int nbytes) {
 inline void buffer_free(void *buffer) {
   free(buffer);
 }
+
+inline void broadcast(void *buf, int nbytes, rank_t root) {
+  MPI_Request request;
+  MPI_Ibcast(buf, nbytes, MPI_BYTE, root, MPI_COMM_WORLD, &request);
+  progress_external_until([&]() {
+    int flag;
+    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
+    return flag;
+  });
+}
+
+const MPI_Datatype mpi_datatype_map[] = {
+  MPI_INT32_T,
+  MPI_INT64_T,
+  MPI_UINT32_T,
+  MPI_UINT64_T,
+  MPI_FLOAT,
+  MPI_DOUBLE,
+};
+
+const MPI_Op mpi_op_map[] = {
+  MPI_SUM,
+  MPI_PROD,
+  MPI_MIN,
+  MPI_MAX,
+  MPI_BAND,
+  MPI_BOR,
+  MPI_BXOR,
+};
+
+inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root) {
+  MPI_Request request;
+  MPI_Ireduce(buf_in, buf_out, n, mpi_datatype_map[static_cast<int>(datatype)], mpi_op_map[static_cast<int>(op)], root, MPI_COMM_WORLD, &request);
+  progress_external_until([&]() {
+    int flag;
+    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
+    return flag;
+  });
+}
+
+inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op) {
+  MPI_Request request;
+  MPI_Iallreduce(buf_in, buf_out, n, mpi_datatype_map[static_cast<int>(datatype)], mpi_op_map[static_cast<int>(op)], MPI_COMM_WORLD, &request);
+  progress_external_until([&]() {
+    int flag;
+    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
+    return flag;
+  });
+}
 }// namespace arl::backend::internal
 
-#endif//ARL_BACKEND_BASE_HPP
+#endif//ARL_BACKEND_LCI_BASE_HPP

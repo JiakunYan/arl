@@ -7,6 +7,8 @@ rank_t say_hello(rank_t source) {
   return rank_me();
 }
 
+int main(int argc, char** argv);
+
 void worker(int arg) {
   rank_t target = (rank_me() + 1) % rank_n();
   auto future = rpc(target, say_hello, rank_me());
@@ -16,7 +18,8 @@ void worker(int arg) {
 
 int main(int argc, char** argv) {
   // one process per node
-  arl::init(15, 16); // 15 worker, 1 progress thread per process
+  // arl::init(15, 16); // 15 worker, 1 progress thread per process
+  arl::init(1, 2); // 15 worker, 1 progress thread per process
   int arg = 132; // you can pass some arguments if you want
   arl::run(worker, arg);
 

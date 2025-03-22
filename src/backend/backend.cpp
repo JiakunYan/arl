@@ -16,26 +16,6 @@ void init() {
 void finalize() {
   internal::finalize();
 }
-template<typename T>
-T broadcast(T &val, rank_t root) {
-  return internal::broadcast(val, root);
-}
-template<typename T, typename BinaryOp>
-T reduce_one(const T &value, const BinaryOp &op, rank_t root) {
-  return internal::reduce_one(value, op, root);
-}
-template<typename T, typename BinaryOp>
-std::vector<T> reduce_one(const std::vector<T> &value, const BinaryOp &op, rank_t root) {
-  return internal::reduce_one(value, op, root);
-}
-template<typename T, typename BinaryOp>
-T reduce_all(const T &value, const BinaryOp &op) {
-  return internal::reduce_all(value, op);
-}
-template<typename T, typename BinaryOp>
-std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op) {
-  return internal::reduce_all(value, op);
-}
 const int get_max_buffer_size() {
   return internal::get_max_buffer_size();
 }
@@ -54,4 +34,41 @@ void *buffer_alloc(int nbytes) {
 void buffer_free(void *buffer) {
   internal::buffer_free(buffer);
 }
+void broadcast_impl(void *buf, int nbytes, rank_t root) {
+  internal::broadcast(buf, nbytes, root);
+}
+void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root) {
+  internal::reduce_one(buf_in, buf_out, n, datatype, op, root);
+}
+void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op) {
+  internal::reduce_all(buf_in, buf_out, n, datatype, op);
+}
+
+template<>
+const datatype_t reduce_ty_id_integral<32, /*signed=*/true>::ty_id = datatype_t::INT32_T;
+template<>
+const datatype_t reduce_ty_id_integral<64, /*signed=*/true>::ty_id = datatype_t::INT64_T;
+template<>
+const datatype_t reduce_ty_id_integral<32, /*signed=*/false>::ty_id = datatype_t::UINT32_T;
+template<>
+const datatype_t reduce_ty_id_integral<64, /*signed=*/false>::ty_id = datatype_t::UINT64_T;
+template<>
+const datatype_t reduce_ty_id_floating<32>::ty_id = datatype_t::FLOAT;
+template<>
+const datatype_t reduce_ty_id_floating<64>::ty_id = datatype_t::DOUBLE;
+
+template<>
+const reduce_op_t reduce_op_id<op_plus>::op_id = reduce_op_t::SUM;
+template<>
+const reduce_op_t reduce_op_id<op_multiplies>::op_id = reduce_op_t::PROD;
+template<>
+const reduce_op_t reduce_op_id<op_min>::op_id = reduce_op_t::MIN;
+template<>
+const reduce_op_t reduce_op_id<op_max>::op_id = reduce_op_t::MAX;
+template<>
+const reduce_op_t reduce_op_id<op_bit_and>::op_id = reduce_op_t::BAND;
+template<>
+const reduce_op_t reduce_op_id<op_bit_or>::op_id = reduce_op_t::BOR;
+template<>
+const reduce_op_t reduce_op_id<op_bit_xor>::op_id = reduce_op_t::BXOR;
 }// namespace arl::backend

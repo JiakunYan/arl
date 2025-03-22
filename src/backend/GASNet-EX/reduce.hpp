@@ -1,6 +1,6 @@
 // This file is simplified based on UPC++(https://bitbucket.org/berkeleylab/upcxx/wiki/Home) reduce.hpp, reduce.cpp
-#ifndef ARL_BACKEND_REDUCE_HPP
-#define ARL_BACKEND_REDUCE_HPP
+#ifndef ARL_BACKEND_GEX_REDUCE_HPP
+#define ARL_BACKEND_GEX_REDUCE_HPP
 
 namespace arl::backend::internal {
 template<int bits, bool is_signed>
@@ -138,4 +138,4 @@ inline std::vector<T> reduce_all(const std::vector<T> &value, const BinaryOp &op
 }
 }// namespace arl::backend::internal
 
-#endif//ARL_BACKEND_REDUCE_HPP
+#endif//ARL_BACKEND_GEX_REDUCE_HPP

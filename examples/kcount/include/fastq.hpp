@@ -138,7 +138,8 @@ public:
     else end_read = get_fptr_for_next_record(end_read);
     if (fseek(f, start_read, SEEK_SET) != 0) ARL_Error("Could not fseek on ", fname, " to ", start_read, ": ", strerror(errno));
     posix_fadvise(fileno(f), start_read, end_read - start_read, POSIX_FADV_SEQUENTIAL);
-//    printf("rank %lu start_read %lu end_read %lu\n", rank_me(), start_read, end_read);
+    // fprintf(stderr, "rank %lu start_read %lu end_read %lu\n", rank_me(), start_read, end_read);
+    arl::barrier();
 //    print("%s", string_format("Reading FASTQ file ", fname, "\n"));
 //    DBG("Reading fastq file ", fname, " at pos ", start_read, " ", (f ? ftell(f) : gztell(gzf)), "\n");
   }
@@ -165,7 +166,7 @@ public:
     size_t bytes_read = 0;
     for (int i = 0; i < 4; i++) {
       char *bytes = (f ? fgets(buf, BUF_SIZE, f) : gzgets(gzf, buf, BUF_SIZE));
-      if (!bytes) ARL_Error("Read record terminated on file ", fname, " before full record at position ", (f ? ftell(f) : gztell(gzf)));
+      if (!bytes) ARL_Error("Rank ", arl::rank_me(), " Read record terminated on file ", fname, " before full record at position ", (f ? ftell(f) : gztell(gzf)));
       if (i == 0) id.assign(buf);
       else if (i == 1) seq.assign(buf);
       else if (i == 3) quals.assign(buf);

@@ -16,6 +16,11 @@ extern void exit_am_thread();
 extern std::atomic<bool> thread_run;
 extern std::atomic<bool> worker_exit;
 
+extern void init(size_t custom_num_workers_per_proc = 15,
+          size_t custom_num_threads_per_proc = 16);
+
+extern void finalize();
+
 // progress thread
 static void progress_handler(rank_t id) {
   rank_internal::my_rank = id;
@@ -35,33 +40,11 @@ static void worker_handler(Fn &&fn, rank_t id, Args &&...args) {
   while (!thread_run) {
     usleep(1);
   }
+  fprintf(stderr, "rank %ld: init %p\n", rank_me(), init);
   barrier();
   std::invoke(std::forward<Fn>(fn),
               std::forward<Args>(args)...);
   barrier();
-}
-
-static void init(size_t custom_num_workers_per_proc = 15,
-          size_t custom_num_threads_per_proc = 16) {
-  config::init();
-  backend::init();
-
-#ifdef ARL_DEBUG
-  proc::print("%s", "WARNING: Running low-performance debug mode.\n");
-#endif
-#ifndef ARL_THREAD_PIN
-  proc::print("%s", "WARNING: Haven't pinned threads to cores.\n");
-#endif
-  rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
-  rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
-  threadBarrier.init(local::rank_n());
-
-  am_internal::init_am();
-}
-
-static void finalize() {
-  am_internal::exit_am();
-  backend::finalize();
 }
 
 static void set_affinity(pthread_t pthread_handler, size_t target) {

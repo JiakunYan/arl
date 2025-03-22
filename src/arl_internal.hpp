@@ -12,9 +12,7 @@
 #ifdef ARL_USE_LCI
 #include "lci.hpp"
 #include "mpi.h"
-#include "backend/LCI/base.hpp"
-#include "backend/LCI/collective.hpp"
-#include "backend/LCI/reduce.hpp"
+#include "backend/lci/base.hpp"
 #endif
 
 #endif//ARL_INTERNAL_HPP

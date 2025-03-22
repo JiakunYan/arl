@@ -8,6 +8,9 @@ rank_t num_threads_per_proc = 16;
 rank_t num_workers_per_proc = 15;
 } // namespace rank_internal
 
+namespace internal {
+std::vector<HandlerRegisterEntry> g_handler_registry;
+} // namespace internal
 
 alignas(alignof_cacheline) ThreadBarrier threadBarrier;
 
@@ -21,4 +24,27 @@ __thread double timeout = NO_TIMEOUT;
 namespace info {
 __thread NetworkInfo networkInfo;
 }// namespace info
+
+void init(size_t custom_num_workers_per_proc,
+          size_t custom_num_threads_per_proc) {
+  config::init();
+  backend::init();
+
+#ifdef ARL_DEBUG
+  proc::print("%s", "WARNING: Running low-performance debug mode.\n");
+#endif
+#ifndef ARL_THREAD_PIN
+  proc::print("%s", "WARNING: Haven't pinned threads to cores.\n");
+#endif
+  rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
+  rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
+  threadBarrier.init(local::rank_n());
+
+  am_internal::init_am();
+}
+
+void finalize() {
+  am_internal::exit_am();
+  backend::finalize();
+}
 }// namespace arl
