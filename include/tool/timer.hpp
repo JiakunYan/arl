@@ -1,12 +1,5 @@
-//
-// Created by Jiakun Yan on 11/12/19.
-//
 #ifndef ARL_TIMER_HPP
 #define ARL_TIMER_HPP
-
-#ifdef ARL_USE_GEX
-#include <gasnetex.h>
-#endif
 
 namespace arl {
 template<typename T, typename BinaryOp>
@@ -15,23 +8,15 @@ extern T reduce_all(const T &value, const BinaryOp &op);
 // microseconds, 12ns
 static inline tick_t ticks_now() {
   tick_t ret;
-#ifdef ARL_USE_GEX
-  ret = gasneti_ticks_now();
-#else
   struct timeval t1;
   gettimeofday(&t1, 0);
   ret = t1.tv_sec * 1e9 + t1.tv_usec * 1e3;
-#endif
   return ret;
 }
 
 static inline uint64_t ticks_to_ns(tick_t val) {
   uint64_t ret;
-#ifdef ARL_USE_GEX
-  ret = gasneti_ticks_to_ns(val);
-#else
   ret = val;
-#endif
   return ret;
 }
 

@@ -16,6 +16,8 @@ extern void exit_am_thread();
 extern std::atomic<bool> thread_run;
 extern std::atomic<bool> worker_exit;
 
+extern intptr_t base_fnptr;
+
 extern void init(size_t custom_num_workers_per_proc = 15,
           size_t custom_num_threads_per_proc = 16);
 
@@ -40,7 +42,6 @@ static void worker_handler(Fn &&fn, rank_t id, Args &&...args) {
   while (!thread_run) {
     usleep(1);
   }
-  fprintf(stderr, "rank %ld: init %p\n", rank_me(), init);
   barrier();
   std::invoke(std::forward<Fn>(fn),
               std::forward<Args>(args)...);
@@ -60,6 +61,8 @@ static void set_affinity(pthread_t pthread_handler, size_t target) {
 template<typename Fn, typename... Args>
 static void run(Fn &&fn, Args &&...args) {
   using fn_t = decltype(+std::declval<std::remove_reference_t<Fn>>());
+  base_fnptr = reinterpret_cast<intptr_t>(&fn);
+
   std::vector<std::thread> worker_pool;
   std::vector<std::thread> progress_pool;
   thread_run = false;

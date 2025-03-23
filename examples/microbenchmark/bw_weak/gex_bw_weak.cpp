@@ -3,6 +3,8 @@
 #include <mutex>
 #include <thread>
 #include <random>
+#include "gasnetex.h"
+#include "gasnet.h"
 
 bool thread_run = true;
 
@@ -13,6 +15,15 @@ arl::ThreadBarrier threadBarrier;
 const size_t max_payload_size = 64 * 1024 + 1; // 64KiB
 char payload[max_payload_size];
 size_t payload_size;
+
+gex_Client_t client;
+gex_EP_t ep;
+gex_TM_t tm;
+gex_Segment_t seg;
+
+void retrive_gex_objects() {
+  gasnet_QueryGexObjects(&client, &ep, &tm, &seg);
+}
 
 void empty_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id) {
   {
@@ -46,7 +57,7 @@ void worker(int id) {
 //    if (remote_proc >= BCL::rank()) {
 //      remote_proc++;
 //    }
-    int rv = gex_AM_RequestMedium(arl::backend::internal::tm, remote_proc, req_num, payload, payload_size, GEX_EVENT_NOW, 0, id);
+    int rv = gex_AM_RequestMedium(tm, remote_proc, req_num, payload, payload_size, GEX_EVENT_NOW, 0, id);
     issued++;
   }
 
@@ -68,11 +79,12 @@ void worker(int id) {
 }
 
 int main() {
-  arl::backend::init(2048);
+  arl::backend::init();
+  retrive_gex_objects();
 
   payload_size = std::min(
-          gex_AM_MaxRequestMedium(arl::backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1),
-          gex_AM_MaxReplyMedium  (arl::backend::internal::tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1)
+          gex_AM_MaxRequestMedium(tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1),
+          gex_AM_MaxReplyMedium  (tm,GEX_RANK_INVALID,GEX_EVENT_NOW,0,1)
   );
   payload_size = std::min(max_payload_size, payload_size);
   payload_size = payload_size;
@@ -98,7 +110,7 @@ int main() {
   entry[1].gex_flags = GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REPLY;
   entry[1].gex_nargs = 1;
 
-  int rv = gex_EP_RegisterHandlers(arl::backend::internal::ep, entry, 2);
+  int rv = gex_EP_RegisterHandlers(ep, entry, 2);
 
   threadBarrier.init(16);
 

@@ -21,7 +21,7 @@ option(ARL_INFO "Enable info mode" OFF)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 include(ARLUtils)
 
-add_library(arl SHARED)
+add_library(arl STATIC)
 add_subdirectory(include)
 add_subdirectory(src)
 

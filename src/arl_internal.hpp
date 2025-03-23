@@ -4,10 +4,9 @@
 #include "arl.hpp"
 
 #ifdef ARL_USE_GEX
-#include <gasnetex.h>
-#include "backend/GASNet-EX/base.hpp"
-#include "backend/GASNet-EX/collective.hpp"
-#include "backend/GASNet-EX/reduce.hpp"
+#include "gasnetex.h"
+#include "gasnet_coll.h"
+#include "backend/gex/base.hpp"
 #endif
 #ifdef ARL_USE_LCI
 #include "lci.hpp"

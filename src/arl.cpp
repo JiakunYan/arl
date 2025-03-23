@@ -8,9 +8,10 @@ rank_t num_threads_per_proc = 16;
 rank_t num_workers_per_proc = 15;
 } // namespace rank_internal
 
-namespace internal {
-std::vector<HandlerRegisterEntry> g_handler_registry;
-} // namespace internal
+// namespace internal {
+// std::vector<HandlerRegisterEntry> g_handler_registry;
+// } // namespace internal
+intptr_t base_fnptr = 0;
 
 alignas(alignof_cacheline) ThreadBarrier threadBarrier;
 

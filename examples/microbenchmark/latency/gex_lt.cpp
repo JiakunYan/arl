@@ -3,6 +3,8 @@
 #include <mutex>
 #include <thread>
 #include <random>
+#include "gasnetex.h"
+#include "gasnet.h"
 
 bool thread_run = true;
 
@@ -10,6 +12,15 @@ std::vector<std::atomic<int>> receiveds(16);
 size_t req_num;
 size_t rep_num;
 arl::ThreadBarrier threadBarrier;
+
+gex_Client_t client;
+gex_EP_t ep;
+gex_TM_t tm;
+gex_Segment_t seg;
+
+void retrive_gex_objects() {
+  gasnet_QueryGexObjects(&client, &ep, &tm, &seg);
+}
 
 void empty_handler(gex_Token_t token, void *buf, size_t nbytes, gex_AM_Arg_t id) {
   {
@@ -43,7 +54,7 @@ void worker(int id) {
 //    if (remote_proc >= BCL::rank()) {
 //      remote_proc++;
 //    }
-    int rv = gex_AM_RequestMedium(arl::backend::internal::tm, remote_proc, req_num, nullptr, 0, GEX_EVENT_NOW, 0, id);
+    int rv = gex_AM_RequestMedium(tm, remote_proc, req_num, nullptr, 0, GEX_EVENT_NOW, 0, id);
     issued++;
 
     while (receiveds[id] < issued) {
@@ -64,7 +75,8 @@ void worker(int id) {
 }
 
 int main() {
-  arl::backend::init(2048);
+  arl::backend::init();
+  retrive_gex_objects();
 
   size_t max_args = gex_AM_MaxArgs();
   size_t handler_num = GEX_AM_INDEX_BASE + 1;
@@ -82,7 +94,7 @@ int main() {
   entry[1].gex_flags = GEX_FLAG_AM_MEDIUM | GEX_FLAG_AM_REPLY;
   entry[1].gex_nargs = 1;
 
-  int rv = gex_EP_RegisterHandlers(arl::backend::internal::ep, entry, 2);
+  int rv = gex_EP_RegisterHandlers(ep, entry, 2);
 
   threadBarrier.init(16);
 

@@ -57,8 +57,8 @@ extern inline bool pool_am_event_queue();
 // Get a *position independent* function pointer
 template<typename T>
 std::intptr_t get_pi_fnptr(T *fn) {
-  auto ret = reinterpret_cast<std::intptr_t>(fn) - reinterpret_cast<std::intptr_t>(init);
-  fprintf(stderr, "rank %ld: get_pi_fnptr: %p, %p, %ld\n", rank_me(), fn, init, ret);
+  // auto ret = reinterpret_cast<std::intptr_t>(fn) - reinterpret_cast<std::intptr_t>(init);
+  auto ret = reinterpret_cast<std::intptr_t>(fn) - base_fnptr;
   return ret;
 }
 
@@ -66,8 +66,8 @@ std::intptr_t get_pi_fnptr(T *fn) {
 // to a local function pointer.
 template<typename T>
 T *resolve_pi_fnptr(std::uintptr_t fn) {
-  auto ret = reinterpret_cast<T *>(fn + reinterpret_cast<std::uintptr_t>(init));
-  fprintf(stderr, "rank %ld: resolve_pi_fnptr: %ld, %p, %p\n", rank_me(), fn, init, ret);
+  // auto ret = reinterpret_cast<T *>(fn + reinterpret_cast<std::uintptr_t>(init));
+  auto ret = reinterpret_cast<T *>(fn + base_fnptr);
   return ret;
 }
 

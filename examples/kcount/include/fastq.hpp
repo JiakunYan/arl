@@ -139,7 +139,6 @@ public:
     if (fseek(f, start_read, SEEK_SET) != 0) ARL_Error("Could not fseek on ", fname, " to ", start_read, ": ", strerror(errno));
     posix_fadvise(fileno(f), start_read, end_read - start_read, POSIX_FADV_SEQUENTIAL);
     // fprintf(stderr, "rank %lu start_read %lu end_read %lu\n", rank_me(), start_read, end_read);
-    arl::barrier();
 //    print("%s", string_format("Reading FASTQ file ", fname, "\n"));
 //    DBG("Reading fastq file ", fname, " at pos ", start_read, " ", (f ? ftell(f) : gztell(gzf)), "\n");
   }
