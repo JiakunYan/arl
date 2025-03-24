@@ -21,7 +21,10 @@ option(ARL_INFO "Enable info mode" OFF)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 include(ARLUtils)
 
+find_package(Threads REQUIRED)
+
 add_library(arl STATIC)
+target_link_libraries(arl PUBLIC Threads::Threads)
 add_subdirectory(include)
 add_subdirectory(src)
 
@@ -48,9 +51,8 @@ if(ARL_USE_GEX)
     fix_property(PkgConfig::gasnet INTERFACE_LINK_OPTIONS)
     target_link_libraries(arl PUBLIC PkgConfig::gasnet)
 elseif(ARL_USE_LCI)
-    find_package(MPI REQUIRED)
     find_package(LCI REQUIRED CONFIG PATH_SUFFIXES lib/cmake lib64/cmake)
-    target_link_libraries(arl PUBLIC LCI::lci MPI::MPI_CXX)
+    target_link_libraries(arl PUBLIC LCI::lci)
 endif()
 
 add_subdirectory(examples)

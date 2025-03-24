@@ -23,7 +23,13 @@ inline rank_t rank_n() {
 }
 
 inline void barrier() {
-  lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  lci::comp_t comp = lci::alloc_sync();
+  lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).comp(comp)();
+  while (!lci::sync_test(comp, nullptr)) {
+    arl::progress_external();
+    arl::progress_internal();
+  }
+  lci::free_comp(&comp);
 }
 
 inline const int get_max_buffer_size() {
@@ -71,52 +77,28 @@ inline void buffer_free(void *buffer) {
 }
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
-  MPI_Request request;
-  MPI_Ibcast(buf, nbytes, MPI_BYTE, root, MPI_COMM_WORLD, &request);
-  progress_external_until([&]() {
-    int flag;
-    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
-    return flag;
-  });
+  barrier();
+  lci::broadcast_x(buf, nbytes, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
 }
 
-const MPI_Datatype mpi_datatype_map[] = {
-  MPI_INT32_T,
-  MPI_INT64_T,
-  MPI_UINT32_T,
-  MPI_UINT64_T,
-  MPI_FLOAT,
-  MPI_DOUBLE,
+const size_t lci_datatype_size_map[] = {
+        sizeof(int32_t),
+        sizeof(int64_t),
+        sizeof(uint32_t),
+        sizeof(uint64_t),
+        sizeof(float),
+        sizeof(double),
 };
 
-const MPI_Op mpi_op_map[] = {
-  MPI_SUM,
-  MPI_PROD,
-  MPI_MIN,
-  MPI_MAX,
-  MPI_BAND,
-  MPI_BOR,
-  MPI_BXOR,
-};
-
-inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root) {
-  MPI_Request request;
-  MPI_Ireduce(buf_in, buf_out, n, mpi_datatype_map[static_cast<int>(datatype)], mpi_op_map[static_cast<int>(op)], root, MPI_COMM_WORLD, &request);
-  progress_external_until([&]() {
-    int flag;
-    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
-    return flag;
-  });
+inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root) {
+  barrier();
+  lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
 }
 
-inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op) {
-  MPI_Request request;
-  MPI_Iallreduce(buf_in, buf_out, n, mpi_datatype_map[static_cast<int>(datatype)], mpi_op_map[static_cast<int>(op)], MPI_COMM_WORLD, &request);
-  progress_external_until([&]() {
-    int flag;
-    MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
-    return flag;
-  });
+inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
+  int root = 0;
+  reduce_one(buf_in, buf_out, n, datatype, op, fn, root);
+  broadcast(buf_out, n * lci_datatype_size_map[static_cast<int>(datatype)], root);
 }
 }// namespace arl::backend::internal
 

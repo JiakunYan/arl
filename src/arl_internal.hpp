@@ -10,7 +10,6 @@
 #endif
 #ifdef ARL_USE_LCI
 #include "lci.hpp"
-#include "mpi.h"
 #include "backend/lci/base.hpp"
 #endif
 

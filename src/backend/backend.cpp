@@ -37,11 +37,11 @@ void buffer_free(void *buffer) {
 void broadcast_impl(void *buf, int nbytes, rank_t root) {
   internal::broadcast(buf, nbytes, root);
 }
-void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root) {
-  internal::reduce_one(buf_in, buf_out, n, datatype, op, root);
+void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root) {
+  internal::reduce_one(buf_in, buf_out, n, datatype, op, fn, root);
 }
-void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op) {
-  internal::reduce_all(buf_in, buf_out, n, datatype, op);
+void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
+  internal::reduce_all(buf_in, buf_out, n, datatype, op, fn);
 }
 
 template<>

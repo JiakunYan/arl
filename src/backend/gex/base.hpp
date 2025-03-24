@@ -160,13 +160,13 @@ const gex_DT_t gex_datatype_map[] = {
   GEX_DT_DBL,
 };
 
-const gex_DT_t gex_datatype_size_map[] = {
-  sizeof(int32_t),
-  sizeof(int64_t),
-  sizeof(uint32_t),
-  sizeof(uint64_t),
-  sizeof(float),
-  sizeof(double),
+const size_t gex_datatype_size_map[] = {
+        sizeof(int32_t),
+        sizeof(int64_t),
+        sizeof(uint32_t),
+        sizeof(uint64_t),
+        sizeof(float),
+        sizeof(double),
 };
 
 const gex_OP_t gex_op_map[] = {
@@ -179,7 +179,7 @@ const gex_OP_t gex_op_map[] = {
   GEX_OP_XOR,
 };
 
-inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root) {
+inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t, rank_t root) {
   gex_Event_t event = gex_Coll_ReduceToOneNB(
     tm, root, buf_out, &buf_in,
     gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,
@@ -193,7 +193,7 @@ inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t data
   });
 }
 
-inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op) {
+inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t) {
   gex_Event_t event = gex_Coll_ReduceToAllNB(
           tm, buf_out, buf_in,
           gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,

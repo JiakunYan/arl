@@ -11,23 +11,23 @@ thread_state_t* get_thread_state() {
 }
 
 void init() {
-  int is_mpi_initialized;
-  MPI_Initialized(&is_mpi_initialized);
-  if (!is_mpi_initialized) {
-    int provided;
-    MPI_Init_thread(nullptr, nullptr, MPI_THREAD_MULTIPLE, &provided);
-    if (provided != MPI_THREAD_MULTIPLE) {
-      ARL_Error("MPI does not support MPI_THREAD_MULTIPLE");
-    }
-    to_finalize_mpi = true;
-  } else {
-    int provided;
-    MPI_Query_thread(&provided);
-    if (provided != MPI_THREAD_MULTIPLE) {
-      ARL_Error("MPI does not support MPI_THREAD_MULTIPLE");
-    }
-    to_finalize_mpi = false;
-  }
+  // int is_mpi_initialized;
+  // MPI_Initialized(&is_mpi_initialized);
+  // if (!is_mpi_initialized) {
+  //   int provided;
+  //   MPI_Init_thread(nullptr, nullptr, MPI_THREAD_MULTIPLE, &provided);
+  //   if (provided != MPI_THREAD_MULTIPLE) {
+  //     ARL_Error("MPI does not support MPI_THREAD_MULTIPLE");
+  //   }
+  //   to_finalize_mpi = true;
+  // } else {
+  //   int provided;
+  //   MPI_Query_thread(&provided);
+  //   if (provided != MPI_THREAD_MULTIPLE) {
+  //     ARL_Error("MPI does not support MPI_THREAD_MULTIPLE");
+  //   }
+  //   to_finalize_mpi = false;
+  // }
 
   if (!lci::is_active()) {
     lci::g_runtime_init();
@@ -38,10 +38,10 @@ void init() {
 
   // assert mpi rank and lci rank are the same
   int mpi_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-  if (lci::get_rank() != mpi_rank) {
-    ARL_Error("MPI rank ", mpi_rank, " does not match LCI rank ", lci::get_rank());
-  }
+  // MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  // if (lci::get_rank() != mpi_rank) {
+  // ARL_Error("MPI rank ", mpi_rank, " does not match LCI rank ", lci::get_rank());
+  // }
 
   thread_state.device = lci::get_default_device();
   thread_state.endpoint = lci::get_default_endpoint();
@@ -54,10 +54,10 @@ void finalize() {
   if (lci::is_active() && to_finalize_lci)
     lci::g_runtime_fina();
 
-  int is_mpi_finalized;
-  MPI_Finalized(&is_mpi_finalized);
-  if (!is_mpi_finalized && to_finalize_mpi)
-    MPI_Finalize();
+  // int is_mpi_finalized;
+  // MPI_Finalized(&is_mpi_finalized);
+  // if (!is_mpi_finalized && to_finalize_mpi)
+  //   MPI_Finalize();
 }
 
 }// namespace arl::backend::internal

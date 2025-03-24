@@ -26,6 +26,9 @@ enum class reduce_op_t {
   BXOR,
 };
 
+using reduce_fn_t = void (*)(const void *left, const void *right, void *dst,
+                             size_t n);
+
 // Active message handler
 using tag_t = uint16_t;
 
@@ -48,8 +51,8 @@ extern int progress();
 extern void *buffer_alloc(int nbytes);
 extern void buffer_free(void *);
 extern void broadcast_impl(void *buf, int nbytes, rank_t root);
-extern void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, rank_t root);
-extern void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op);
+extern void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root);
+extern void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn);
 
 template<typename T>
 inline T broadcast(T &val, rank_t root) {
