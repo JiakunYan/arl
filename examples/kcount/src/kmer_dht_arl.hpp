@@ -249,7 +249,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer);
-    rpc_ffrd(target_rank, NULL, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
   }
 
   void add_kmer_count_ffrd(Kmer kmer) {
@@ -257,7 +257,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer);
-    rpc_ffrd(target_rank, NULL, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
   void reserve_space_and_clear_bloom() {
