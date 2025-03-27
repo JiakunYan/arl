@@ -6,7 +6,7 @@ log_level_t log_level = log_level_t::WARN;
 bool pin_thread = true;
 size_t max_buffer_size = 1 << 31;
 AggBufferType aggBufferType = AGG_BUFFER_ATOMIC;
-bool lci_shared_cq = true;
+bool lci_shared_cq = false;
 int lci_ndevices = -1;
 
 static const char *const aggBufferTypeToString[] = {
