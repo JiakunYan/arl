@@ -23,7 +23,7 @@
 
 #include "external/typename.hpp"
 
-#include "config.hpp"
+#include "arl_config.hpp"
 #include "config_env.hpp"
 #include "global_decl.hpp"
 

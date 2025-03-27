@@ -10,12 +10,12 @@
 #include <unistd.h>
 #include <upcxx/upcxx.hpp>
 
-#include "config.hpp"
-#include "utils.hpp"
-#include "progressbar.hpp"
-#include "options.hpp"
-#include "kmer_dht.hpp"
 #include "fastq.hpp"
+#include "kcount_config.hpp"
+#include "kmer_dht.hpp"
+#include "options.hpp"
+#include "progressbar.hpp"
+#include "utils.hpp"
 
 using namespace std;
 using namespace upcxx;

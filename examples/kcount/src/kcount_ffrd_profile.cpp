@@ -7,13 +7,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "config.hpp"
 #include "arl.hpp"
-#include "utils.hpp"
+#include "fastq.hpp"
+#include "kcount_config.hpp"
+#include "kmer_dht_arl.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"
-#include "kmer_dht_arl.hpp"
-#include "fastq.hpp"
+#include "utils.hpp"
 
 using namespace std;
 using namespace arl;

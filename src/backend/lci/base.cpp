@@ -59,7 +59,7 @@ void init(size_t custom_num_workers_per_proc,
   lci::comp_t cq;
   lci::rcomp_t rcomp;
   if (config::lci_shared_cq) {
-    cq = lci::alloc_cq();
+    cq = lci::alloc_cq_x().zero_copy_am(true)();
     rcomp = lci::register_rcomp(cq);
   }
   for (size_t i = 0; i < devices.size(); ++i) {
@@ -70,7 +70,7 @@ void init(size_t custom_num_workers_per_proc,
       device.comp = cq;
       device.rcomp = rcomp;
     } else {
-      device.comp = lci::alloc_cq();
+      device.comp = lci::alloc_cq_x().zero_copy_am(true)();
       device.rcomp = lci::register_rcomp(device.comp);
     }
   }

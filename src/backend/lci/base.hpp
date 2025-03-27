@@ -48,7 +48,6 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
     arl::progress_external();
   } while (status.error.is_retry());
   info::networkInfo.byte_send.add(nbytes);
-  free(buf);
   return ARL_OK;
 }
 
@@ -72,17 +71,28 @@ inline int progress() {
 }
 
 inline void *buffer_alloc(int nbytes) {
-  void *buffer;
-  int ret = posix_memalign(&buffer, 8192, nbytes);
-  if (ret != 0) {
-    // Allocation failed
-    throw std::runtime_error("posix_memalign failed\n");
-  }
-  return buffer;
+  void *ret;
+  do {
+    ret = lci::get_upacket();
+    arl::progress_external();
+    if (local::rank_me() < 0) {
+      // in the main thread
+      arl::progress_internal();
+    }
+  } while (!ret);
+  return ret;
+  // void *buffer;
+  // int ret = posix_memalign(&buffer, 8192, nbytes);
+  // if (ret != 0) {
+  // Allocation failed
+  // throw std::runtime_error("posix_memalign failed\n");
+  // }
+  // return buffer;
 }
 
 inline void buffer_free(void *buffer) {
-  free(buffer);
+  if (!buffer) return;
+  lci::put_upacket(buffer);
 }
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
