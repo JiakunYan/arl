@@ -128,7 +128,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_kmers, " kmers (", timer_total.to_s(), " s)\n");
   SLOG_VERBOSE_ALL("Estimated overhead is ", timer_total.to_us() / num_kmers, " us\n");
-  SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer_total.to_s() / 1e6 / proc::rank_n() * 2, " MB/s\n");
+  SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer_total.to_us() / proc::rank_n() * 2, " MB/s\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_ALL("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 //

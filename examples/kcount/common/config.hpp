@@ -5,7 +5,8 @@
 #ifndef KCOUNT_CONFIG_HPP
 #define KCOUNT_CONFIG_HPP
 
-#define MAX_KMER_LEN 160
+// #define MAX_KMER_LEN 160
+#define MAX_KMER_LEN 51
 //# quality encoding is logarithmic, so the probability of an error is:
 //# cutoff 10: 10% chance
 //# cutoff 20: 1% chance
@@ -22,4 +23,4 @@
 #define MHM_VERSION "ARL v0.5.0"
 #define ALL_DEFNS "all defns"
 
-#endif //KCOUNT_CONFIG_HPP
+#endif//KCOUNT_CONFIG_HPP

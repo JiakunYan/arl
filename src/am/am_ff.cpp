@@ -14,7 +14,7 @@ alignas(alignof_cacheline) AggBuffer **amff_agg_buffer_p;
 void init_amff() {
   amff_agg_buffer_p = new AggBuffer *[proc::rank_n()];
 
-  int max_buffer_size = backend::get_max_buffer_size();
+  int max_buffer_size = std::min(config::max_buffer_size, backend::get_max_buffer_size());
   for (int i = 0; i < proc::rank_n(); ++i) {
     amff_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
     amff_agg_buffer_p[i]->init(max_buffer_size, 0);

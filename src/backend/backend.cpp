@@ -10,13 +10,14 @@ rank_t rank_n() {
 void barrier() {
   internal::barrier();
 }
-void init() {
-  internal::init();
+void init(size_t custom_num_workers_per_proc,
+          size_t custom_num_threads_per_proc) {
+  internal::init(custom_num_workers_per_proc, custom_num_threads_per_proc);
 }
 void finalize() {
   internal::finalize();
 }
-const int get_max_buffer_size() {
+const size_t get_max_buffer_size() {
   return internal::get_max_buffer_size();
 }
 int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {

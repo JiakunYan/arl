@@ -68,34 +68,77 @@ static void run(Fn &&fn, Args &&...args) {
   thread_run = false;
   worker_exit = false;
 
-#ifdef ARL_THREAD_PIN
   int numberOfProcessors = sysconf(_SC_NPROCESSORS_ONLN);
-  size_t cpuoffset;
   int my_cpu = sched_getcpu();
-  if ((my_cpu >= 0 && my_cpu < 16) || (my_cpu >= 32 && my_cpu < 48)) {
-    cpuoffset = 0;
+  ARL_LOG(DEBUG, "Number of processors: %d; my_cpu: %d\n", numberOfProcessors, my_cpu);
+  size_t cpuoffset = my_cpu / local::thread_n() * local::thread_n();
+  // if ((my_cpu >= 0 && my_cpu < 16) || (my_cpu >= 32 && my_cpu < 48)) {
+  // cpuoffset = 0;
+  // } else {
+  // cpuoffset = 16;
+  // }
+
+  int num_progress_thread = local::thread_n() - local::rank_n();
+
+  if (num_progress_thread > 0) {
+    int workers_per_progress = (local::rank_n() + num_progress_thread - 1) / num_progress_thread;
+    // interleave worker threads and progress threads
+    size_t cpu_idx = 0;
+    for (size_t i = 0; i < num_progress_thread; ++i) {
+      for (size_t j = 0; j < workers_per_progress; ++j) {
+        size_t idx = i * workers_per_progress + j;
+        if (idx >= local::rank_n()) {
+          break;
+        }
+        std::thread t(worker_handler<fn_t, std::remove_reference_t<Args>...>,
+                      std::forward<fn_t>(+fn), idx,
+                      std::forward<Args>(args)...);
+        if (config::pin_thread) {
+          size_t final_cpu_idx = (cpu_idx++ + cpuoffset) % numberOfProcessors;
+          set_affinity(t.native_handle(), final_cpu_idx);
+          ARL_LOG(DEBUG, "Rank %ld worker thread %lu is pinned to CPU %lu\n", proc::rank_me(), worker_pool.size(), final_cpu_idx);
+        }
+        worker_pool.push_back(std::move(t));
+      }
+      std::thread t(progress_handler, local::rank_n() + i);
+      if (config::pin_thread) {
+        size_t final_cpu_idx = (cpu_idx++ + cpuoffset) % numberOfProcessors;
+        set_affinity(t.native_handle(), final_cpu_idx);
+        ARL_LOG(DEBUG, "Rank %ld progress thread %lu is pinned to CPU %lu\n", proc::rank_me(), progress_pool.size(), final_cpu_idx);
+      }
+      progress_pool.push_back(std::move(t));
+    }
   } else {
-    cpuoffset = 16;
+    for (size_t i = 0; i < local::rank_n(); ++i) {
+      std::thread t(worker_handler<fn_t, std::remove_reference_t<Args>...>,
+                    std::forward<fn_t>(+fn), i,
+                    std::forward<Args>(args)...);
+      if (config::pin_thread) {
+        size_t final_cpu_idx = (i + cpuoffset) % numberOfProcessors;
+        set_affinity(t.native_handle(), final_cpu_idx);
+        ARL_LOG(DEBUG, "Rank %ld worker thread %lu is pinned to CPU %lu\n", proc::rank_me(), worker_pool.size(), final_cpu_idx);
+      }
+      worker_pool.push_back(std::move(t));
+    }
   }
-#endif
 
-  for (size_t i = 0; i < local::rank_n(); ++i) {
-    std::thread t(worker_handler<fn_t, std::remove_reference_t<Args>...>,
-                  std::forward<fn_t>(+fn), i,
-                  std::forward<Args>(args)...);
-#ifdef ARL_THREAD_PIN
-    set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
-#endif
-    worker_pool.push_back(std::move(t));
-  }
+  //   for (size_t i = 0; i < local::rank_n(); ++i) {
+  //     std::thread t(worker_handler<fn_t, std::remove_reference_t<Args>...>,
+  //                   std::forward<fn_t>(+fn), i,
+  //                   std::forward<Args>(args)...);
+  // #ifdef ARL_THREAD_PIN
+  //     set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
+  // #endif
+  //     worker_pool.push_back(std::move(t));
+  //   }
 
-  for (size_t i = local::rank_n(); i < local::thread_n(); ++i) {
-    std::thread t(progress_handler, i - local::rank_n());
-#ifdef ARL_THREAD_PIN
-    set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
-#endif
-    progress_pool.push_back(std::move(t));
-  }
+  //   for (size_t i = local::rank_n(); i < local::thread_n(); ++i) {
+  //     std::thread t(progress_handler, i - local::rank_n());
+  // #ifdef ARL_THREAD_PIN
+  //     set_affinity(t.native_handle(), (i + cpuoffset) % numberOfProcessors);
+  // #endif
+  //     progress_pool.push_back(std::move(t));
+  //   }
   thread_run = true;
 
   for (size_t i = 0; i < local::rank_n(); ++i) {

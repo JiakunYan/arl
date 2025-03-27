@@ -1,12 +1,13 @@
 // kcount - kmer counting
 // Steven Hofmeyr, LBNL, June 2019
 
+#include <algorithm>
+#include <chrono>
+#include <fcntl.h>
 #include <iostream>
 #include <math.h>
-#include <algorithm>
 #include <stdarg.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <upcxx/upcxx.hpp>
 
 #include "config.hpp"
@@ -89,6 +90,8 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
   IntermittentTimer read_io_timer("Read IO");
+  upcxx::barrier();
+  auto start = chrono::high_resolution_clock::now();
   //char special = qual_offset + 2;
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
@@ -116,6 +119,9 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
     progbar.done();
     kmer_dht->flush_updates(pass_type);
   }
+  upcxx::barrier();
+  auto end = chrono::high_resolution_clock::now();
+  auto elapsed_ms = chrono::duration_cast<chrono::milliseconds>(end - start).count();
   read_io_timer.done();
   DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_fast_add, 0).wait();
@@ -123,6 +129,9 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
   auto all_num_kmers = reduce_one(num_kmers, op_fast_add, 0).wait();
   auto all_distinct_kmers = kmer_dht->get_num_kmers();
   SLOG_VERBOSE("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
+  SLOG_VERBOSE("Processed a total of ", all_num_kmers, " kmers (", elapsed_ms / 1e3, " s)\n");
+  SLOG_VERBOSE("Estimated overhead is ", elapsed_ms * 1e3 / num_kmers, " us\n");
+  SLOG_VERBOSE("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / elapsed_ms / 1e3 / upcxx::rank_n() * 2, " MB/s\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_VERBOSE("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }
 

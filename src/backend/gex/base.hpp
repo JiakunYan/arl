@@ -58,7 +58,8 @@ inline void barrier() {
   });
 }
 
-inline void init() {
+inline void init(size_t, size_t) {
+  ARL_LOG(INFO, "Initializing GASNet-EX backend\n");
   gex_Client_Init(&client, &ep, &tm, clientName, NULL, NULL, 0);
 
 #ifndef GASNET_PAR
@@ -97,7 +98,7 @@ inline void finalize() {
   gasnet_exit(0);
 }
 
-inline const int get_max_buffer_size() {
+inline const size_t get_max_buffer_size() {
   return gex_AM_MaxRequestMedium(tm, GEX_RANK_INVALID, GEX_EVENT_NOW, 0, GEX_NARGS);
 }
 
@@ -136,9 +137,7 @@ inline void *buffer_alloc(int nbytes) {
 }
 
 inline void buffer_free(void *buffer) {
-  if (buffer != nullptr) {
-    free(buffer);
-  }
+  free(buffer);
 }
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
@@ -181,10 +180,10 @@ const gex_OP_t gex_op_map[] = {
 
 inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t, rank_t root) {
   gex_Event_t event = gex_Coll_ReduceToOneNB(
-    tm, root, buf_out, &buf_in,
-    gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,
-    gex_op_map[static_cast<int>(op)],
-    NULL, NULL, 0);
+          tm, root, buf_out, buf_in,
+          gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,
+          gex_op_map[static_cast<int>(op)],
+          NULL, NULL, 0);
   progress_external_until([&]() {
     int done = !gex_Event_Test(event);
   if (!done)

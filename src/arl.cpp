@@ -11,6 +11,7 @@ rank_t num_workers_per_proc = 15;
 // namespace internal {
 // std::vector<HandlerRegisterEntry> g_handler_registry;
 // } // namespace internal
+
 intptr_t base_fnptr = 0;
 
 alignas(alignof_cacheline) ThreadBarrier threadBarrier;
@@ -28,14 +29,21 @@ __thread NetworkInfo networkInfo;
 
 void init(size_t custom_num_workers_per_proc,
           size_t custom_num_threads_per_proc) {
+  char *p = getenv("ARL_NWORKERS");
+  if (p) {
+    custom_num_workers_per_proc = atoi(p);
+    ARL_LOG(INFO, "ARL num workers per proc: %zu\n", custom_num_workers_per_proc);
+  }
+  p = getenv("ARL_NTHREADS");
+  if (p) {
+    custom_num_threads_per_proc = atoi(p);
+    ARL_LOG(INFO, "ARL num threads per proc: %zu\n", custom_num_threads_per_proc);
+  }
   config::init();
-  backend::init();
+  backend::init(custom_num_workers_per_proc, custom_num_threads_per_proc);
 
 #ifdef ARL_DEBUG
   proc::print("%s", "WARNING: Running low-performance debug mode.\n");
-#endif
-#ifndef ARL_THREAD_PIN
-  proc::print("%s", "WARNING: Haven't pinned threads to cores.\n");
 #endif
   rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
   rank_internal::num_threads_per_proc = custom_num_threads_per_proc;

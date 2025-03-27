@@ -26,6 +26,13 @@ Register_Op(op_plus, std::plus<>{})
 
 #undef Register_Op
 
+#define ARL_LOG(lvl, ...)                                              \
+  do {                                                                 \
+    if (::arl::config::log_level >= ::arl::config::log_level_t::lvl) { \
+      fprintf(stderr, __VA_ARGS__);                                    \
+    }                                                                  \
+  } while (0)
+
                                                         const int ARL_OK = 0;
 const int ARL_RETRY = -1;
 const int alignof_cacheline = 64;
@@ -52,7 +59,7 @@ enum RPCType {
 extern void flush_agg_buffer(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 extern void wait_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
 extern void flush_am(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD);
-inline void progress_internal();
+inline bool progress_internal();
 inline bool progress_external();
 extern void progress_external_until(const std::function<bool()> &);// with deadlock detector
 extern rank_t rank_me();

@@ -10,7 +10,8 @@ struct thread_state_t {
   lci::rcomp_t rcomp;
 };
 
-void init();
+void init(size_t custom_num_workers_per_proc,
+          size_t custom_num_threads_per_proc);
 void finalize();
 thread_state_t *get_thread_state();
 
@@ -27,19 +28,27 @@ inline void barrier() {
   lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).comp(comp)();
   while (!lci::sync_test(comp, nullptr)) {
     arl::progress_external();
-    arl::progress_internal();
+    if (local::rank_me() < 0) {
+      // in the main thread
+      arl::progress_internal();
+    }
   }
   lci::free_comp(&comp);
 }
 
-inline const int get_max_buffer_size() {
+inline const size_t get_max_buffer_size() {
   // FIXME: Technically LCI has no limit.
   return lci::get_max_bcopy_size();
 }
 
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
-  lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_OK, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
+  lci::status_t status;
+  do {
+    status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_OK_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
+    arl::progress_external();
+  } while (status.error.is_retry());
   info::networkInfo.byte_send.add(nbytes);
+  free(buf);
   return ARL_OK;
 }
 

@@ -1,8 +1,6 @@
 #ifndef ARL_HPP
 #define ARL_HPP
 
-#define ARL_THREAD_PIN
-
 #include <atomic>
 #include <cassert>
 #include <cstring>

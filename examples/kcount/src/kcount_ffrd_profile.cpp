@@ -183,13 +183,14 @@ void worker(const options_t& options) {
 }
 
 int main(int argc, char **argv) {
-  init(15, 16);
-
   auto options = make_shared<Options>();
   if (!options->load(argc, argv)) return 0;
   _show_progress = options->show_progress;
   _verbose = options->verbose;
   Kmer::k = options->kmer_len;
+
+  init(options->num_workers, options->num_threads);
+  if (proc::rank_me() == 0) options->print();
 
   run(worker, options);
   finalize();

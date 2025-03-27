@@ -103,12 +103,16 @@ inline void flush_am(char rpc_type) {
   wait_am(rpc_type);
 }
 
-inline void progress_internal() {
-  backend::progress();
+inline bool progress_internal() {
+  return backend::progress() == ARL_OK;
 }
 
 // return value indicates whether this function actually executes some works.
 inline bool progress_external() {
+  if (local::rank_n() == local::thread_n()) {
+    // no progress thread
+    while (progress_internal()) continue;
+  }
   return am_internal::pool_am_event_queue();
 }
 

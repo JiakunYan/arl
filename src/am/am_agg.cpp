@@ -14,7 +14,7 @@ void init_amagg() {
   amagg_agg_buffer_p = new AggBuffer *[proc::rank_n()];
 
   // TODO: might have problem if sizeof(result) > sizeof(arguments)
-  int max_buffer_size = backend::get_max_buffer_size();
+  int max_buffer_size = std::min(config::max_buffer_size, backend::get_max_buffer_size());
   for (int i = 0; i < proc::rank_n(); ++i) {
     if (config::aggBufferType == config::AGG_BUFFER_SIMPLE)
       amagg_agg_buffer_p[i] = new am_internal::AggBufferSimple();

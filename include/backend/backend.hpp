@@ -42,9 +42,9 @@ struct cq_entry_t {
 extern rank_t rank_me();
 extern rank_t rank_n();
 extern void barrier();
-extern void init();
+extern void init(size_t nworkers = 15, size_t nthreads = 16);
 extern void finalize();
-extern const int get_max_buffer_size();
+extern const size_t get_max_buffer_size();
 extern int send_msg(rank_t target, tag_t tag, void *buf, int nbytes);
 extern int poll_msg(cq_entry_t &entry);
 extern int progress();
