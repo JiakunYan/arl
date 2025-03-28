@@ -17,7 +17,14 @@ void init_amffrd() {
 
   int max_buffer_size = std::min(config::max_buffer_size, backend::get_max_buffer_size());
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amffrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    if (config::aggBufferType == config::AGG_BUFFER_SIMPLE)
+      amffrd_agg_buffer_p[i] = new am_internal::AggBufferSimple();
+    else if (config::aggBufferType == config::AGG_BUFFER_LOCAL)
+      amffrd_agg_buffer_p[i] = new am_internal::AggBufferLocal();
+    else {
+      assert(config::aggBufferType == config::AGG_BUFFER_ATOMIC);
+      amffrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    }
     amffrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmffrdReqMeta));
   }
 

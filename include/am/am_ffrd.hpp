@@ -109,7 +109,7 @@ void rpc_ffrd(rank_t remote_worker, Fn &&fn, Args &&...args) {
 
   rank_t remote_proc = remote_worker / local::rank_n();
   int remote_worker_local = remote_worker % local::rank_n();
-  if (remote_proc == proc::rank_me()) {
+  if (config::rpc_loopback && remote_proc == proc::rank_me()) {
     // local precedure call
     return amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
     // Fn* fn_p = am_internal::resolve_pi_fnptr<Fn>(amffrd_internal::global_meta_p->fn_p);

@@ -5,9 +5,12 @@ namespace arl::config {
 log_level_t log_level = log_level_t::WARN;
 bool pin_thread = true;
 size_t max_buffer_size = 1 << 31;
-AggBufferType aggBufferType = AGG_BUFFER_ATOMIC;
+AggBufferType aggBufferType = AGG_BUFFER_LOCAL;
 bool lci_shared_cq = false;
 int lci_ndevices = -1;
+extern bool backend_only_mode = false;
+bool rpc_loopback = true;
+bool msg_loopback = true;
 
 static const char *const aggBufferTypeToString[] = {
         "simple",
@@ -72,6 +75,27 @@ void init() {
   if (p) {
     lci_ndevices = atoi(p);
     ARL_LOG(INFO, "ARL lci ndevices: %d\n", lci_ndevices);
+  }
+
+  // backend only mode
+  p = getenv("ARL_BACKEND_ONLY_MODE");
+  if (p) {
+    backend_only_mode = atoi(p);
+    ARL_LOG(INFO, "ARL backend only mode: %d\n", backend_only_mode);
+  }
+
+  // rpc loopback
+  p = getenv("ARL_RPC_LOOPBACK");
+  if (p) {
+    rpc_loopback = atoi(p);
+    ARL_LOG(INFO, "ARL rpc loopback: %d\n", rpc_loopback);
+  }
+
+  // msg loopback
+  p = getenv("ARL_MSG_LOOPBACK");
+  if (p) {
+    msg_loopback = atoi(p);
+    ARL_LOG(INFO, "ARL msg loopback: %d\n", msg_loopback);
   }
 }
 }// namespace arl::config

@@ -23,15 +23,13 @@ inline rank_t rank_n() {
   return lci::get_nranks();
 }
 
-inline void barrier() {
+inline void barrier(bool (*do_something)() = nullptr) {
   lci::comp_t comp = lci::alloc_sync();
   lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).comp(comp)();
   while (!lci::sync_test(comp, nullptr)) {
-    arl::progress_external();
-    if (local::rank_me() < 0) {
-      // in the main thread
-      arl::progress_internal();
-    }
+    progress();
+    if (do_something != nullptr)
+      do_something();
   }
   lci::free_comp(&comp);
 }
@@ -42,6 +40,16 @@ inline const size_t get_max_buffer_size() {
 }
 
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
+  if (config::msg_loopback && target == rank_me()) {
+    lci::status_t status;
+    status.error = lci::errorcode_t::ok;
+    status.data = lci::buffer_t(buf, nbytes);
+    status.rank = rank_me();
+    status.tag = tag;
+    lci::comp_signal(get_thread_state()->comp, status);
+    return ARL_OK;
+    
+  }
   lci::status_t status;
   do {
     status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_OK_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
@@ -75,19 +83,8 @@ inline void *buffer_alloc(int nbytes) {
   do {
     ret = lci::get_upacket();
     arl::progress_external();
-    if (local::rank_me() < 0) {
-      // in the main thread
-      arl::progress_internal();
-    }
   } while (!ret);
   return ret;
-  // void *buffer;
-  // int ret = posix_memalign(&buffer, 8192, nbytes);
-  // if (ret != 0) {
-  // Allocation failed
-  // throw std::runtime_error("posix_memalign failed\n");
-  // }
-  // return buffer;
 }
 
 inline void buffer_free(void *buffer) {

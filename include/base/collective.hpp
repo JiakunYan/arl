@@ -17,9 +17,9 @@ inline void pure_barrier() {
   threadBarrier.wait();
 }
 
-inline void barrier() {
+inline void barrier(char rpc_type = RPC_AGG | RPC_FF | RPC_AGGRD | RPC_FFRD) {
   threadBarrier.wait();
-  flush_am();
+  flush_am(rpc_type);
   if (local::rank_me() == 0) {
     backend::barrier();
   }

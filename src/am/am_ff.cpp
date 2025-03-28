@@ -16,7 +16,14 @@ void init_amff() {
 
   int max_buffer_size = std::min(config::max_buffer_size, backend::get_max_buffer_size());
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amff_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    if (config::aggBufferType == config::AGG_BUFFER_SIMPLE)
+      amff_agg_buffer_p[i] = new am_internal::AggBufferSimple();
+    else if (config::aggBufferType == config::AGG_BUFFER_LOCAL)
+      amff_agg_buffer_p[i] = new am_internal::AggBufferLocal();
+    else {
+      assert(config::aggBufferType == config::AGG_BUFFER_ATOMIC);
+      amff_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    }
     amff_agg_buffer_p[i]->init(max_buffer_size, 0);
   }
   amff_recv_counter = new AlignedAtomicInt64;

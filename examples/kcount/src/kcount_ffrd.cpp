@@ -8,8 +8,8 @@
 #include <fcntl.h>
 
 #include "arl.hpp"
-#include "fastq.hpp"
 #include "kcount_config.hpp"
+#include "fastq.hpp"
 #include "kmer_dht_arl.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"
@@ -78,6 +78,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       break;
   }
   SimpleTimer timer_total;
+  SimpleTimer timer_per_thread;
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -88,6 +89,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
   };
   //char special = qual_offset + 2;
   timer_total.start();
+  timer_per_thread.start();
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
     string id, seq, quals;
@@ -117,7 +119,9 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       progress_external();
     }
     progbar.done(true);
-    barrier();
+    timer_per_thread.end();
+    SLOG_VERBOSE("Thread ", rank_me(), " finished in ", timer_per_thread.to_s(), " s\n");
+    barrier(RPC_FFRD);
   }
   timer_total.end();
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
@@ -152,6 +156,7 @@ void worker(const options_t& options) {
   count_kmers(options->kmer_len, options->reads_fname_list, kmer_dht, BLOOM_COUNT_PASS);
   barrier();
   SLOG_VERBOSE_ALL("After counting, there are ", kmer_dht.size(), " kmers; capacity:", kmer_dht.capacity(), "\n");
+  SLOG_VERBOSE_ALL("Kmer DHT Capacity: ", kmer_dht.capacity(), " kmers\n");
   SLOG_VERBOSE_ALL("kmer DHT load factor: ", kmer_dht.load_factor(), "\n");
   barrier();
   kmer_dht.purge_kmers(options->depth_thres);

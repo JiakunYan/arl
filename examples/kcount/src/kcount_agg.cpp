@@ -8,8 +8,8 @@
 #include <fcntl.h>
 
 #include "arl.hpp"
-#include "fastq.hpp"
 #include "kcount_config.hpp"
+#include "fastq.hpp"
 #include "kmer_dht_arl.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"

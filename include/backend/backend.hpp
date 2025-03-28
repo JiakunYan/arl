@@ -41,7 +41,7 @@ struct cq_entry_t {
 
 extern rank_t rank_me();
 extern rank_t rank_n();
-extern void barrier();
+extern void barrier(bool (*do_something)() = progress_external);
 extern void init(size_t nworkers = 15, size_t nthreads = 16);
 extern void finalize();
 extern const size_t get_max_buffer_size();

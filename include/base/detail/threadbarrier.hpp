@@ -9,7 +9,7 @@ class ThreadBarrier {
     thread_num_ = thread_num;
   }
 
-  void wait() {
+  void wait(bool (*do_something)() = progress_external) {
     ARL_Assert(thread_num_ > 0, "Error: call wait() before init().");
     size_t mstep = step.load();
 
@@ -17,7 +17,10 @@ class ThreadBarrier {
       waiting = 0;
       step++;
     } else {
-      progress_external_until([&]() { return step != mstep; });
+      while (step == mstep) {
+        if (do_something != nullptr)
+          do_something();
+      }
     }
   }
 

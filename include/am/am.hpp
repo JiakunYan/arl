@@ -109,11 +109,14 @@ inline bool progress_internal() {
 
 // return value indicates whether this function actually executes some works.
 inline bool progress_external() {
-  if (local::rank_n() == local::thread_n()) {
+  if (local::rank_n() == local::thread_n() || local::rank_me() < 0) {
     // no progress thread
     while (progress_internal()) continue;
   }
-  return am_internal::pool_am_event_queue();
+  if (local::rank_me() >= 0 && !config::backend_only_mode) {
+    return am_internal::pool_am_event_queue();
+  }
+  return false;
 }
 
 inline void progress_external_until(const std::function<bool()> &is_ready) {

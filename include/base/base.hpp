@@ -70,8 +70,8 @@ static void run(Fn &&fn, Args &&...args) {
 
   int numberOfProcessors = sysconf(_SC_NPROCESSORS_ONLN);
   int my_cpu = sched_getcpu();
-  ARL_LOG(DEBUG, "Number of processors: %d; my_cpu: %d\n", numberOfProcessors, my_cpu);
   size_t cpuoffset = my_cpu / local::thread_n() * local::thread_n();
+  ARL_LOG(DEBUG, "Rank %ld Number of processors: %d; my_cpu: %d; cpuoffset %lu\n", proc::rank_me(), numberOfProcessors, my_cpu, cpuoffset);
   // if ((my_cpu >= 0 && my_cpu < 16) || (my_cpu >= 32 && my_cpu < 48)) {
   // cpuoffset = 0;
   // } else {

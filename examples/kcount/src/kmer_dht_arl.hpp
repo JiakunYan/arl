@@ -111,7 +111,7 @@ public:
 
     // two bloom false positive rates applied
     auto initial_kmer_dht_reservation = (int64_t) ((cardinality2 * (1+BLOOM_FP) * (1+BLOOM_FP) + 1000) * 2);
-    kmers.reserve( initial_kmer_dht_reservation );
+    kmers.reserve( initial_kmer_dht_reservation * 2 );
     double kmers_space_reserved = initial_kmer_dht_reservation * (sizeof(Kmer) + sizeof(KmerCounts));
   }
 

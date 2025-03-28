@@ -13,6 +13,9 @@ extern bool pin_thread;
 extern size_t max_buffer_size;
 extern int lci_ndevices;
 extern bool lci_shared_cq;
+extern bool backend_only_mode;
+extern bool rpc_loopback;
+extern bool msg_loopback;
 
 enum AggBufferType {
   AGG_BUFFER_SIMPLE = 0,

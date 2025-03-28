@@ -18,7 +18,14 @@ void init_amaggrd() {
   // TODO: might have problem if sizeof(result) > sizeof(arguments)
   int max_buffer_size = std::min(config::max_buffer_size, backend::get_max_buffer_size());
   for (int i = 0; i < proc::rank_n(); ++i) {
-    amaggrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    if (config::aggBufferType == config::AGG_BUFFER_SIMPLE)
+      amaggrd_agg_buffer_p[i] = new am_internal::AggBufferSimple();
+    else if (config::aggBufferType == config::AGG_BUFFER_LOCAL)
+      amaggrd_agg_buffer_p[i] = new am_internal::AggBufferLocal();
+    else {
+      assert(config::aggBufferType == config::AGG_BUFFER_ATOMIC);
+      amaggrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
+    }
     amaggrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmaggrdReqMeta));
   }
 

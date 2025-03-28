@@ -7,8 +7,8 @@ rank_t rank_me() {
 rank_t rank_n() {
   return internal::rank_n();
 }
-void barrier() {
-  internal::barrier();
+void barrier(bool (*do_something)()) {
+  internal::barrier(do_something);
 }
 void init(size_t custom_num_workers_per_proc,
           size_t custom_num_threads_per_proc) {

@@ -1897,6 +1897,7 @@ private:
     // array. Then the old buckets will be deleted when new_map is deleted.
     maybe_resize_locks(new_map.bucket_count());
     buckets_.swap(new_map.buckets_);
+    fprintf(stderr, "resize to %lu\n", new_hp);
 
     return ok;
   }

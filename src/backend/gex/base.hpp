@@ -48,14 +48,13 @@ inline rank_t rank_n() {
   return nprocs;
 }
 
-inline void barrier() {
+inline void barrier(bool (*do_something)() = nullptr) {
   gex_Event_t event = gex_Coll_BarrierNB(tm, 0);
-  progress_external_until([&]() {
-    int done = !gex_Event_Test(event);
-    if (!done)
-      CHECK_GEX(gasnet_AMPoll());
-    return done;
-  });
+  while (gex_Event_Test(event)) {
+    progress();
+    if (do_something != nullptr)
+      do_something();
+  }
 }
 
 inline void init(size_t, size_t) {
@@ -128,7 +127,7 @@ inline int poll_msg(cq_entry_t &entry) {
 
 inline int progress() {
   CHECK_GEX(gasnet_AMPoll());
-  return ARL_OK;
+  return ARL_RETRY;
 }
 
 inline void *buffer_alloc(int nbytes) {

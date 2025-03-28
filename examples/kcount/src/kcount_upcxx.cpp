@@ -10,8 +10,8 @@
 #include <unistd.h>
 #include <upcxx/upcxx.hpp>
 
-#include "fastq.hpp"
 #include "kcount_config.hpp"
+#include "fastq.hpp"
 #include "kmer_dht.hpp"
 #include "options.hpp"
 #include "progressbar.hpp"
