@@ -51,6 +51,7 @@ extern "C" {
 
 uint32_t MurmurHash3_x64_32(const void *key, uint32_t len);
 uint64_t MurmurHash3_x64_64(const void *key, uint32_t len);
+void MurmurHash3_x64_128(const void *key, const uint32_t len, const uint32_t seed, void *out);
 
 // this is a hash define because the code is shared between the GPU and CPU implementations and cannot be a host function call
 #define quick_hash(h, v)                               \

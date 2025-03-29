@@ -71,7 +71,10 @@ static void run(Fn &&fn, Args &&...args) {
   int numberOfProcessors = sysconf(_SC_NPROCESSORS_ONLN);
   int my_cpu = sched_getcpu();
   size_t cpuoffset = my_cpu / local::thread_n() * local::thread_n();
-  ARL_LOG(DEBUG, "Rank %ld Number of processors: %d; my_cpu: %d; cpuoffset %lu\n", proc::rank_me(), numberOfProcessors, my_cpu, cpuoffset);
+  // get hostname
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  ARL_LOG(INFO, "Rank %ld Number of processors: %d; my_cpu: %d; cpuoffset %lu on host %s\n", proc::rank_me(), numberOfProcessors, my_cpu, cpuoffset, hostname);
   // if ((my_cpu >= 0 && my_cpu < 16) || (my_cpu >= 32 && my_cpu < 48)) {
   // cpuoffset = 0;
   // } else {

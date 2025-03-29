@@ -199,6 +199,10 @@ class Kmer {
     return hash_u64(reinterpret_cast<const void *>(longs.data()), N_LONGS * sizeof(uint64_t));
   }
 
+  uint64_t hash2() const {
+    return MurmurHash3_x64_64(reinterpret_cast<const void *>(longs.data()), N_LONGS * sizeof(uint64_t));
+  }
+
   Kmer revcomp() const {
     Kmer km(*this);
     size_t nlongs = (Kmer::k + 31) / 32;
@@ -323,7 +327,7 @@ template<>
 struct hash<Kmer> {
   typedef std::size_t result_type;
   result_type operator()(Kmer const &km) const {
-    return km.hash();
+    return km.hash2(); // use different hash function from hashtable to reduce collisions
   }
 };
 
