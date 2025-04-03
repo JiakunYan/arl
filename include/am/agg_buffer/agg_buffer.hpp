@@ -14,6 +14,8 @@ class AggBuffer {
   virtual std::pair<char *, size_type> push(char *p1, size_t s1,
                                             char *p2, size_t s2) = 0;
   virtual std::pair<char *, size_type> push(char *p, size_t s) = 0;
+  virtual std::pair<char *, size_type> reserve(size_t, char**) = 0;
+  virtual void commit(size_t s) = 0;
   virtual std::vector<std::pair<char *, size_type>> flush() = 0;
   [[nodiscard]] virtual size_type get_size() const = 0;
   [[nodiscard]] virtual std::string get_status() const = 0;

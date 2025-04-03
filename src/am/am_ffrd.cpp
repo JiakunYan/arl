@@ -8,7 +8,8 @@ AlignedAtomicInt64 *amffrd_recv_counter;
 std::vector<std::vector<int64_t>> *amffrd_req_counters;// of length (local::rank_n, proc::rank_n)
 // other variables whose names are clear
 AggBuffer **amffrd_agg_buffer_p;
-AmffrdReqMeta *global_meta_p = nullptr;
+uint8_t g_am_idx = -1;
+size_t g_payload_size = 0;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
@@ -25,7 +26,7 @@ void init_amffrd() {
       assert(config::aggBufferType == config::AGG_BUFFER_ATOMIC);
       amffrd_agg_buffer_p[i] = new am_internal::AggBufferAtomic();
     }
-    amffrd_agg_buffer_p[i]->init(max_buffer_size, sizeof(AmffrdReqMeta));
+    amffrd_agg_buffer_p[i]->init(max_buffer_size, 0);
   }
 
   amffrd_recv_counter = new AlignedAtomicInt64;
@@ -40,7 +41,6 @@ void init_amffrd() {
 void exit_amffrd() {
   delete amffrd_req_counters;
   delete amffrd_recv_counter;
-  delete amffrd_internal::global_meta_p;
   for (int i = 0; i < proc::rank_n(); ++i) {
     delete amffrd_agg_buffer_p[i];
   }
@@ -54,24 +54,23 @@ void generic_amffrd_reqhandler(const backend::cq_entry_t &event) {
 
   char *buf = (char *) event.buf;
   int nbytes = event.nbytes;
-  ARL_Assert(nbytes >= (int) sizeof(AmffrdReqMeta), "(", nbytes, " >= ", sizeof(AmffrdReqMeta), ")");
-  AmffrdReqMeta &meta = *reinterpret_cast<AmffrdReqMeta *>(buf);
-  buf += sizeof(AmffrdReqMeta);
-  nbytes -= sizeof(AmffrdReqMeta);
-  //  printf("recv meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
+  ARL_Assert(event.nbytes % g_payload_size == 0, "(", event.nbytes, " % ", g_payload_size, ")");
+  size_t n = nbytes / g_payload_size;
 
-  auto invoker = resolve_pi_fnptr<intptr_t(const std::string &)>(meta.type_wrapper_p);
-  intptr_t req_invoker_p = invoker("req_invoker");
-  auto req_invoker = resolve_pi_fnptr<req_invoker_t>(req_invoker_p);
-  int ack_n = req_invoker(meta.fn_p, buf, nbytes);
+  for (size_t i = 0; i < n; ++i) {
+    const void *buf = ((char *) event.buf) + i * g_payload_size;
 
-  amffrd_recv_counter->val += ack_n;
+    // rank_t mContext = rank_internal::get_context();
+    // rank_internal::set_context(context);
+    am_internal::g_amhandler_registry.invoke(g_am_idx, buf);
+    // rank_internal::set_context(mContext);
+  }
+
+  amffrd_recv_counter->val += n;
   //  printf("rank %ld exit reqhandler %p, %lu\n", rank_me(), void_buf, unbytes);
 }
 
-void sendm_amffrd(rank_t remote_proc, AmffrdReqMeta meta, void *buf, size_t nbytes) {
-  memcpy(buf, &meta, sizeof(AmffrdReqMeta));
-  //  printf("send meta: %ld, %ld\n", meta.fn_p, meta.type_wrapper_p);
+void sendm_amffrd(rank_t remote_proc, void *buf, size_t nbytes) {
   ARL_Assert(nbytes >= sizeof(AmffrdReqMeta));
   backend::send_msg(remote_proc, am_internal::HandlerType::AM_FFRD_REQ, buf, nbytes);
 }
@@ -83,8 +82,7 @@ void flush_amffrd_buffer() {
     for (auto result : results) {
       if (std::get<0>(result) != nullptr) {
         if (std::get<1>(result) != 0) {
-          amffrd_internal::sendm_amffrd(i, *amffrd_internal::global_meta_p,
-                                        std::get<0>(result), std::get<1>(result));
+          amffrd_internal::sendm_amffrd(i, std::get<0>(result), std::get<1>(result));
           progress_external();
         }
       }

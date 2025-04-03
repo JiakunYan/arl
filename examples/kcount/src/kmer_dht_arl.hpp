@@ -171,10 +171,18 @@ public:
   }
 };
 
+struct KmerDHT;
+__thread KmerDHT *g_kmerDHT_singleton = nullptr;
+
 class KmerDHT {
  public:
   // initialize the local map
   KmerDHT(uint64_t cardinality) {
+    if (g_kmerDHT_singleton != nullptr) {
+      cerr << "KmerDHT already initialized" << endl;
+      abort();
+    }
+    g_kmerDHT_singleton = this;
     map_ptrs.resize(rank_n());
     map_ptrs[rank_me()] = new KmerLHT(cardinality);
     for (size_t i = 0; i < rank_n(); ++i) {
@@ -183,24 +191,25 @@ class KmerDHT {
   }
 
   ~KmerDHT() {
+    g_kmerDHT_singleton = nullptr;
     arl::barrier();
     delete map_ptrs[rank_me()];
   }
 
   void register_add_kmer_set_aggrd() {
-    register_amaggrd<decltype(kmer_set_fn), KmerLHT*, Kmer>(kmer_set_fn);
+    register_amaggrd<decltype(kmer_set_fn), Kmer>(kmer_set_fn);
   }
 
   void register_add_kmer_count_aggrd() {
-    register_amaggrd<decltype(kmer_count_fn), KmerLHT*, Kmer>(kmer_count_fn);
+    register_amaggrd<decltype(kmer_count_fn), Kmer>(kmer_count_fn);
   }
 
   void register_add_kmer_set_ffrd() {
-    register_amffrd<decltype(kmer_set_fn), KmerLHT*, Kmer>(kmer_set_fn);
+    register_amffrd(kmer_set_fn, Kmer());
   }
 
   void register_add_kmer_count_ffrd() {
-    register_amffrd<decltype(kmer_count_fn), KmerLHT*, Kmer>(kmer_count_fn);
+    register_amffrd(kmer_count_fn, Kmer());
   }
 
   Future<void> add_kmer_set(Kmer kmer) {
@@ -208,7 +217,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    return rpc_agg(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+    return rpc_agg(target_rank, kmer_set_fn, kmer);
   }
 
   Future<void> add_kmer_count(Kmer kmer) {
@@ -216,7 +225,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    return rpc_agg(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+    return rpc_agg(target_rank, kmer_count_fn, kmer);
   }
 
   Future<void> add_kmer_set_aggrd(Kmer kmer) {
@@ -224,7 +233,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    return rpc_aggrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+    return rpc_aggrd(target_rank, kmer_set_fn, kmer);
   }
 
   Future<void> add_kmer_count_aggrd(Kmer kmer) {
@@ -232,7 +241,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    return rpc_aggrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+    return rpc_aggrd(target_rank, kmer_count_fn, kmer);
   }
 
   void add_kmer_set_ff(Kmer kmer) {
@@ -240,7 +249,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    rpc_ff(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+    rpc_ff(target_rank, kmer_set_fn, kmer);
   }
 
   void add_kmer_count_ff(Kmer kmer) {
@@ -248,7 +257,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    rpc_ff(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+    rpc_ff(target_rank, kmer_count_fn, kmer);
   }
 
   void add_kmer_set_ffrd(Kmer kmer) {
@@ -256,7 +265,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    rpc_ffrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, kmer_set_fn, kmer);
   }
 
   void add_kmer_count_ffrd(Kmer kmer) {
@@ -264,7 +273,7 @@ class KmerDHT {
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
     size_t target_rank = get_target_rank(kmer, map_ptrs.size());
-    rpc_ffrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
+    rpc_ffrd(target_rank, kmer_count_fn, kmer);
   }
 
   void reserve_space_and_clear_bloom() {
@@ -303,13 +312,23 @@ class KmerDHT {
     return std::hash<Kmer>{}(kmer) % nranks;
   }
 
+  void kmer_set_real_fn(Kmer kmer) {
+    int rank = get_target_rank(kmer, arl::rank_n());
+    map_ptrs[rank_me()]->add_kmer_set(kmer);
+  }
+
+  void kmer_count_real_fn(Kmer kmer) {
+    int rank = get_target_rank(kmer, arl::rank_n());
+    map_ptrs[rank_me()]->add_kmer_count(kmer);
+  }
+
  private:
-  static constexpr auto kmer_set_fn = [](KmerLHT* lmap, Kmer kmer){
-    lmap->add_kmer_set(kmer);
+  static constexpr auto kmer_set_fn = [](Kmer kmer){
+    g_kmerDHT_singleton->kmer_set_real_fn(kmer);
   };
 
-  static constexpr auto kmer_count_fn = [](KmerLHT* lmap, Kmer kmer){
-    lmap->add_kmer_count(kmer);
+  static constexpr auto kmer_count_fn = [](Kmer kmer){
+    g_kmerDHT_singleton->kmer_count_real_fn(kmer);
   };
 
   std::vector<KmerLHT *> map_ptrs;

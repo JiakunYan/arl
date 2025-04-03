@@ -77,6 +77,24 @@ class AggBufferLocal : public AggBuffer {
     return result;
   }
 
+  std::pair<char *, size_type> reserve(size_t s, char **p) override {
+    int my_rank = local::rank_me();
+    std::pair<char *, int> result(nullptr, 0);
+    if (thread_tail_[my_rank].val + s > cap_) {
+      // push my
+      result = std::make_pair(thread_ptr_[my_rank].val, thread_tail_[my_rank].val);
+      thread_ptr_[my_rank].val = (char *) backend::buffer_alloc(cap_);
+      thread_tail_[my_rank].val = prefix_;
+    }
+    *p = thread_ptr_[my_rank].val + thread_tail_[my_rank].val;
+    return result;
+  }
+
+  void commit(size_t s) override {
+    int my_rank = local::rank_me();
+    thread_tail_[my_rank].val += s;
+  }
+
   std::vector<std::pair<char *, size_type>> flush() override {
     //    std::vector<std::pair<int, int>> data;
     //    for (int i = 0; i < thread_num_; ++i) {

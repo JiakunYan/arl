@@ -44,7 +44,6 @@ void worker(int64_t sleep_us) {
   tick_t end_wait = ticks_now();
 
   double duration_total = ticks_to_us(end_wait - start);
-  using amffrd_internal::AmffrdReqPayload;
   print("sleep time is %ld us\n", sleep_us);
   print("rpc_ffrd overhead is %.2lf us (total %.2lf s)\n", duration_total / num_ops, duration_total / 1e6);
 }

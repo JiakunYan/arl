@@ -93,6 +93,38 @@ class AggBufferAtomic : public AggBuffer {
     return result;
   }
 
+  std::pair<char *, size_type> reserve(size_t s, char** p) {
+    std::pair<char *, size_type> result(nullptr, 0);
+    size_type current_tail = tail_.fetch_add(s);
+    while (current_tail > cap_) {
+      do_something();
+      current_tail = tail_.fetch_add(s);
+      ARL_Assert(current_tail >= prefix_, "AggBuffer: tail overflow!");
+    }
+    if (current_tail <= cap_ && current_tail + s > cap_) {
+      while (!mutex_pop_.try_lock()) {
+        do_something();
+      }
+
+      while (reserved_tail_ != current_tail) {
+        do_something();
+      }
+      result = std::make_pair(ptr_, current_tail);
+      ptr_ = (char *) backend::buffer_alloc(cap_);
+      reserved_tail_ = prefix_;
+      tail_ = prefix_ + s;
+
+      mutex_pop_.unlock();
+      current_tail = prefix_;
+    }
+    *p = ptr_ + current_tail;
+    return result;
+  }
+
+  void commit(size_t s) {
+    reserved_tail_.fetch_add(s);
+  }
+
   std::vector<std::pair<char *, size_type>> flush() override {
     std::vector<std::pair<char *, size_type>> result;
     if (tail_.load() == prefix_) {

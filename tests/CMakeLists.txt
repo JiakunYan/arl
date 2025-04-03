@@ -27,6 +27,7 @@ set(SRUN_ARG "-n 2" CACHE STRING "arguments to be used in ctest")
 add_arl_tests(
         TESTS
             test_agg_buffer.cpp
+            test_am_registry.cpp
             test_amagg.cpp
             test_amaggrd.cpp
             test_amff.cpp

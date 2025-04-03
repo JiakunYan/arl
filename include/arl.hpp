@@ -59,6 +59,7 @@ extern __thread size_t num_kmer_processed;
 // am
 #include "am/agg_buffer/agg_buffer.hpp"
 #include "am/future.hpp"
+#include "am/am_registry.hpp"
 #include "am/am.hpp"
 #include "am/am_agg.hpp"
 #include "am/am_aggrd.hpp"

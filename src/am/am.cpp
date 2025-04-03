@@ -3,6 +3,8 @@
 namespace arl {
 
 namespace am_internal {
+AmHandlerRegistry g_amhandler_registry;
+
 void init_am() {
   amagg_internal::init_amagg();
   amff_internal::init_amff();

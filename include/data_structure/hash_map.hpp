@@ -69,7 +69,8 @@ class HashMap {
   }
 
   void register_insert_ffrd() {
-    register_amffrd<decltype(insert_fn), local_map_t *, Key, Val>(insert_fn);
+    local_map_t* dummy;
+    register_amffrd(insert_fn, dummy, Key(), Val());
   }
 
   void insert_ffrd(Key key, Val val) {

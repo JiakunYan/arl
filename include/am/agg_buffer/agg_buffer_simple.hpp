@@ -61,6 +61,25 @@ class AggBufferSimple : public AggBuffer {
     return result;
   }
 
+  std::pair<char *, size_type> reserve(size_t s, char** p) {
+    while (!lock.try_lock()) {
+      do_something();
+    }
+    std::pair<char *, size_type> result(nullptr, 0);
+    if (tail_ + s > cap_) {
+      result = std::make_pair(ptr_, tail_);
+      ptr_ = (char *) backend::buffer_alloc(cap_);
+      tail_ = prefix_;
+    }
+    *p = ptr_ + tail_;
+    return result;
+  }
+
+  void commit(size_t s) {
+    tail_ += s;
+    lock.unlock();
+  }
+
   std::vector<std::pair<char *, size_type>> flush() override {
     std::vector<std::pair<char *, size_type>> result;
     if (tail_ == prefix_) return result;

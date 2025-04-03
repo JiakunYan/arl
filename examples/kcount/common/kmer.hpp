@@ -80,10 +80,10 @@ class Kmer {
     for (size_t i = 0; i < N_LONGS; i++) longs[i] = 0;
   }
 
-  Kmer(const Kmer &o) {
-    assert(Kmer::k > 0);
-    for (size_t i = 0; i < N_LONGS; i++) longs[i] = o.longs[i];
-  }
+  // Kmer(const Kmer &o) {
+  //   assert(Kmer::k > 0);
+  //   for (size_t i = 0; i < N_LONGS; i++) longs[i] = o.longs[i];
+  // }
 
   explicit Kmer(const char *s) {
     assert(Kmer::k > 0);
@@ -157,11 +157,11 @@ class Kmer {
     return kmers;
   }
 
-  Kmer &operator=(const Kmer &o) {
-    if (this != &o)
-      for (size_t i = 0; i < N_LONGS; i++) longs[i] = o.longs[i];
-    return *this;
-  }
+  // Kmer &operator=(const Kmer &o) {
+  //   if (this != &o)
+  //     for (size_t i = 0; i < N_LONGS; i++) longs[i] = o.longs[i];
+  //   return *this;
+  // }
 
   bool operator<(const Kmer &o) const {
     bool r = false;
