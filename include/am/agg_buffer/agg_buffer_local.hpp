@@ -118,15 +118,17 @@ class AggBufferLocal : public AggBuffer {
   private:
   struct AlignedCharPtr {
     alignas(alignof_cacheline) char *val;
+    char padding[alignof_cacheline - sizeof(char *)];
   };
-  alignas(alignof_cacheline) AlignedCharPtr *thread_ptr_;
+  AlignedCharPtr *thread_ptr_;
   struct AlignedInt {
     alignas(alignof_cacheline) int val;
+    char padding[alignof_cacheline - sizeof(int)];
   };
-  alignas(alignof_cacheline) AlignedInt *thread_tail_;
-  alignas(alignof_cacheline) size_type cap_;
-  alignas(alignof_cacheline) int thread_num_;
-  alignas(alignof_cacheline) size_type prefix_;
+  AlignedInt *thread_tail_;
+  size_type cap_;
+  int thread_num_;
+  size_type prefix_;
 };// AggBufferLocal
 }// namespace arl::am_internal
 

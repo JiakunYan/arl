@@ -1,7 +1,7 @@
 #ifndef ARL_HASH_MAP_HPP
 #define ARL_HASH_MAP_HPP
 
-#include "external/libcuckoo/cuckoohash_map.hh"
+#include "external/libcuckoo/libcuckoo/cuckoohash_map.hh"
 
 namespace arl {
 

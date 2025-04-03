@@ -11,6 +11,8 @@ extern __thread rank_t my_rank;
 extern __thread rank_t my_context;
 extern rank_t num_threads_per_proc;
 extern rank_t num_workers_per_proc;
+extern rank_t proc_rank_me;
+extern rank_t proc_rank_n;
 
 inline void set_context(rank_t mContext) {
   my_context = mContext;
@@ -37,11 +39,11 @@ inline rank_t thread_n() {
 
 namespace proc {
 inline rank_t rank_me() {
-  return backend::rank_me();
+  return rank_internal::proc_rank_me;
 }
 
 inline rank_t rank_n() {
-  return backend::rank_n();
+  return rank_internal::proc_rank_n;
 }
 }// namespace proc
 

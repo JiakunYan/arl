@@ -13,7 +13,7 @@
 #include "kmer.hpp"
 #include "zstr.hpp"
 
-#include "external/libcuckoo/cuckoohash_map.hh"
+#include "external/libcuckoo/libcuckoo/cuckoohash_map.hh"
 
 using std::vector;
 using std::pair;
@@ -84,21 +84,28 @@ public:
   }
 
   void add_kmer_set(Kmer kmer) {
+    ++num_kmer_processed;
+    timer_work.start();
     if (bloom_filter_singletons.add(kmer))
       bloom_filter_repeats.add(kmer);
+    timer_work.end();
   }
 
   void add_kmer_count(Kmer kmer) {
+    ++num_kmer_processed;
+    timer_work.start();
     // if the kmer is not found in the bloom filter, skip it
-    if (!bloom_filter_repeats.possibly_contains(kmer)) return;
-    // add or update the kmer count
-    KmerCounts kmer_counts = {.count = 1};
-    kmers.upsert(
-        kmer,
-        [](KmerCounts &v) {
-          v.count++;
-        },
-        kmer_counts);
+    if (bloom_filter_repeats.possibly_contains(kmer)) {
+      // add or update the kmer count
+      KmerCounts kmer_counts = {.count = 1};
+      kmers.upsert(
+          kmer,
+          [](KmerCounts &v) {
+            v.count++;
+          },
+          kmer_counts);
+    }
+    timer_work.end();
   }
 
   void reserve_space_and_clear_bloom() {
@@ -200,7 +207,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     return rpc_agg(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -208,7 +215,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     return rpc_agg(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -216,7 +223,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     return rpc_aggrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -224,7 +231,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     return rpc_aggrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -232,7 +239,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     rpc_ff(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -240,7 +247,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     rpc_ff(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -248,7 +255,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     rpc_ffrd(target_rank, kmer_set_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -256,7 +263,7 @@ class KmerDHT {
     // get the lexicographically smallest
     Kmer kmer_rc = kmer.revcomp();
     if (kmer_rc < kmer) kmer = kmer_rc;
-    size_t target_rank = get_target_rank(kmer);
+    size_t target_rank = get_target_rank(kmer, map_ptrs.size());
     rpc_ffrd(target_rank, kmer_count_fn, map_ptrs[target_rank], kmer);
   }
 
@@ -291,6 +298,11 @@ class KmerDHT {
     map_ptrs[rank_me()]->dump_kmers(dump_fname);
   }
 
+  // map the key to a target process
+  static int get_target_rank(const Kmer &kmer, int nranks) {
+    return std::hash<Kmer>{}(kmer) % nranks;
+  }
+
  private:
   static constexpr auto kmer_set_fn = [](KmerLHT* lmap, Kmer kmer){
     lmap->add_kmer_set(kmer);
@@ -301,10 +313,6 @@ class KmerDHT {
   };
 
   std::vector<KmerLHT *> map_ptrs;
-  // map the key to a target process
-  int get_target_rank(const Kmer &kmer) {
-    return std::hash<Kmer>{}(kmer) % map_ptrs.size();
-  }
 };
 
 #endif

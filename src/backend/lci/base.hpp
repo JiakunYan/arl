@@ -6,14 +6,14 @@ namespace arl::backend::internal {
 struct thread_state_t {
   lci::device_t device;
   lci::endpoint_t endpoint;
-  lci::comp_t comp;
+  lci::comp_t cq;
   lci::rcomp_t rcomp;
 };
 
 void init(size_t custom_num_workers_per_proc,
           size_t custom_num_threads_per_proc);
 void finalize();
-thread_state_t *get_thread_state();
+thread_state_t *get_thread_state(bool for_progress = false);
 
 inline rank_t rank_me() {
   return lci::get_rank();
@@ -46,13 +46,15 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
     status.data = lci::buffer_t(buf, nbytes);
     status.rank = rank_me();
     status.tag = tag;
-    lci::comp_signal(get_thread_state()->comp, status);
+    lci::comp_signal(get_thread_state()->cq, status);
     return ARL_OK;
     
   }
   lci::status_t status;
   do {
+    timer_sendmsg.start();
     status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_OK_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
+    timer_sendmsg.end();
     arl::progress_external();
   } while (status.error.is_retry());
   info::networkInfo.byte_send.add(nbytes);
@@ -60,7 +62,7 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
 }
 
 inline int poll_msg(cq_entry_t &entry) {
-  auto status = lci::cq_pop(get_thread_state()->comp);
+  auto status = lci::cq_pop(get_thread_state()->cq);
   if (status.error.is_ok()) {
     entry.srcRank = status.rank;
     entry.tag = status.tag;
@@ -74,8 +76,10 @@ inline int poll_msg(cq_entry_t &entry) {
 }
 
 inline int progress() {
-  auto ret = lci::progress_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  auto thread_state = get_thread_state(true);
+  auto ret = lci::progress_x().device(thread_state->device).endpoint(thread_state->endpoint)();
   return ret.is_ok() ? ARL_OK : ARL_RETRY;
+  // return ARL_RETRY;
 }
 
 inline void *buffer_alloc(int nbytes) {
@@ -113,8 +117,11 @@ inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t data
 
 inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
   int root = 0;
-  reduce_one(buf_in, buf_out, n, datatype, op, fn, root);
-  broadcast(buf_out, n * lci_datatype_size_map[static_cast<int>(datatype)], root);
+  barrier();
+  timer_allreduce.start();
+  lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  lci::broadcast_x(buf_out, n * lci_datatype_size_map[static_cast<int>(datatype)], root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  timer_allreduce.end();
 }
 }// namespace arl::backend::internal
 

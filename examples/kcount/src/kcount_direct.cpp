@@ -24,6 +24,18 @@ bool _show_progress = false;
 unsigned int Kmer::k = 0;
 using options_t = decltype(make_shared<Options>());
 
+void process_kmer(Kmer kmer, KmerDHT &kmer_dht, PASS_TYPE pass_type) {
+  // get the lexicographically smallest
+  switch (pass_type) {
+    case BLOOM_SET_PASS:
+      kmer_dht.add_kmer_set(kmer);
+      break;
+    case BLOOM_COUNT_PASS:
+      kmer_dht.add_kmer_count(kmer);
+      break;
+  }
+}
+
 uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list) {
   int64_t num_reads = 0;
   int64_t num_lines = 0;
@@ -69,21 +81,8 @@ uint64_t estimate_num_kmers(unsigned kmer_len, vector<string> &reads_fname_list)
 
 static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, KmerDHT &kmer_dht,
                         PASS_TYPE pass_type) {
-  switch (pass_type) {
-    case BLOOM_SET_PASS:
-      kmer_dht.register_add_kmer_set_ffrd();
-      break;
-    case BLOOM_COUNT_PASS:
-      kmer_dht.register_add_kmer_count_ffrd();
-      break;
-  }
   SimpleTimer timer_total;
   SimpleTimer timer_per_thread;
-  SimpleTimer timer_barrier;
-  SimpleTimer timer_sendmsg_pre;
-  SimpleTimer timer_work_pre;
-  SimpleTimer timer_progress_pre;
-  double progress_external_time_min = 10000000;
   int64_t num_reads = 0;
   int64_t num_lines = 0;
   int64_t num_kmers = 0;
@@ -93,21 +92,14 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
     case BLOOM_COUNT_PASS: progbar_prefix = "Pass 2: Parsing reads file to count kmers"; break;
   };
   //char special = qual_offset + 2;
-  timer_sendmsg.clear();
-  timer_progress.clear();
-  timer_work.clear();
-  timer_backup.clear();
-  timer_allreduce.clear();
   timer_total.start();
   timer_per_thread.start();
-  num_kmer_processed = 0;
   for (auto const &reads_fname : reads_fname_list) {
     FastqReader fqr(reads_fname, false);
     string id, seq, quals;
     ProgressBar progbar(fqr.my_file_size(), progbar_prefix);
     size_t tot_bytes_read = 0;
     while (true) {
-      timer_backup.start();
       size_t bytes_read = fqr.get_next_fq_record(id, seq, quals);
       if (!bytes_read) break;
       num_lines += 4;
@@ -118,6 +110,11 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       // split into kmers
       auto kmers = Kmer::get_kmers(kmer_len, seq);
       for (int i = 1; i < kmers.size() - 1; i++) {
+        int target_rank = KmerDHT::get_target_rank(kmers[i], proc::rank_n());
+        if (target_rank != rank_me()) {
+          aggbuffers[target_rank].push(kmers[i]);
+          continue;
+        }
         switch (pass_type) {
           case BLOOM_SET_PASS:
             kmer_dht.add_kmer_set_ffrd(kmers[i]);
@@ -128,27 +125,13 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
         }
         num_kmers++;
       }
-      timer_backup.end();
-      auto start = ticks_now();
       progress_external();
-      auto duration = ticks_now() - start;
-      if (duration < progress_external_time_min) {
-        progress_external_time_min = duration;
-      }
     }
     progbar.done(true);
   }
   timer_per_thread.end();
-  timer_sendmsg_pre = timer_sendmsg;
-  timer_sendmsg.clear();
-  timer_work_pre = timer_work;
-  timer_work.clear();
-  timer_progress_pre = timer_progress;
-  timer_progress.clear();
-  // SLOG_VERBOSE("Thread ", rank_me(), " proceesed ", num_kmers, " finished in ", timer_per_thread.to_s(), " s\n");
-  timer_barrier.start();
+  SLOG_VERBOSE("Thread ", rank_me(), " proceesed ", num_kmers, " finished in ", timer_per_thread.to_s(), " s\n");
   barrier(RPC_FFRD);
-  timer_barrier.end();
   timer_total.end();
 //  DBG("This rank processed ", num_lines, " lines (", num_reads, " reads)\n");
   auto all_num_lines = reduce_one(num_lines, op_plus(), 0);
@@ -158,43 +141,8 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
   SLOG_VERBOSE_ALL("Processed a total of ", all_num_kmers, " kmers (", timer_total.to_s(), " s)\n");
   SLOG_VERBOSE_ALL("Estimated overhead is ", timer_total.to_us() / num_kmers, " us\n");
-  SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer_total.to_us() / proc::rank_n(), " MB/s\n");
+  SLOG_VERBOSE_ALL("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / timer_total.to_us() / proc::rank_n() * 2, " MB/s\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_ALL("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
-  
-  std::ostringstream oss;
-  oss << "Rank " << rank_me() << ": "
-      << "Num kmers read: " << num_kmers << " "
-      << "Num kmers processed: " << num_kmer_processed << " "
-      << "Total: " << timer_total.to_s() * timer_total.step() << " s (" << timer_total.step() << "x" << timer_total.to_us() << "); "
-      << "Barrier: " << timer_barrier.to_s() * timer_barrier.step() << " s (" << timer_barrier.step() << "x" << timer_barrier.to_us() << "); "
-      << "Per thread: " << timer_per_thread.to_s() * timer_per_thread.step() << " s (" << timer_per_thread.step() << "x" << timer_per_thread.to_us() << "); "
-      << "Sendmsg_pre: " << timer_sendmsg_pre.to_s() * timer_sendmsg_pre.step() << " s (" << timer_sendmsg_pre.step() << "x" << timer_sendmsg_pre.to_us() << "); "
-      << "Sendmsg: " << timer_sendmsg.to_s() * timer_sendmsg.step() << " s (" << timer_sendmsg.step() << "x" << timer_sendmsg.to_us() << "); "
-      << "Progress_pre: " << timer_progress_pre.to_s() * timer_progress_pre.step() << " s (" << timer_progress_pre.step() << "x" << timer_progress_pre.to_us() << "); "
-      << "Progress: " << timer_progress.to_s() * timer_progress.step() << " s (" << timer_progress.step() << "x" << timer_progress.to_us() << "); "
-      << "Work_pre: " << timer_work_pre.to_s() * timer_work_pre.step() << " s (" << timer_work_pre.step() << "x" << timer_work_pre.to_us() << "); "
-      << "Work: " << timer_work.to_s() * timer_work.step() << " s (" << timer_work.step() << "x" << timer_work.to_us() << "); "
-      << "Backup: " << timer_backup.to_s() * timer_backup.step() << " s (" << timer_backup.step() << "x" << timer_backup.to_us() << "); "
-      << "Allreduce" << timer_allreduce.to_s() * timer_allreduce.step() << " s (" << timer_allreduce.step() << "x" << timer_allreduce.to_us() << "); "
-      << "Progress external: " << ticks_to_ns(progress_external_time_min) / 1e3 << "us; ";
-      // << "Read: " << timer_read.to_s() << " s (" << timer_read.step() << "x" << timer_read.to_us() / timer_read.step() << "); "
-      // << "Barrier: " << timer_barrier.to_s() << " s (" << timer_barrier.step() << "x" << timer_barrier.to_us() / timer_barrier.step() << "); "
-      // << "Per thread: " << timer_per_thread.to_s() << " s (" << timer_per_thread.step() << "x" << timer_per_thread.to_us() / timer_per_thread.step() << "); "
-      // << "Sendmsg_pre: " << timer_sendmsg_pre.to_s() << " s (" << timer_sendmsg_pre.step() << "x" << timer_sendmsg_pre.to_us() / timer_sendmsg_pre.step() << "); "
-      // << "Sendmsg: " << timer_sendmsg.to_s() << " s (" << timer_sendmsg.step() << "x" << timer_sendmsg.to_us() / timer_sendmsg.step() << "); "
-      // << "Progress_pre: " << timer_progress_pre.to_s() << " s (" << timer_progress_pre.step() << "x" << timer_progress_pre.to_us() / timer_progress_pre.step()  << "); "
-      // << "Progress: " << timer_progress.to_s() << " s (" << timer_progress.step() << "x" << timer_progress.to_us() / timer_progress.step()  << "); "
-      // << "Work_pre: " << timer_work_pre.to_s() << " s (" << timer_work_pre.step() << "x" << timer_work_pre.to_us() / timer_work_pre.step()  << "); "
-      // << "Work: " << timer_work.to_s() << " s (" << timer_work.step() << "x" << timer_work.to_us() / timer_work.step()  << "); "
-      // << "Allreduce: " << timer_backup.to_s() << " s (" << timer_backup.step() << "x" << timer_backup.to_us() / timer_backup.step()  << "); ";
-  std::cerr << oss.str() << std::endl;
-  // timer_read.col_print_us("read");
-  timer_per_thread.col_print_us("per thread");
-  timer_barrier.col_print_us("barrier");
-  // timer_sendmsg.col_print_us("sendmsg");
-  // timer_progress.col_print_us("progress");
-  // timer_work.col_print_us("work");
-  // timer_backup.col_print_us("allreduce");
 }
 //
 void worker(const options_t& options) {

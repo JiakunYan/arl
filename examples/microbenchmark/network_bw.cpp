@@ -88,8 +88,10 @@ void worker(int nmsgs, size_t payload_size) {
   auto end = std::chrono::high_resolution_clock::now();
   double duration_s = std::chrono::duration<double>(end - begin).count();
 
+  double time_us_per_msg = duration_s * 1e6 / nmsgs;
   double bandwidth_node_s = payload_size * nmsgs * nthreads * 2 / duration_s;
   if (arl::backend::rank_me() == 0 && thread_id == 0) {
+    fprintf(stderr, "Time per message = %.3lf us\n", time_us_per_msg);
     fprintf(stderr, "Node single-direction bandwidth = %.3lf MB/s\n", bandwidth_node_s / 1e6);
   }
   // fprintf(stderr, "Rank %ld Thread %d finished\n", arl::backend::rank_me(), thread_id);

@@ -49,6 +49,7 @@ class BloomFilter {
     hash_n = (int) ceil(0.693147180559945 * bpe);// ln(2)
 
     bucket_n = (bit_n + 8 * sizeof(bucket_t) - 1) / (8 * sizeof(bucket_t));
+    ARL_LOG(INFO, "Bloom filter: %lu bits, %lu buckets, %lu hashes\n", bit_n, bucket_n, hash_n);
     //        printf("bit_n: %lu; bpe: %lf; bucket_n: %lu\n", bit_n, bpe, bucket_n);
 
     try {
@@ -80,7 +81,6 @@ class BloomFilter {
       int my_bit = hash_values % (8 * sizeof(bucket_t));
       my_bucket |= (bucket_t) 0x1 << my_bit;
     }
-
     bucket_t old_bucket = buckets[bucket_id].fetch_or(my_bucket);
     bool is_contained = ((old_bucket & my_bucket) == my_bucket);
     //        printf("add %s: (%lu, %016lx) old %016lx, %s\n", data.str, bucket_id, my_bucket, old_bucket, is_contained? "true": "false");
@@ -100,7 +100,6 @@ class BloomFilter {
       int my_bit = hash_values % (8 * sizeof(bucket_t));
       my_bucket |= (bucket_t) 0x1 << my_bit;
     }
-
     bucket_t the_bucket = buckets[bucket_id].load();
     bool is_contained = ((the_bucket & my_bucket) == my_bucket);
     //        printf("find %s: (%lu, %016lx) old %016lx, %s\n", data.str, bucket_id, my_bucket, the_bucket, is_contained? "true": "false");

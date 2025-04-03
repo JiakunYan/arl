@@ -43,10 +43,12 @@ using tick_t = int64_t;
 
 struct AlignedAtomicInt64 {
   alignas(alignof_cacheline) std::atomic<int64_t> val;
+  char padding[alignof_cacheline - sizeof(std::atomic<int64_t>)];
 };
 
 struct AlignedInt64 {
   alignas(alignof_cacheline) int64_t val;
+  char padding[alignof_cacheline - sizeof(int64_t)];
 };
 
 enum RPCType {

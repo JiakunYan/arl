@@ -10,6 +10,8 @@
 #ifndef ARL_BACKEND_BASE_HPP
 #define ARL_BACKEND_BASE_HPP
 
+#include "lct.h"
+
 #define CHECK_GEX(x)                                         \
   {                                                          \
     int err = (x);                                           \
@@ -35,8 +37,9 @@ extern gasnet_seginfo_t *gasnet_seginfo;
 
 const int GEX_NARGS = (sizeof(tag_t) + sizeof(gex_AM_Arg_t) - 1) / sizeof(gex_AM_Arg_t);
 const gex_AM_Index_t gex_handler_idx = GEX_AM_INDEX_BASE;
-extern std::queue<cq_entry_t> *cq_p;
-extern std::mutex cq_mutex;
+// extern std::queue<cq_entry_t> *cq_p;
+// extern std::mutex cq_mutex;
+extern LCT_queue_t cq;
 
 extern void gex_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes, gex_AM_Arg_t tag);
 
@@ -84,14 +87,16 @@ inline void init(size_t, size_t) {
 
   CHECK_GEX(gex_EP_RegisterHandlers(ep, htable, sizeof(htable) / sizeof(gex_AM_Entry_t)));
 
-  cq_p = new std::queue<cq_entry_t>();
+  // cq_p = new std::queue<cq_entry_t>();
+  cq = LCT_queue_alloc(LCT_QUEUE_ARRAY_ATOMIC_FAA, 65536);
 
   barrier();
 }
 
 inline void finalize() {
   barrier();
-  delete cq_p;
+  // delete cq_p;
+  LCT_queue_free(&cq);
   free(gasnet_seginfo);
   finalized = true;
   gasnet_exit(0);
@@ -102,8 +107,10 @@ inline const size_t get_max_buffer_size() {
 }
 
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
+  timer_sendmsg.start();
   CHECK_GEX(gex_AM_RequestMedium1(tm, target, gex_handler_idx,
                                   buf, nbytes, GEX_EVENT_NOW, 0, static_cast<gex_AM_Arg_t>(tag)));
+  timer_sendmsg.end();
   info::networkInfo.byte_send.add(nbytes);
   free(buf);
   return ARL_OK;
@@ -112,15 +119,22 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
 inline int poll_msg(cq_entry_t &entry) {
   ARL_Assert(cq_p != nullptr, "Didn't initialize the backend!");
   int ret = ARL_RETRY;
-  if (!cq_p->empty()) {
-    cq_mutex.lock();
-    if (!cq_p->empty()) {
-      entry = cq_p->front();
-      cq_p->pop();
-      info::networkInfo.byte_recv.add(entry.nbytes);
-      ret = ARL_OK;
-    }
-    cq_mutex.unlock();
+  // if (!cq_p->empty()) {
+    // cq_mutex.lock();
+    // if (!cq_p->empty()) {
+    //   entry = cq_p->front();
+    //   cq_p->pop();
+    //   info::networkInfo.byte_recv.add(entry.nbytes);
+    //   ret = ARL_OK;
+    // }
+    // cq_mutex.unlock();
+  // }
+  auto p = (cq_entry_t *)LCT_queue_pop(cq);
+  if (p != nullptr) {
+    entry = *p;
+    delete p;
+    info::networkInfo.byte_recv.add(entry.nbytes);
+    ret = ARL_OK;
   }
   return ret;
 }

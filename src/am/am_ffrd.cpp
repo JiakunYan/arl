@@ -4,11 +4,11 @@ namespace arl {
 namespace amffrd_internal {
 
 // AM synchronous counters
-alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_recv_counter;
-alignas(alignof_cacheline) AlignedAtomicInt64 *amffrd_req_counters;// of length proc::rank_n()
+AlignedAtomicInt64 *amffrd_recv_counter;
+std::vector<std::vector<int64_t>> *amffrd_req_counters;// of length (local::rank_n, proc::rank_n)
 // other variables whose names are clear
-alignas(alignof_cacheline) AggBuffer **amffrd_agg_buffer_p;
-alignas(alignof_cacheline) AmffrdReqMeta *global_meta_p = nullptr;
+AggBuffer **amffrd_agg_buffer_p;
+AmffrdReqMeta *global_meta_p = nullptr;
 
 // Currently, init_am* should only be called once. Multiple call might run out of gex_am_handler_id.
 // Should be called after arl::backend::init
@@ -30,14 +30,15 @@ void init_amffrd() {
 
   amffrd_recv_counter = new AlignedAtomicInt64;
   amffrd_recv_counter->val = 0;
-  amffrd_req_counters = new AlignedAtomicInt64[proc::rank_n()];
-  for (int i = 0; i < proc::rank_n(); ++i) {
-    amffrd_req_counters[i].val = 0;
+  amffrd_req_counters = new std::vector<std::vector<int64_t>>();
+  amffrd_req_counters->resize(local::rank_n());
+  for (auto &v : *amffrd_req_counters) {
+    v.resize(proc::rank_n(), 0);
   }
 }
 
 void exit_amffrd() {
-  delete[] amffrd_req_counters;
+  delete amffrd_req_counters;
   delete amffrd_recv_counter;
   delete amffrd_internal::global_meta_p;
   for (int i = 0; i < proc::rank_n(); ++i) {
@@ -92,16 +93,8 @@ void flush_amffrd_buffer() {
 }
 
 int64_t get_expected_recv_num() {
-  int64_t expected_recv_num = 0;
-  if (local::rank_me() == 0) {
-    std::vector<int64_t> src_v(proc::rank_n());
-    for (int i = 0; i < proc::rank_n(); ++i) {
-      src_v[i] = amffrd_req_counters[i].val.load();
-    }
-    auto dst_v = proc::reduce_all(src_v, op_plus());
-    expected_recv_num = dst_v[proc::rank_me()];
-  }
-  return local::broadcast(expected_recv_num, 0);
+  auto dst_v = reduce_all((*amffrd_req_counters)[local::rank_me()], op_plus());
+  return dst_v[proc::rank_me()];
 }
 
 void wait_amffrd() {

@@ -17,7 +17,7 @@ int get_rand() {
   return rand_r(&seed);
 }
 
-thread_state_t *get_thread_state() {
+thread_state_t *get_thread_state(bool for_progress) {
   int idx = local::rank_me();
   if (idx < 0) {
     idx = 0;
@@ -28,6 +28,9 @@ thread_state_t *get_thread_state() {
     int my_worker_end = std::min(my_worker_start + num_workers_per_progress, local::rank_n());
     int range = my_worker_end - my_worker_start;
     idx = my_worker_start + get_rand() % range;
+  } else if (for_progress && config::lci_shared_progress) {
+    // worker thread calling progress
+    idx = get_rand() % thread_states.size();
   }
   return &thread_states[idx];
 }
@@ -35,7 +38,7 @@ thread_state_t *get_thread_state() {
 void init(size_t custom_num_workers_per_proc,
           size_t custom_num_threads_per_proc) {
   ARL_LOG(INFO, "Initializing LCI backend\n");
-  if (!lci::is_active()) {
+  if (lci::get_g_runtime().is_empty()) {
     lci::g_runtime_init_x().alloc_default_device(false)();
     to_finalize_lci = true;
   } else {
@@ -53,7 +56,9 @@ void init(size_t custom_num_workers_per_proc,
 
   size_t npackets = lci::get_default_packet_pool().get_attr_npackets();
   size_t max_nrecvs_per_device = std::min(npackets / 4 / config::lci_ndevices, 4096UL);
-  size_t max_nsends_per_device = std::min(npackets / 4 / lci::get_nranks() / config::lci_ndevices, 64UL);
+  size_t max_nsends_per_device = std::min(npackets / 4 / lci::get_nranks() / config::lci_ndevices, config::lci_max_sends);
+  max_nsends_per_device = std::max(max_nsends_per_device, config::lci_min_sends);
+  // size_t max_nsends_per_device = config::lci_max_sends;
   ARL_LOG(INFO, "Number of devices: %d (max_sends %lu, max_recvs %lu)\n", config::lci_ndevices, max_nsends_per_device, max_nrecvs_per_device);
   devices.resize(config::lci_ndevices);
   lci::comp_t cq;
@@ -67,11 +72,11 @@ void init(size_t custom_num_workers_per_proc,
     device.device = lci::alloc_device_x().net_max_sends(max_nsends_per_device).net_max_recvs(max_nrecvs_per_device)();
     device.endpoint = lci::get_default_endpoint_x().device(device.device)();
     if (config::lci_shared_cq) {
-      device.comp = cq;
+      device.cq = cq;
       device.rcomp = rcomp;
     } else {
-      device.comp = lci::alloc_cq_x().zero_copy_am(true)();
-      device.rcomp = lci::register_rcomp(device.comp);
+      device.cq = lci::alloc_cq_x().zero_copy_am(true)();
+      device.rcomp = lci::register_rcomp(device.cq);
     }
   }
 
@@ -93,13 +98,13 @@ void finalize() {
   for (auto &device : devices) {
     lci::free_device(&device.device);
     if (!config::lci_shared_cq) {
-      lci::free_comp(&device.comp);
+      lci::free_comp(&device.cq);
     }
   }
   if (config::lci_shared_cq) {
-    lci::free_comp(&devices[0].comp);
+    lci::free_comp(&devices[0].cq);
   }
-  if (lci::is_active() && to_finalize_lci)
+  if (!lci::get_g_runtime().is_empty() && to_finalize_lci)
     lci::g_runtime_fina();
 }
 

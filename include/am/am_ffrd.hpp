@@ -10,7 +10,7 @@ using am_internal::resolve_pi_fnptr;
 
 // AM synchronous counters
 extern AlignedAtomicInt64 *amffrd_recv_counter;
-extern AlignedAtomicInt64 *amffrd_req_counters;// of length proc::rank_n()
+extern std::vector<std::vector<int64_t>> *amffrd_req_counters;
 // other variables whose names are clear
 extern AggBuffer **amffrd_agg_buffer_p;
 
@@ -111,25 +111,28 @@ void rpc_ffrd(rank_t remote_worker, Fn &&fn, Args &&...args) {
   int remote_worker_local = remote_worker % local::rank_n();
   if (config::rpc_loopback && remote_proc == proc::rank_me()) {
     // local precedure call
-    return amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+    timer_backup.end();
+    amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
+    timer_backup.start();
     // Fn* fn_p = am_internal::resolve_pi_fnptr<Fn>(amffrd_internal::global_meta_p->fn_p);
     // amff_internal::run_lpc(remote_worker_local, *fn_p, std::forward<Args>(args)...);
     return;
   }
-
   Payload payload{remote_worker_local, std::make_tuple(std::forward<Args>(args)...)};
   //  printf("Rank %ld send rpc to rank %ld\n", rank_me(), remote_worker);
-  //  std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
-
+  // std::cout << "sizeof(" << type_name<Payload>() << ") is " << sizeof(Payload) << std::endl;
+  fprintf(stderr, "sizeof(payload) is %lu\n", sizeof(payload));
   std::pair<char *, int64_t> result = amffrd_internal::amffrd_agg_buffer_p[remote_proc]->push((char *) &payload, sizeof(payload));
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
+      timer_backup.end();
       amffrd_internal::sendm_amffrd(remote_proc, *amffrd_internal::global_meta_p,
                                     std::get<0>(result), std::get<1>(result));
       progress_external();
+      timer_backup.start();
     }
   }
-  ++(amffrd_internal::amffrd_req_counters[remote_proc].val);
+  ++(*amffrd_internal::amffrd_req_counters)[local::rank_me()][remote_proc];
 }
 
 }// namespace arl

@@ -39,6 +39,13 @@ inline void set_timeout(double t);
 #include "tool/info.hpp"
 #include "tool/timer.hpp"
 #include "tool/utils.hpp"
+
+extern thread_local arl::SimpleTimer timer_sendmsg;
+extern thread_local arl::SimpleTimer timer_progress;
+extern thread_local arl::SimpleTimer timer_work;
+extern thread_local arl::SimpleTimer timer_backup;
+extern thread_local arl::SimpleTimer timer_allreduce;
+extern __thread size_t num_kmer_processed;
 // backend
 #include "backend/backend.hpp"
 #include "backend/reduce.hpp"

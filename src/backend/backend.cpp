@@ -21,13 +21,17 @@ const size_t get_max_buffer_size() {
   return internal::get_max_buffer_size();
 }
 int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
-  return internal::send_msg(target, tag, buf, nbytes);
+  auto ret = internal::send_msg(target, tag, buf, nbytes);
+  return ret;
 }
 int poll_msg(cq_entry_t &entry) {
   return internal::poll_msg(entry);
 }
 int progress() {
-  return internal::progress();
+  timer_progress.start();
+  auto ret = internal::progress();
+  timer_progress.end();
+  return ret;
 }
 void *buffer_alloc(int nbytes) {
   return internal::buffer_alloc(nbytes);

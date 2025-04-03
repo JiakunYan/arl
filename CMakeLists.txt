@@ -28,6 +28,8 @@ target_link_libraries(arl PUBLIC Threads::Threads)
 add_subdirectory(include)
 add_subdirectory(src)
 
+find_package(LCI REQUIRED CONFIG PATH_SUFFIXES lib/cmake lib64/cmake)
+
 if(ARL_USE_GEX)
     set(ARL_USE_GASNET_MODULE gasnet-ibv-par CACHE STRING "Gasnet module to use")
     set_property(CACHE ARL_USE_GASNET_MODULE PROPERTY STRINGS gasnet-aries-par gasnet-ibv-par gasnet-mpi-par gasnet-shm-par)
@@ -50,8 +52,8 @@ if(ARL_USE_GEX)
     fix_property(PkgConfig::gasnet INTERFACE_COMPILE_OPTIONS)
     fix_property(PkgConfig::gasnet INTERFACE_LINK_OPTIONS)
     target_link_libraries(arl PUBLIC PkgConfig::gasnet)
+    target_link_libraries(arl PRIVATE LCI::lct)
 elseif(ARL_USE_LCI)
-    find_package(LCI REQUIRED CONFIG PATH_SUFFIXES lib/cmake lib64/cmake)
     target_link_libraries(arl PUBLIC LCI::lci)
 endif()
 

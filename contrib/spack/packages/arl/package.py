@@ -33,7 +33,7 @@ class Arl(CMakePackage):
     generator("ninja", "make", default="ninja")
 
     depends_on("cmake@3.13:", type="build")
-    depends_on("lci", when="backend=lci")
+    depends_on("lci")
     depends_on("gasnet", when="backend=gex")
     depends_on("mpi", when="+gex-with-mpi")
     depends_on("upcxx", when="+upcxx")

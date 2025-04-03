@@ -6,9 +6,12 @@ log_level_t log_level = log_level_t::WARN;
 bool pin_thread = true;
 size_t max_buffer_size = 1 << 31;
 AggBufferType aggBufferType = AGG_BUFFER_LOCAL;
-bool lci_shared_cq = false;
+bool lci_shared_cq = true;
 int lci_ndevices = -1;
-extern bool backend_only_mode = false;
+bool lci_shared_progress = false;
+size_t lci_max_sends = 64;
+size_t lci_min_sends = 8;
+bool backend_only_mode = false;
 bool rpc_loopback = true;
 bool msg_loopback = true;
 
@@ -70,11 +73,32 @@ void init() {
     ARL_LOG(INFO, "ARL lci shared cq: %d\n", lci_shared_cq);
   }
 
+  // lci shared progress
+  p = getenv("ARL_LCI_SHARED_PROGRESS");
+  if (p) {
+    lci_shared_progress = atoi(p);
+    ARL_LOG(INFO, "ARL lci shared progress: %d\n", lci_shared_progress);
+  }
+
   // lci ndevices
   p = getenv("ARL_LCI_NDEVICES");
   if (p) {
     lci_ndevices = atoi(p);
     ARL_LOG(INFO, "ARL lci ndevices: %d\n", lci_ndevices);
+  }
+
+  // lci max sends
+  p = getenv("ARL_LCI_MAX_SENDS");
+  if (p) {
+    lci_max_sends = atoi(p);
+    ARL_LOG(INFO, "ARL lci max sends: %zu\n", lci_max_sends);
+  }
+
+  // lci min sends
+  p = getenv("ARL_LCI_MIN_SENDS");
+  if (p) {
+    lci_min_sends = atoi(p);
+    ARL_LOG(INFO, "ARL lci min sends: %zu\n", lci_min_sends);
   }
 
   // backend only mode

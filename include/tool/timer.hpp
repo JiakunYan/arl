@@ -5,19 +5,18 @@ namespace arl {
 template<typename T, typename BinaryOp>
 extern T reduce_all(const T &value, const BinaryOp &op);
 
-// microseconds, 12ns
 static inline tick_t ticks_now() {
-  tick_t ret;
-  struct timeval t1;
-  gettimeofday(&t1, 0);
-  ret = t1.tv_sec * 1e9 + t1.tv_usec * 1e3;
-  return ret;
+  struct timespec t1;
+  int ret = clock_gettime(CLOCK_MONOTONIC, &t1);
+  if (ret != 0) {
+    fprintf(stderr, "Cannot get time!\n");
+    abort();
+  }
+  return (tick_t)t1.tv_sec * (tick_t)1e9 + (tick_t)t1.tv_nsec;
 }
 
 static inline uint64_t ticks_to_ns(tick_t val) {
-  uint64_t ret;
-  ret = val;
-  return ret;
+  return val;
 }
 
 static inline uint64_t ticks_to_us(tick_t val) {
@@ -32,13 +31,6 @@ static inline double ticks_to_s(tick_t val) {
   return ticks_to_ns(val) / 1e9;
 }
 
-// microseconds, 370ns
-//  tick_t ticks_now() {
-//    timespec temp;
-//    clock_gettime(CLOCK_MONOTONIC, &temp);
-//    return temp.tv_sec * 1e6 + temp.tv_nsec / 1e3;
-//  }
-
 inline void update_average(double &average, uint64_t val, uint64_t num) {
   average += (val - average) / num;
 }
@@ -50,16 +42,31 @@ static inline void usleep(int64_t utime) {
 
 struct SimpleTimer {
   public:
+  SimpleTimer() = default;
+  SimpleTimer(const char *name) : _name(name) {
+    is_enabled = false;
+    char *p = getenv("ARL_TIMER");
+    if (p) {
+      std::string env_var(p);
+      if (env_var.find(name) != std::string::npos) {
+        is_enabled = true;
+      }
+    }
+  }
+
   void start() {
+    if (!is_enabled) return;
     _start = ticks_now();
   }
 
   void end() {
+    if (!is_enabled) return;
     tick_t _end = ticks_now();
     update_average(_ticks, _end - _start, ++_step);
   }
 
   void tick_and_update(tick_t _start_) {
+    if (!is_enabled) return;
     tick_t _end = ticks_now();
     update_average(_ticks, _end - _start_, ++_step);
   }
@@ -81,18 +88,22 @@ struct SimpleTimer {
   }
 
   void print_us(std::string &&name = "") const {
+    if (!is_enabled) return;
     printf("Duration %s: %.3lf us (step %ld, total %.3lf s)\n", name.c_str(), to_us(), step(), to_s() * step());
   }
 
   void print_ms(std::string &&name = "") const {
+    if (!is_enabled) return;
     printf("Duration %s: %.3lf ms (step %ld, total %.3lf s)\n", name.c_str(), to_ms(), step(), to_s() * step());
   }
 
   void print_s(std::string &&name = "") const {
+    if (!is_enabled) return;
     printf("Duration %s: %.3lf s (step %ld, total %.3lf s)\n", name.c_str(), to_s(), step(), to_s() * step());
   }
 
   SimpleTimer &col_print_us(std::string &&name = "", rank_t r = 0) {
+    if (!is_enabled) return *this;
     double max_duration = reduce_all(to_us(), op_max());
     double ave_duration = reduce_all(to_us(), op_plus()) / rank_n();
     double min_duration = reduce_all(to_us(), op_min());
@@ -112,6 +123,7 @@ struct SimpleTimer {
   }
 
   SimpleTimer &col_print_s(std::string &&name = "", rank_t r = 0) {
+    if (!is_enabled) return *this;
     double max_duration = reduce_all(to_s(), op_max());
     double ave_duration = reduce_all(to_s(), op_plus()) / rank_n();
     double min_duration = reduce_all(to_s(), op_min());
@@ -141,6 +153,8 @@ struct SimpleTimer {
   }
 
   private:
+  const char *_name = nullptr;
+  bool is_enabled = true;
   int64_t _step = 0;
   tick_t _start = 0;
   double _ticks = 0;

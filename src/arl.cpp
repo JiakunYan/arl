@@ -1,11 +1,20 @@
 #include "arl_internal.hpp"
 
+thread_local arl::SimpleTimer timer_sendmsg("sendmsg");
+thread_local arl::SimpleTimer timer_progress("progress");
+thread_local arl::SimpleTimer timer_work("work");
+thread_local arl::SimpleTimer timer_backup("backup");
+thread_local arl::SimpleTimer timer_allreduce("allreduce");
+__thread size_t num_kmer_processed = 0;
+
 namespace arl {
 namespace rank_internal {
 __thread rank_t my_rank = -1;
 __thread rank_t my_context = -1;
 rank_t num_threads_per_proc = 16;
 rank_t num_workers_per_proc = 15;
+rank_t proc_rank_me = -1;
+rank_t proc_rank_n = -1;
 } // namespace rank_internal
 
 // namespace internal {
@@ -40,13 +49,15 @@ void init(size_t custom_num_workers_per_proc,
     ARL_LOG(INFO, "ARL num threads per proc: %zu\n", custom_num_threads_per_proc);
   }
   config::init();
-  backend::init(custom_num_workers_per_proc, custom_num_threads_per_proc);
 
 #ifdef ARL_DEBUG
   proc::print("%s", "WARNING: Running low-performance debug mode.\n");
 #endif
   rank_internal::num_workers_per_proc = custom_num_workers_per_proc;
   rank_internal::num_threads_per_proc = custom_num_threads_per_proc;
+  backend::init(custom_num_workers_per_proc, custom_num_threads_per_proc);
+  rank_internal::proc_rank_me = backend::rank_me();
+  rank_internal::proc_rank_n = backend::rank_n();
   threadBarrier.init(local::rank_n());
 
   am_internal::init_am();

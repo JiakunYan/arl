@@ -46,7 +46,6 @@ using upcxx::global_ptr;
 using upcxx::new_array;
 using upcxx::delete_array;
 
-
 //#define DBG_INS_CTG_KMER DBG
 #define DBG_INS_CTG_KMER(...)
 //#define DBG_INSERT_KMER DBG

@@ -17,7 +17,7 @@ using std::vector;
 struct Options {
 
   std::vector<string> reads_fname_list;
-  int num_workers = 15;
+  int num_workers = 16;
   int num_threads = 16;
   int kmer_len = 51;
   bool verbose = false;
