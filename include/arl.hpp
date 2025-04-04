@@ -44,7 +44,7 @@ extern thread_local arl::SimpleTimer timer_sendmsg;
 extern thread_local arl::SimpleTimer timer_progress;
 extern thread_local arl::SimpleTimer timer_work;
 extern thread_local arl::SimpleTimer timer_backup;
-extern thread_local arl::SimpleTimer timer_allreduce;
+extern thread_local arl::SimpleTimer timer_collective;
 extern __thread size_t num_kmer_processed;
 // backend
 #include "backend/backend.hpp"

@@ -97,7 +97,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
   timer_progress.clear();
   timer_work.clear();
   timer_backup.clear();
-  timer_allreduce.clear();
+  timer_collective.clear();
   timer_total.start();
   timer_per_thread.start();
   num_kmer_processed = 0;
@@ -175,8 +175,9 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       << "Work_pre: " << timer_work_pre.to_s() * timer_work_pre.step() << " s (" << timer_work_pre.step() << "x" << timer_work_pre.to_us() << "); "
       << "Work: " << timer_work.to_s() * timer_work.step() << " s (" << timer_work.step() << "x" << timer_work.to_us() << "); "
       << "Backup: " << timer_backup.to_s() * timer_backup.step() << " s (" << timer_backup.step() << "x" << timer_backup.to_us() << "); "
-      << "Allreduce" << timer_allreduce.to_s() * timer_allreduce.step() << " s (" << timer_allreduce.step() << "x" << timer_allreduce.to_us() << "); "
-      << "Progress external: " << ticks_to_ns(progress_external_time_min) / 1e3 << "us; ";
+      << "Collective: " << timer_collective.to_s() * timer_collective.step() << " s (" << timer_collective.step() << "x" << timer_collective.to_us() << "); "
+      << "Progress external: " << ticks_to_ns(progress_external_time_min) / 1e3 << "us; "
+      << "\n";
       // << "Read: " << timer_read.to_s() << " s (" << timer_read.step() << "x" << timer_read.to_us() / timer_read.step() << "); "
       // << "Barrier: " << timer_barrier.to_s() << " s (" << timer_barrier.step() << "x" << timer_barrier.to_us() / timer_barrier.step() << "); "
       // << "Per thread: " << timer_per_thread.to_s() << " s (" << timer_per_thread.step() << "x" << timer_per_thread.to_us() / timer_per_thread.step() << "); "
@@ -187,7 +188,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, Kme
       // << "Work_pre: " << timer_work_pre.to_s() << " s (" << timer_work_pre.step() << "x" << timer_work_pre.to_us() / timer_work_pre.step()  << "); "
       // << "Work: " << timer_work.to_s() << " s (" << timer_work.step() << "x" << timer_work.to_us() / timer_work.step()  << "); "
       // << "Allreduce: " << timer_backup.to_s() << " s (" << timer_backup.step() << "x" << timer_backup.to_us() / timer_backup.step()  << "); ";
-  std::cerr << oss.str() << std::endl;
+  std::cerr << oss.str();
   // timer_read.col_print_us("read");
   timer_per_thread.col_print_us("per thread");
   timer_barrier.col_print_us("barrier");

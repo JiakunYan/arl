@@ -97,8 +97,10 @@ inline void buffer_free(void *buffer) {
 }
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
+  timer_collective.start();
   barrier();
   lci::broadcast_x(buf, nbytes, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  timer_collective.end();
 }
 
 const size_t lci_datatype_size_map[] = {
@@ -111,17 +113,19 @@ const size_t lci_datatype_size_map[] = {
 };
 
 inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root) {
+  timer_collective.start();
   barrier();
   lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
+  timer_collective.end();
 }
 
 inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
   int root = 0;
+  timer_collective.start();
   barrier();
-  timer_allreduce.start();
   lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
   lci::broadcast_x(buf_out, n * lci_datatype_size_map[static_cast<int>(datatype)], root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
-  timer_allreduce.end();
+  timer_collective.end();
 }
 }// namespace arl::backend::internal
 

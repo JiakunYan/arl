@@ -10,6 +10,7 @@ struct function_traits;
 template<typename Ret, typename... Args>
 struct function_traits<Ret(*)(Args...)> {
     static constexpr std::size_t arity = sizeof...(Args);
+    static constexpr std::size_t total_arg_size = (sizeof(Args) + ... + 0);
     using return_type = Ret;
     using args_tuple = std::tuple<Args...>;
 };
@@ -20,6 +21,7 @@ struct function_traits : function_traits<decltype(&T::operator())> {};
 template<typename ClassType, typename Ret, typename... Args>
 struct function_traits<Ret(ClassType::*)(Args...) const> {
     static constexpr std::size_t arity = sizeof...(Args);
+    static constexpr std::size_t total_arg_size = (sizeof(Args) + ... + 0);
     using return_type = Ret;
     using args_tuple = std::tuple<Args...>;
 };
@@ -41,7 +43,6 @@ public:
     template<typename T>
     static void serialize_one(char*& buffer, const T& value) {
         static_assert(std::is_trivially_copyable_v<T>, "Only trivially copyable types supported.");
-        std::cout << "serializing " << typeid(T).name() << " to buffer " << (void*)buffer << "\n";
         std::memcpy(buffer, &value, sizeof(T));
         buffer += sizeof(T);
     }
@@ -50,7 +51,6 @@ public:
     static T deserialize_one(const char*& buffer) {
         T value;
         std::memcpy(&value, buffer, sizeof(T));
-        std::cout << "deserializing " << typeid(T).name() << " from buffer " << (void*)buffer << "\n";
         buffer += sizeof(T);
         return value;
     }

@@ -24,7 +24,7 @@ void register_amffrd(Fn&& fn) {
   pure_barrier();
   if (local::rank_me() == 0) {
     amffrd_internal::g_am_idx = am_internal::register_amhandler(std::forward<Fn>(fn));
-    amffrd_internal::g_payload_size = am_internal::function_traits<std::decay_t<Fn>>::arity;
+    amffrd_internal::g_payload_size = am_internal::function_traits<std::decay_t<Fn>>::total_arg_size;
   }
   pure_barrier();
 }
@@ -36,7 +36,7 @@ void register_amffrd(Fn&& fn, Args&&...) {
   pure_barrier();
   if (local::rank_me() == 0) {
     amffrd_internal::g_am_idx = am_internal::register_amhandler(std::forward<Fn>(fn));
-    amffrd_internal::g_payload_size = am_internal::function_traits<std::decay_t<Fn>>::arity;
+    amffrd_internal::g_payload_size = am_internal::function_traits<std::decay_t<Fn>>::total_arg_size;
   }
   pure_barrier();
 }
