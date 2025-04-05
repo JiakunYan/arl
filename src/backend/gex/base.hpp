@@ -113,10 +113,8 @@ inline const size_t get_max_buffer_size() {
 }
 
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
-  timer_sendmsg.start();
   CHECK_GEX(gex_AM_RequestMedium1(tm, target, gex_handler_idx,
                                   buf, nbytes, GEX_EVENT_NOW, 0, static_cast<gex_AM_Arg_t>(tag)));
-  timer_sendmsg.end();
   info::networkInfo.byte_send.add(nbytes);
   free(buf);
   return ARL_OK;

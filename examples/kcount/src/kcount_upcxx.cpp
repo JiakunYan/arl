@@ -10,8 +10,6 @@
 #include <unistd.h>
 #include <upcxx/upcxx.hpp>
 
-#include "timer.hpp"
-
 #include "kcount_config.hpp"
 #include "fastq.hpp"
 #include "kmer_dht.hpp"
@@ -133,6 +131,7 @@ static void count_kmers(unsigned kmer_len, vector<string> &reads_fname_list, dis
   SLOG_VERBOSE("Processed a total of ", all_num_lines, " lines (", all_num_reads, " reads)\n");
   SLOG_VERBOSE("Processed a total of ", all_num_kmers, " kmers (", elapsed_ms / 1e3, " s)\n");
   SLOG_VERBOSE("Estimated overhead is ", elapsed_ms * 1e3 / num_kmers, " us\n");
+  SLOG_VERBOSE("Estimated throughput is ", (double) all_num_kmers / elapsed_ms / 1e3, " Mkmers/s\n");
   SLOG_VERBOSE("Estimated node bandwidth is ", (double) all_num_kmers * sizeof(Kmer) / elapsed_ms / 1e3 / upcxx::rank_n() * 2, " MB/s\n");
   if (pass_type != BLOOM_SET_PASS) SLOG_VERBOSE("Found ", perc_str(all_distinct_kmers, all_num_kmers), " unique kmers\n");
 }

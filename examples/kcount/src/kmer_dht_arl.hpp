@@ -84,16 +84,11 @@ public:
   }
 
   void add_kmer_set(Kmer kmer) {
-    ++num_kmer_processed;
-    timer_work.start();
     if (bloom_filter_singletons.add(kmer))
       bloom_filter_repeats.add(kmer);
-    timer_work.end();
   }
 
   void add_kmer_count(Kmer kmer) {
-    ++num_kmer_processed;
-    timer_work.start();
     // if the kmer is not found in the bloom filter, skip it
     if (bloom_filter_repeats.possibly_contains(kmer)) {
       // add or update the kmer count
@@ -105,7 +100,6 @@ public:
           },
           kmer_counts);
     }
-    timer_work.end();
   }
 
   void reserve_space_and_clear_bloom() {

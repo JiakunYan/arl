@@ -1,12 +1,5 @@
 #include "arl_internal.hpp"
 
-thread_local arl::SimpleTimer timer_sendmsg("sendmsg");
-thread_local arl::SimpleTimer timer_progress("progress");
-thread_local arl::SimpleTimer timer_work("work");
-thread_local arl::SimpleTimer timer_backup("backup");
-thread_local arl::SimpleTimer timer_collective("collective");
-__thread size_t num_kmer_processed = 0;
-
 namespace arl {
 namespace rank_internal {
 __thread rank_t my_rank = -1;

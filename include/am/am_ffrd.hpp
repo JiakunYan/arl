@@ -51,9 +51,7 @@ void rpc_ffrd(rank_t remote_worker, Fn && fn, Args &&...args) {
   int remote_worker_local = remote_worker % local::rank_n();
   if (config::rpc_loopback && remote_proc == proc::rank_me()) {
     // local precedure call
-    timer_backup.end();
     amff_internal::run_lpc(remote_worker_local, std::forward<Fn>(fn), std::forward<Args>(args)...);
-    timer_backup.start();
     return;
   }
 
@@ -65,10 +63,8 @@ void rpc_ffrd(rank_t remote_worker, Fn && fn, Args &&...args) {
   aggbuffer->commit(nbytes);
   if (std::get<0>(result) != nullptr) {
     if (std::get<1>(result) != 0) {
-      timer_backup.end();
       amffrd_internal::sendm_amffrd(remote_proc, std::get<0>(result), std::get<1>(result));
       progress_external();
-      timer_backup.start();
     }
   }
   ++(*amffrd_internal::amffrd_req_counters)[local::rank_me()][remote_proc];

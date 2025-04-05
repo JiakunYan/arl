@@ -28,9 +28,7 @@ int poll_msg(cq_entry_t &entry) {
   return internal::poll_msg(entry);
 }
 int progress() {
-  timer_progress.start();
   auto ret = internal::progress();
-  timer_progress.end();
   return ret;
 }
 void *buffer_alloc(int nbytes) {
@@ -40,19 +38,13 @@ void buffer_free(void *buffer) {
   internal::buffer_free(buffer);
 }
 void broadcast_impl(void *buf, int nbytes, rank_t root) {
-  timer_collective.start();
   internal::broadcast(buf, nbytes, root);
-  timer_collective.end();
 }
 void reduce_one_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root) {
-  timer_collective.start();
   internal::reduce_one(buf_in, buf_out, n, datatype, op, fn, root);
-  timer_collective.end();
 }
 void reduce_all_impl(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
-  timer_collective.start();
   internal::reduce_all(buf_in, buf_out, n, datatype, op, fn);
-  timer_collective.end();
 }
 
 template<>
