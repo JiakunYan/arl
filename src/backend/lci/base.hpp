@@ -24,14 +24,19 @@ inline rank_t rank_n() {
 }
 
 inline void barrier(bool (*do_something)() = nullptr) {
-  lci::comp_t comp = lci::alloc_sync();
-  lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).comp(comp)();
-  while (!lci::sync_test(comp, nullptr)) {
-    progress();
-    if (do_something != nullptr)
-      do_something();
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one, need to take care of external progress
+    lci::comp_t comp = lci::alloc_sync();
+    lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).comp(comp)();
+    while (!lci::sync_test(comp, nullptr)) {
+      progress();
+      if (do_something != nullptr)
+        do_something();
+    }
+    lci::free_comp(&comp);
+  } else {
+    lci::barrier_x().device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
   }
-  lci::free_comp(&comp);
 }
 
 inline const size_t get_max_buffer_size() {
@@ -97,10 +102,11 @@ inline void buffer_free(void *buffer) {
 }
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
-  timer_collective.start();
-  barrier();
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one
+    barrier();
+  }
   lci::broadcast_x(buf, nbytes, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
-  timer_collective.end();
 }
 
 const size_t lci_datatype_size_map[] = {
@@ -113,19 +119,21 @@ const size_t lci_datatype_size_map[] = {
 };
 
 inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn, rank_t root) {
-  timer_collective.start();
-  barrier();
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one
+    barrier();
+  }
   lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
-  timer_collective.end();
 }
 
 inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t fn) {
   int root = 0;
-  timer_collective.start();
-  barrier();
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one
+    barrier();
+  }
   lci::reduce_x(buf_in, buf_out, n, lci_datatype_size_map[static_cast<int>(datatype)], fn, root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
   lci::broadcast_x(buf_out, n * lci_datatype_size_map[static_cast<int>(datatype)], root).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint)();
-  timer_collective.end();
 }
 }// namespace arl::backend::internal
 

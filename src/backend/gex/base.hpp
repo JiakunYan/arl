@@ -53,10 +53,16 @@ inline rank_t rank_n() {
 
 inline void barrier(bool (*do_something)() = nullptr) {
   gex_Event_t event = gex_Coll_BarrierNB(tm, 0);
-  while (gex_Event_Test(event)) {
-    progress();
-    if (do_something != nullptr)
-      do_something();
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one, need to take care of external progress
+    gex_Event_Wait(event);
+    while (gex_Event_Test(event)) {
+      progress();
+      if (do_something != nullptr)
+        do_something();
+    }
+  } else {
+    gex_Event_Wait(event);
   }
 }
 
@@ -155,12 +161,17 @@ inline void buffer_free(void *buffer) {
 
 inline void broadcast(void *buf, int nbytes, rank_t root) {
   gex_Event_t event = gex_Coll_BroadcastNB(tm, root, buf, buf, nbytes, 0);
-  progress_external_until([&]() {
-    int done = !gex_Event_Test(event);
-    if (!done)
-      CHECK_GEX(gasnet_AMPoll());
-    return done;
-  });
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one, need to take care of external progress
+    progress_external_until([&]() {
+      int done = !gex_Event_Test(event);
+      if (!done)
+        CHECK_GEX(gasnet_AMPoll());
+      return done;
+    });
+  } else {
+    gex_Event_Wait(event);
+  }
 }
 
 const gex_DT_t gex_datatype_map[] = {
@@ -197,12 +208,17 @@ inline void reduce_one(const void *buf_in, void *buf_out, int n, datatype_t data
           gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,
           gex_op_map[static_cast<int>(op)],
           NULL, NULL, 0);
-  progress_external_until([&]() {
-    int done = !gex_Event_Test(event);
-  if (!done)
-    CHECK_GEX(gasnet_AMPoll());
-    return done;
-  });
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one, need to take care of external progress
+    progress_external_until([&]() {
+      int done = !gex_Event_Test(event);
+    if (!done)
+      CHECK_GEX(gasnet_AMPoll());
+      return done;
+    });
+  } else {
+    gex_Event_Wait(event);
+  }
 }
 
 inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t datatype, reduce_op_t op, reduce_fn_t) {
@@ -211,12 +227,17 @@ inline void reduce_all(const void *buf_in, void *buf_out, int n, datatype_t data
           gex_datatype_map[static_cast<int>(datatype)], gex_datatype_size_map[static_cast<int>(datatype)], n,
           gex_op_map[static_cast<int>(op)],
           NULL, NULL, 0);
-  progress_external_until([&]() {
-    int done = !gex_Event_Test(event);
-    if (!done)
-      CHECK_GEX(gasnet_AMPoll());
-    return done;
-  });
+  if (local::rank_n() <= 1 || local::rank_me() < 0) {
+    // We may be the only one, need to take care of external progress
+    progress_external_until([&]() {
+      int done = !gex_Event_Test(event);
+      if (!done)
+        CHECK_GEX(gasnet_AMPoll());
+      return done;
+    });
+  } else {
+    gex_Event_Wait(event);
+  }
 }
 }// namespace arl::backend::internal
 
