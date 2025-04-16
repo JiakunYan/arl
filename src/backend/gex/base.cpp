@@ -20,7 +20,7 @@ void gex_reqhandler(gex_Token_t token, void *void_buf, size_t unbytes, gex_AM_Ar
   gex_Token_Info_t info;
   gex_TI_t rc = gex_Token_Info(token, &info, GEX_TI_SRCRANK);
   gex_Rank_t srcRank = info.gex_srcrank;
-  char *buf_p = new char[unbytes];
+  void *buf_p = malloc(unbytes);
   memcpy(buf_p, void_buf, unbytes);
   cq_entry_t *p_event = new cq_entry_t;
   p_event->srcRank = srcRank;

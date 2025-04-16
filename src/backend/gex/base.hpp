@@ -55,7 +55,6 @@ inline void barrier(bool (*do_something)() = nullptr) {
   gex_Event_t event = gex_Coll_BarrierNB(tm, 0);
   if (local::rank_n() <= 1 || local::rank_me() < 0) {
     // We may be the only one, need to take care of external progress
-    gex_Event_Wait(event);
     while (gex_Event_Test(event)) {
       progress();
       if (do_something != nullptr)

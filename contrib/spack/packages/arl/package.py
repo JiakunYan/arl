@@ -23,7 +23,7 @@ class Arl(CMakePackage):
     variant(
         "gex-module",
         default="gasnet-ibv-par",
-        description="MPI module to use with GASNet-EX",
+        description="The module to use with GASNet-EX",
         when="backend=gex",
     )
     variant("gex-with-mpi", default=False, description="Enable MPI support in GASNet-EX")
@@ -43,7 +43,6 @@ class Arl(CMakePackage):
             self.define_from_variant("ARL_BACKEND", "backend"),
             self.define_from_variant("ARL_DEBUG", "debug"),
             self.define_from_variant("ARL_INFO", "info"),
-            self.define_from_variant("ARL_USE_GASNET_MODULE", "gex-module"),
         ]
 
         if self.spec.satisfies("backend=gex"):
