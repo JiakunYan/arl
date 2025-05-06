@@ -16,11 +16,11 @@ void finalize();
 thread_state_t *get_thread_state(bool for_progress = false);
 
 inline rank_t rank_me() {
-  return lci::get_rank();
+  return lci::get_rank_me();
 }
 
 inline rank_t rank_n() {
-  return lci::get_nranks();
+  return lci::get_rank_n();
 }
 
 inline void barrier(bool (*do_something)() = nullptr) {
@@ -47,7 +47,7 @@ inline const size_t get_max_buffer_size() {
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
   if (config::msg_loopback && target == rank_me()) {
     lci::status_t status;
-    status.error = lci::errorcode_t::ok;
+    status.error = lci::errorcode_t::done;
     status.data = lci::buffer_t(buf, nbytes);
     status.rank = rank_me();
     status.tag = tag;
@@ -66,7 +66,7 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
 
 inline int poll_msg(cq_entry_t &entry) {
   auto status = lci::cq_pop(get_thread_state()->cq);
-  if (status.error.is_ok()) {
+  if (status.error.is_done()) {
     entry.srcRank = status.rank;
     entry.tag = status.tag;
     auto buffer = status.data.get_buffer();
@@ -81,7 +81,7 @@ inline int poll_msg(cq_entry_t &entry) {
 inline int progress() {
   auto thread_state = get_thread_state(true);
   auto ret = lci::progress_x().device(thread_state->device).endpoint(thread_state->endpoint)();
-  return ret.is_ok() ? ARL_OK : ARL_RETRY;
+  return ret.is_done() ? ARL_OK : ARL_RETRY;
   // return ARL_RETRY;
 }
 

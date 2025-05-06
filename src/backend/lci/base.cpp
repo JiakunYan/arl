@@ -56,7 +56,7 @@ void init(size_t custom_num_workers_per_proc,
 
   size_t npackets = lci::get_default_packet_pool().get_attr_npackets();
   size_t max_nrecvs_per_device = std::min(npackets / 4 / config::lci_ndevices, 4096UL);
-  size_t max_nsends_per_device = std::min(npackets / 4 / lci::get_nranks() / config::lci_ndevices, config::lci_max_sends);
+  size_t max_nsends_per_device = std::min(npackets / 4 / lci::get_rank_n() / config::lci_ndevices, config::lci_max_sends);
   max_nsends_per_device = std::max(max_nsends_per_device, config::lci_min_sends);
   // size_t max_nsends_per_device = config::lci_max_sends;
   ARL_LOG(INFO, "Number of devices: %d (max_sends %lu, max_recvs %lu)\n", config::lci_ndevices, max_nsends_per_device, max_nrecvs_per_device);
