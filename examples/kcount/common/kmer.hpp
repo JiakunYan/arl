@@ -95,6 +95,12 @@ class Kmer {
     std::memcpy(longs.data(), arr.data(), sizeof(uint64_t) * (N_LONGS));
   }
 
+  Kmer(const Kmer &) = default;
+  Kmer(Kmer &&) = default;
+  Kmer &operator=(const Kmer &) = default;
+  Kmer &operator=(Kmer &&) = default;
+  ~Kmer() = default;
+
   static std::vector<Kmer> get_kmers(int kmer_len, std::string seq) {
     // only need rank 0 to check
     if (Kmer::k == 0) SDIE("Kmer::k not set");

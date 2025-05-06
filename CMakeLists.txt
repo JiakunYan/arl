@@ -38,7 +38,7 @@ if(ARL_USE_GEX)
     pkg_check_modules(gasnet REQUIRED IMPORTED_TARGET ${ARL_USE_GASNET_MODULE})
     if (ARL_USE_GASNET_NEED_MPI)
         find_package(MPI REQUIRED)
-        target_include_directories(arl PUBLIC MPI::MPI_CXX)
+        target_link_libraries(arl PUBLIC MPI::MPI_CXX)
     endif()
 
     # fix a cmake bug when encountering multiple "--param <val>" options
