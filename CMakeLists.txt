@@ -5,6 +5,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 enable_testing()
 
+# init and update submodules
+find_package(Git)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    # Update submodules as needed
+    option(GIT_SUBMODULE "Init and update git submodules" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Updating git submodules...")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}")
+        endif()
+    endif()
+endif()
+
 set(ARL_BACKEND gex CACHE STRING "Backend")
 set_property(CACHE ARL_BACKEND PROPERTY STRINGS gex lci)
 if(ARL_BACKEND STREQUAL "gex")
