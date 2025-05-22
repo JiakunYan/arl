@@ -57,7 +57,7 @@ inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
   }
   lci::status_t status;
   do {
-    status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_OK_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
+    status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_DONE_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
     arl::progress_external();
   } while (status.error.is_retry());
   info::networkInfo.byte_send.add(nbytes);
