@@ -47,31 +47,30 @@ inline const size_t get_max_buffer_size() {
 inline int send_msg(rank_t target, tag_t tag, void *buf, int nbytes) {
   if (config::msg_loopback && target == rank_me()) {
     lci::status_t status;
-    status.error = lci::errorcode_t::done;
-    status.data = lci::buffer_t(buf, nbytes);
+    status.set_done();
+    status.buffer = buf;
+    status.size = nbytes;
     status.rank = rank_me();
     status.tag = tag;
     lci::comp_signal(get_thread_state()->cq, status);
     return ARL_OK;
-    
   }
   lci::status_t status;
   do {
     status = lci::post_am_x(target, buf, nbytes, lci::COMP_NULL_EXPECT_DONE_OR_RETRY, get_thread_state()->rcomp).device(get_thread_state()->device).endpoint(get_thread_state()->endpoint).tag(tag)();
     arl::progress_external();
-  } while (status.error.is_retry());
+  } while (status.is_retry());
   info::networkInfo.byte_send.add(nbytes);
   return ARL_OK;
 }
 
 inline int poll_msg(cq_entry_t &entry) {
   auto status = lci::cq_pop(get_thread_state()->cq);
-  if (status.error.is_done()) {
-    entry.srcRank = status.rank;
-    entry.tag = status.tag;
-    auto buffer = status.data.get_buffer();
-    entry.buf = buffer.base;
-    entry.nbytes = buffer.size;
+  if (status.is_done()) {
+    entry.srcRank = status.get_rank();
+    entry.tag = status.get_tag();
+    entry.buf = status.get_buffer();
+    entry.nbytes = status.get_size();
     return ARL_OK;
   } else {
     return ARL_RETRY;
